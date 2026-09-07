@@ -1,0 +1,896 @@
+/* =====================================================
+   AXIEE NAVBAR
+===================================================== */
+
+.ax-navbar {
+     position: fixed;
+
+     top: 16px;
+     left: 50%;
+
+     z-index: 9000;
+
+     width: calc(100% - 48px);
+     max-width: 1480px;
+     height: 74px;
+
+     transform: translateX(-50%);
+
+     display: grid;
+
+     grid-template-columns:
+          170px minmax(400px, 1fr) 540px;
+
+     align-items: center;
+
+     gap: 18px;
+
+     padding: 0 22px;
+
+     border: 1px solid rgba(255, 255, 255, 0.14);
+
+     border-radius: 16px;
+
+     background:
+          linear-gradient(90deg,
+               rgba(6, 6, 6, 0.92),
+               rgba(16, 16, 16, 0.8),
+               rgba(6, 6, 6, 0.92));
+
+     backdrop-filter: blur(18px);
+     -webkit-backdrop-filter: blur(18px);
+
+     box-shadow:
+          0 15px 40px rgba(0, 0, 0, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+/* =====================================================
+   LOGO
+===================================================== */
+
+.ax-navbar-logo {
+     width: fit-content;
+
+     display: flex;
+     align-items: center;
+
+     gap: 10px;
+
+     color: #f6f5ef;
+
+     text-decoration: none;
+}
+
+.ax-navbar-logo span {
+     display: inline-block;
+
+     font-family: Arial, Helvetica, sans-serif;
+
+     font-size: 16px;
+     font-weight: 300;
+
+     line-height: 1;
+
+     letter-spacing: 0.1em;
+}
+
+/* custom futuristic A */
+
+.ax-logo-a {
+     position: relative;
+
+     width: 19px;
+     height: 19px;
+}
+
+.ax-logo-a::before,
+.ax-logo-a::after {
+     content: "";
+
+     position: absolute;
+
+     top: 50%;
+
+     width: 18px;
+     height: 1.5px;
+
+     background: #f6f5ef;
+}
+
+.ax-logo-a::before {
+     left: 0;
+
+     transform:
+          translateY(-50%) rotate(-64deg);
+
+     transform-origin: left center;
+}
+
+.ax-logo-a::after {
+     right: 0;
+
+     transform:
+          translateY(-50%) rotate(64deg);
+
+     transform-origin: right center;
+}
+
+/* =====================================================
+   DESKTOP NAV LINKS
+===================================================== */
+
+.ax-navbar-links {
+     display: flex;
+     align-items: center;
+     justify-content: center;
+
+     gap: 48px;
+}
+
+.ax-navbar-links a {
+     position: relative;
+
+     padding: 14px 0;
+
+     color: rgba(255, 255, 255, 0.68);
+
+     font-family: Arial, Helvetica, sans-serif;
+
+     font-size: 10px;
+     font-weight: 500;
+
+     letter-spacing: 0.16em;
+
+     text-decoration: none;
+
+     transition:
+          color 0.3s ease,
+          transform 0.3s ease;
+}
+
+.ax-navbar-links a:hover,
+.ax-navbar-links a.active {
+     color: #ffffff;
+}
+
+.ax-navbar-links a:hover {
+     transform: translateY(-1px);
+}
+
+.ax-navbar-links a.active::after {
+     content: "";
+
+     position: absolute;
+
+     left: 50%;
+     bottom: 2px;
+
+     width: 5px;
+     height: 5px;
+
+     border-radius: 50%;
+
+     background: #cfff24;
+
+     transform: translateX(-50%);
+
+     box-shadow:
+          0 0 8px #cfff24,
+          0 0 18px rgba(207, 255, 36, 0.65);
+}
+
+/* =====================================================
+   RIGHT ACTIONS
+===================================================== */
+
+.ax-navbar-actions {
+     display: flex;
+
+     align-items: center;
+     justify-content: flex-end;
+
+     gap: 14px;
+}
+
+/* =====================================================
+   SEARCH
+===================================================== */
+
+.ax-navbar-search {
+     position: relative;
+
+     width: 220px;
+     height: 40px;
+
+     display: flex;
+
+     align-items: center;
+
+     gap: 10px;
+
+     color: rgba(255, 255, 255, 0.9);
+}
+
+.ax-navbar-search::after {
+     content: "";
+
+     position: absolute;
+
+     left: 0;
+     right: 0;
+     bottom: 0;
+
+     height: 1px;
+
+     background: rgba(255, 255, 255, 0.17);
+}
+
+.ax-navbar-search input {
+     width: 100%;
+
+     border: 0;
+     outline: none;
+
+     background: transparent;
+
+     color: #ffffff;
+
+     font-size: 11px;
+
+     letter-spacing: 0.02em;
+}
+
+.ax-navbar-search input::placeholder {
+     color: rgba(255, 255, 255, 0.36);
+}
+
+/* =====================================================
+   ICON BUTTONS
+===================================================== */
+
+.ax-account-button,
+.ax-cart-button,
+.ax-mobile-search-button,
+.ax-menu-button,
+.ax-mobile-close {
+     padding: 0;
+
+     display: flex;
+
+     align-items: center;
+     justify-content: center;
+
+     border: 0;
+
+     background: transparent;
+
+     color: #ffffff;
+
+     cursor: pointer;
+}
+
+.ax-account-button,
+.ax-cart-button {
+     width: 36px;
+     height: 36px;
+
+     border-radius: 50%;
+
+     transition:
+          background 0.3s ease,
+          transform 0.3s ease;
+}
+
+.ax-account-button:hover,
+.ax-cart-button:hover {
+     background: rgba(255, 255, 255, 0.05);
+
+     transform: translateY(-1px);
+}
+
+/* =====================================================
+   CART COUNT
+===================================================== */
+
+.ax-cart-button {
+     position: relative;
+}
+
+.ax-cart-count {
+     position: absolute;
+
+     top: -4px;
+     right: -3px;
+
+     width: 16px;
+     height: 16px;
+
+     display: grid;
+
+     place-items: center;
+
+     border-radius: 50%;
+
+     background: #cfff24;
+
+     color: #050505;
+
+     font-size: 8px;
+     font-weight: 700;
+
+     box-shadow:
+          0 0 10px rgba(207, 255, 36, 0.7),
+          0 0 20px rgba(207, 255, 36, 0.3);
+}
+
+/* =====================================================
+   EXPLORE BUTTON
+===================================================== */
+
+.ax-explore-button {
+     min-width: 145px;
+     height: 44px;
+
+     padding: 0 20px;
+
+     display: flex;
+
+     align-items: center;
+     justify-content: space-between;
+
+     gap: 20px;
+
+     border: 1px solid #cfff24;
+
+     border-radius: 999px;
+
+     color: #ffffff;
+
+     font-size: 9px;
+
+     letter-spacing: 0.16em;
+
+     text-decoration: none;
+
+     box-shadow:
+          0 0 10px rgba(207, 255, 36, 0.45),
+          0 0 26px rgba(207, 255, 36, 0.12);
+
+     transition:
+          background 0.3s ease,
+          color 0.3s ease,
+          box-shadow 0.3s ease,
+          transform 0.3s ease;
+}
+
+.ax-explore-button:hover {
+     background: #cfff24;
+
+     color: #050505;
+
+     transform: translateY(-1px);
+
+     box-shadow:
+          0 0 15px rgba(207, 255, 36, 0.75),
+          0 0 40px rgba(207, 255, 36, 0.2);
+}
+
+/* =====================================================
+   MOBILE BUTTONS HIDDEN ON DESKTOP
+===================================================== */
+
+.ax-mobile-search-button,
+.ax-menu-button {
+     display: none;
+}
+
+/* =====================================================
+   MOBILE MENU + SEARCH OVERLAY
+===================================================== */
+
+.ax-mobile-menu,
+.ax-search-overlay {
+     position: fixed;
+
+     inset: 0;
+
+     z-index: 8900;
+
+     width: 100%;
+     height: 100svh;
+
+     overflow: hidden;
+
+     background:
+          radial-gradient(circle at 78% 105%,
+               rgba(207, 255, 36, 0.1),
+               transparent 30%),
+          #030303;
+
+     color: #ffffff;
+
+     opacity: 0;
+
+     visibility: hidden;
+
+     transform: translateY(-20px);
+
+     transition:
+          opacity 0.4s ease,
+          visibility 0.4s ease,
+          transform 0.55s cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+.ax-mobile-menu.active,
+.ax-search-overlay.active {
+     opacity: 1;
+
+     visibility: visible;
+
+     transform: translateY(0);
+}
+
+/* =====================================================
+   MOBILE HEADER
+===================================================== */
+
+.ax-mobile-menu-header,
+.ax-search-header {
+     position: relative;
+
+     z-index: 5;
+
+     height: 82px;
+
+     padding: 0 26px;
+
+     display: flex;
+
+     align-items: center;
+     justify-content: space-between;
+}
+
+.ax-mobile-close {
+     width: 40px;
+     height: 40px;
+}
+
+/* =====================================================
+   MOBILE LINKS
+===================================================== */
+
+.ax-mobile-links {
+     position: relative;
+
+     z-index: 5;
+
+     margin-top: clamp(90px, 13vh, 140px);
+
+     padding: 0 46px;
+
+     display: flex;
+
+     flex-direction: column;
+
+     gap: 28px;
+}
+
+.ax-mobile-links a {
+     display: flex;
+
+     align-items: center;
+
+     gap: 24px;
+
+     color: rgba(255, 255, 255, 0.72);
+
+     font-size: 14px;
+
+     letter-spacing: 0.16em;
+
+     text-decoration: none;
+}
+
+.ax-mobile-links a i {
+     width: 6px;
+     height: 6px;
+
+     border-radius: 50%;
+
+     background: transparent;
+}
+
+.ax-mobile-links a.active {
+     color: #ffffff;
+}
+
+.ax-mobile-links a.active i {
+     background: #cfff24;
+
+     box-shadow:
+          0 0 9px #cfff24,
+          0 0 22px rgba(207, 255, 36, 0.6);
+}
+
+/* =====================================================
+   MOBILE DIVIDER
+===================================================== */
+
+.ax-mobile-divider {
+     height: 1px;
+
+     margin: 52px 28px 27px;
+
+     background: rgba(255, 255, 255, 0.08);
+}
+
+/* =====================================================
+   MOBILE EXTRA ACTIONS
+===================================================== */
+
+.ax-mobile-actions {
+     padding: 0 46px;
+
+     display: flex;
+
+     flex-direction: column;
+
+     gap: 22px;
+}
+
+.ax-mobile-actions button {
+     padding: 0;
+
+     display: flex;
+
+     align-items: center;
+
+     gap: 16px;
+
+     border: 0;
+
+     background: transparent;
+
+     color: rgba(255, 255, 255, 0.54);
+
+     font-size: 13px;
+
+     cursor: pointer;
+}
+
+/* =====================================================
+   MOBILE COPY
+===================================================== */
+
+.ax-mobile-copy {
+     position: absolute;
+
+     left: 46px;
+     bottom: 46px;
+
+     z-index: 4;
+
+     display: flex;
+
+     flex-direction: column;
+
+     color: rgba(255, 255, 255, 0.42);
+
+     font-size: 10px;
+
+     letter-spacing: 0.2em;
+
+     line-height: 1.4;
+}
+
+.ax-mobile-glow {
+     position: absolute;
+
+     right: -130px;
+     bottom: -220px;
+
+     width: 430px;
+     height: 430px;
+
+     border-radius: 50%;
+
+     background:
+          radial-gradient(circle at 35% 25%,
+               rgba(255, 255, 255, 0.05),
+               transparent 25%),
+          #080808;
+
+     box-shadow:
+          -30px -20px 55px rgba(207, 255, 36, 0.09);
+
+     border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* =====================================================
+   SEARCH OVERLAY
+===================================================== */
+
+.ax-search-content {
+     position: relative;
+
+     z-index: 5;
+
+     padding: 100px 24px 0;
+}
+
+.ax-search-large {
+     width: 100%;
+     height: 54px;
+
+     padding: 0 19px;
+
+     display: flex;
+
+     align-items: center;
+
+     gap: 12px;
+
+     border: 1px solid #cfff24;
+
+     border-radius: 999px;
+
+     background: rgba(0, 0, 0, 0.5);
+
+     box-shadow:
+          0 0 10px rgba(207, 255, 36, 0.6),
+          0 0 30px rgba(207, 255, 36, 0.14);
+}
+
+.ax-search-large input {
+     flex: 1;
+
+     border: 0;
+
+     outline: none;
+
+     background: transparent;
+
+     color: #ffffff;
+
+     font-size: 14px;
+}
+
+.ax-search-large input::placeholder {
+     color: rgba(255, 255, 255, 0.42);
+}
+
+.ax-search-copy {
+     margin-top: 170px;
+
+     padding-left: 15px;
+}
+
+.ax-search-copy p {
+     margin: 0;
+
+     color: rgba(255, 255, 255, 0.7);
+
+     font-size: 12px;
+
+     letter-spacing: 0.18em;
+
+     line-height: 1.5;
+}
+
+.ax-search-copy span {
+     display: block;
+
+     width: 32px;
+     height: 1px;
+
+     margin-top: 18px;
+
+     background: #ffffff;
+}
+
+.ax-search-glow {
+     position: absolute;
+
+     left: -15%;
+     right: -15%;
+     bottom: -15%;
+
+     height: 48%;
+
+     background:
+          linear-gradient(145deg,
+               transparent 0 38%,
+               #070707 39% 48%,
+               transparent 49%),
+          linear-gradient(35deg,
+               transparent 0 34%,
+               #0e0e0e 35% 53%,
+               transparent 54%);
+
+     filter: drop-shadow(0 -12px 25px rgba(207, 255, 36, 0.05));
+}
+
+/* =====================================================
+   LARGE LAPTOP
+===================================================== */
+
+@media (max-width: 1280px) {
+     .ax-navbar {
+          grid-template-columns:
+               145px minmax(340px, 1fr) 470px;
+
+          padding: 0 18px;
+
+          gap: 12px;
+     }
+
+     .ax-navbar-links {
+          gap: 34px;
+     }
+
+     .ax-navbar-search {
+          width: 180px;
+     }
+
+     .ax-explore-button {
+          min-width: 125px;
+
+          padding: 0 16px;
+     }
+}
+
+/* =====================================================
+   TABLET
+===================================================== */
+
+@media (max-width: 960px) {
+     .ax-navbar {
+          top: 12px;
+
+          width: calc(100% - 28px);
+          height: 66px;
+
+          padding: 0 17px;
+
+          display: flex;
+
+          align-items: center;
+          justify-content: space-between;
+
+          border-radius: 14px;
+
+          background: rgba(5, 5, 5, 0.78);
+     }
+
+     .ax-navbar-links,
+     .ax-navbar-search,
+     .ax-account-button,
+     .ax-explore-button {
+          display: none;
+     }
+
+     .ax-navbar-actions {
+          gap: 10px;
+     }
+
+     .ax-mobile-search-button,
+     .ax-menu-button {
+          width: 34px;
+          height: 34px;
+
+          display: flex;
+
+          align-items: center;
+          justify-content: center;
+     }
+
+     .ax-cart-button {
+          width: 34px;
+          height: 34px;
+     }
+
+     .ax-navbar-logo {
+          gap: 9px;
+     }
+
+     .ax-navbar-logo span {
+          font-size: 14px;
+     }
+
+     .ax-logo-a {
+          width: 17px;
+          height: 17px;
+     }
+
+     .ax-logo-a::before,
+     .ax-logo-a::after {
+          width: 16px;
+     }
+}
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media (max-width: 480px) {
+     .ax-navbar {
+          top: 10px;
+
+          width: calc(100% - 22px);
+          height: 60px;
+
+          padding: 0 14px;
+
+          border-radius: 13px;
+     }
+
+     .ax-navbar-actions {
+          gap: 6px;
+     }
+
+     .ax-navbar-logo {
+          gap: 7px;
+     }
+
+     .ax-navbar-logo span {
+          font-size: 12px;
+     }
+
+     .ax-logo-a {
+          width: 15px;
+          height: 16px;
+     }
+
+     .ax-logo-a::before,
+     .ax-logo-a::after {
+          width: 14px;
+     }
+
+     .ax-mobile-search-button,
+     .ax-cart-button,
+     .ax-menu-button {
+          width: 31px;
+          height: 31px;
+     }
+
+     .ax-mobile-menu-header,
+     .ax-search-header {
+          height: 72px;
+
+          padding: 0 21px;
+     }
+
+     .ax-mobile-links {
+          margin-top: 92px;
+
+          padding: 0 37px;
+
+          gap: 26px;
+     }
+
+     .ax-mobile-links a {
+          gap: 21px;
+
+          font-size: 13px;
+     }
+
+     .ax-mobile-divider {
+          margin: 46px 22px 25px;
+     }
+
+     .ax-mobile-actions {
+          padding: 0 37px;
+
+          gap: 20px;
+     }
+
+     .ax-mobile-copy {
+          left: 37px;
+          bottom: 38px;
+     }
+
+     .ax-search-content {
+          padding: 95px 20px 0;
+     }
+}
