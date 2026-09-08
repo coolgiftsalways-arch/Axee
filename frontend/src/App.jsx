@@ -1,4 +1,15 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  Routes,
+  Route,
+  useLocation,
+} from "react-router-dom";
 
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -9,22 +20,43 @@ import "locomotive-scroll/dist/locomotive-scroll.css";
 import Loader from "./components/Loader.jsx";
 import Navbar from "./components/Navbar.jsx";
 import Footer from "./components/Footer.jsx";
+
+/* ==============================
+   PAGES
+============================== */
+
 import Home from "./pages/Home.jsx";
+import Shop from "./pages/Shop.jsx";
+
+import Tshirts from "./pages/Tshirts.jsx";
+import Jeans from "./pages/Jeans.jsx";
+import TrackPants from "./pages/TrackPants.jsx";
+import Shirts from "./pages/Shirts.jsx";
+import Shorts from "./pages/Shorts.jsx";
 
 gsap.registerPlugin(ScrollTrigger);
 
 function App() {
-  const [loadingComplete, setLoadingComplete] = useState(false);
+  const location = useLocation();
 
-  const [heroComplete, setHeroComplete] = useState(false);
+  const isHomePage = location.pathname === "/";
+
+  const [loadingComplete, setLoadingComplete] =
+    useState(false);
+
+  const [heroComplete, setHeroComplete] =
+    useState(false);
 
   const audioRef = useRef(null);
 
   /* ======================================================
-     PRELOAD AUDIO
+     PRELOAD HERO AUDIO
+     HOME PAGE ONLY
   ====================================================== */
 
   useEffect(() => {
+    if (!isHomePage) return;
+
     const audio = audioRef.current;
 
     if (!audio) return;
@@ -40,103 +72,154 @@ function App() {
     };
 
     const handleError = () => {
-      console.error("❌ Could not load /audio/hero.mp3");
+      console.error(
+        "❌ Could not load /audio/hero.mp3"
+      );
     };
 
-    audio.addEventListener("canplaythrough", handleReady);
+    audio.addEventListener(
+      "canplaythrough",
+      handleReady
+    );
 
-    audio.addEventListener("error", handleError);
+    audio.addEventListener(
+      "error",
+      handleError
+    );
 
     return () => {
-      audio.removeEventListener("canplaythrough", handleReady);
+      audio.removeEventListener(
+        "canplaythrough",
+        handleReady
+      );
 
-      audio.removeEventListener("error", handleError);
+      audio.removeEventListener(
+        "error",
+        handleError
+      );
     };
-  }, []);
+  }, [isHomePage]);
 
   /* ======================================================
      LOADER COMPLETE
-
-     SOUND STARTS ONLY HERE.
-     THERE IS NO CLICK FALLBACK.
   ====================================================== */
 
-  const handleLoaderComplete = useCallback(() => {
-    const audio = audioRef.current;
+  const handleLoaderComplete =
+    useCallback(() => {
+      const audio = audioRef.current;
 
-    if (audio) {
-      try {
-        audio.pause();
+      if (audio) {
+        try {
+          audio.pause();
 
-        audio.currentTime = 0;
+          audio.currentTime = 0;
+          audio.volume = 1;
+          audio.muted = false;
 
-        audio.volume = 1;
+          const playPromise = audio.play();
 
-        audio.muted = false;
-
-        const playPromise = audio.play();
-
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              console.log("🔊 AXIEE SOUND PLAYING");
-            })
-            .catch((error) => {
-              console.warn("🔇 Browser blocked autoplay:", error);
-            });
+          if (playPromise !== undefined) {
+            playPromise
+              .then(() => {
+                console.log(
+                  "🔊 AXIEE SOUND PLAYING"
+                );
+              })
+              .catch((error) => {
+                console.warn(
+                  "🔇 Browser blocked autoplay:",
+                  error
+                );
+              });
+          }
+        } catch (error) {
+          console.error(
+            "Audio error:",
+            error
+          );
         }
-      } catch (error) {
-        console.error("Audio error:", error);
       }
-    }
 
-    /*
-        Start hero at the same moment.
+      /*
+        Hero starts at same time
+        as loader finishes
       */
 
-    setLoadingComplete(true);
-  }, []);
+      setLoadingComplete(true);
+    }, []);
 
   /* ======================================================
      HERO COMPLETE
   ====================================================== */
 
-  const handleHeroComplete = useCallback(() => {
-    setHeroComplete(true);
-  }, []);
+  const handleHeroComplete =
+    useCallback(() => {
+      setHeroComplete(true);
+    }, []);
 
   /* ======================================================
-     SCROLL LOCK / LOCOMOTIVE
+     RESET PAGE SCROLL WHEN ROUTE CHANGES
+  ====================================================== */
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
+  /* ======================================================
+     LOCOMOTIVE SCROLL
+
+     HOME:
+     Wait until hero animation completes.
+
+     OTHER PAGES:
+     Start immediately.
   ====================================================== */
 
   useEffect(() => {
     let locomotiveScroll = null;
-
     let refreshTimer = null;
 
-    if (!heroComplete) {
-      document.documentElement.style.overflow = "hidden";
+    /*
+      On HOME we lock scrolling
+      until hero is finished.
+    */
 
-      document.body.style.overflow = "hidden";
+    if (isHomePage && !heroComplete) {
+      document.documentElement.style.overflow =
+        "hidden";
+
+      document.body.style.overflow =
+        "hidden";
 
       return () => {
-        document.documentElement.style.overflow = "";
+        document.documentElement.style.overflow =
+          "";
 
-        document.body.style.overflow = "";
+        document.body.style.overflow =
+          "";
       };
     }
 
-    document.documentElement.style.overflow = "";
+    /*
+      Shop / Jeans / T-Shirts /
+      Track Pants / Shirts / Shorts
+      can scroll immediately.
+    */
 
-    document.body.style.overflow = "";
+    document.documentElement.style.overflow =
+      "";
 
-    locomotiveScroll = new LocomotiveScroll({
-      lenisOptions: {
-        lerp: 0.08,
-        smoothWheel: true,
-        wheelMultiplier: 0.8,
-      },
-    });
+    document.body.style.overflow =
+      "";
+
+    locomotiveScroll =
+      new LocomotiveScroll({
+        lenisOptions: {
+          lerp: 0.08,
+          smoothWheel: true,
+          wheelMultiplier: 0.8,
+        },
+      });
 
     refreshTimer = setTimeout(() => {
       ScrollTrigger.refresh();
@@ -146,38 +229,145 @@ function App() {
       ScrollTrigger.refresh();
     };
 
-    window.addEventListener("resize", handleResize);
+    window.addEventListener(
+      "resize",
+      handleResize
+    );
 
     return () => {
       if (refreshTimer) {
         clearTimeout(refreshTimer);
       }
 
-      window.removeEventListener("resize", handleResize);
+      window.removeEventListener(
+        "resize",
+        handleResize
+      );
 
       locomotiveScroll?.destroy?.();
     };
-  }, [heroComplete]);
+  }, [
+    heroComplete,
+    isHomePage,
+    location.pathname,
+  ]);
+
+  /* ======================================================
+     RENDER
+  ====================================================== */
 
   return (
     <>
-      {/* ONLY AUDIO ELEMENT */}
+      {/* =================================
+          HERO AUDIO
+          HOME PAGE ONLY
+      ================================= */}
 
-      <audio ref={audioRef} src="/audio/hero.mp3" preload="auto" playsInline />
+      {isHomePage && (
+        <audio
+          ref={audioRef}
+          src="/audio/hero.mp3"
+          preload="auto"
+          playsInline
+        />
+      )}
 
       <div className="app">
         <Navbar />
 
-        <Home
-          startAnimation={loadingComplete}
-          heroComplete={heroComplete}
-          onHeroComplete={handleHeroComplete}
-        />
+        <Routes>
+          {/* ==============================
+              HOME
+          ============================== */}
+
+          <Route
+            path="/"
+            element={
+              <Home
+                startAnimation={
+                  loadingComplete
+                }
+                heroComplete={
+                  heroComplete
+                }
+                onHeroComplete={
+                  handleHeroComplete
+                }
+              />
+            }
+          />
+
+          {/* ==============================
+              SHOP - ALL PRODUCTS
+          ============================== */}
+
+          <Route
+            path="/shop"
+            element={<Shop />}
+          />
+
+          {/* ==============================
+              T-SHIRTS
+          ============================== */}
+
+          <Route
+            path="/tshirts"
+            element={<Tshirts />}
+          />
+
+          {/* ==============================
+              JEANS
+          ============================== */}
+
+          <Route
+            path="/jeans"
+            element={<Jeans />}
+          />
+
+          {/* ==============================
+              TRACK PANTS
+          ============================== */}
+
+          <Route
+            path="/track-pants"
+            element={<TrackPants />}
+          />
+
+          {/* ==============================
+              SHIRTS / TOPS
+          ============================== */}
+
+          <Route
+            path="/shirts"
+            element={<Shirts />}
+          />
+
+          {/* ==============================
+              SHORTS
+          ============================== */}
+
+          <Route
+            path="/shorts"
+            element={<Shorts />}
+          />
+        </Routes>
 
         <Footer />
       </div>
 
-      {!loadingComplete && <Loader onComplete={handleLoaderComplete} />}
+      {/* =================================
+          LOADER
+          ONLY HOME PAGE
+      ================================= */}
+
+      {isHomePage &&
+        !loadingComplete && (
+          <Loader
+            onComplete={
+              handleLoaderComplete
+            }
+          />
+        )}
     </>
   );
 }
