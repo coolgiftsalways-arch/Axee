@@ -1,4 +1,5 @@
 import React, { useLayoutEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -214,6 +215,7 @@ const productSections = [
 ========================================================= */
 
 function ProductCard({ product, selectedSizes, setSelectedSizes }) {
+  const navigate = useNavigate();
   const selectedSize = selectedSizes[product.id];
 
   const chooseSize = (size) => {
@@ -277,15 +279,15 @@ function ProductCard({ product, selectedSizes, setSelectedSizes }) {
       }),
     );
 
-    window.location.href = "/checkout";
+    navigate("/checkout");
   };
 
   return (
     <article className="ax-product-card">
       {/* IMAGE */}
 
-      <a
-        href={`/product/${product.id}`}
+      <Link
+        to={`/product/${product.id}`}
         className="ax-product-image-wrap"
         aria-label={`View ${product.name}`}
       >
@@ -317,7 +319,7 @@ function ProductCard({ product, selectedSizes, setSelectedSizes }) {
           VIEW
           <span>↗</span>
         </span>
-      </a>
+      </Link>
 
       {/* PRODUCT INFO */}
 
@@ -389,10 +391,10 @@ function ProductSection({ section, selectedSizes, setSelectedSizes }) {
           <p>{section.subtitle}</p>
         </div>
 
-        <a href={`/shop?category=${section.id}`} className="ax-view-all">
+        <Link to={`/shop?category=${section.id}`} className="ax-view-all">
           VIEW ALL
           <span>↗</span>
-        </a>
+        </Link>
       </div>
 
       <div className="ax-products-grid">

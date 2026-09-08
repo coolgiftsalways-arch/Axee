@@ -13,8 +13,8 @@ import {
 
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-
 import LocomotiveScroll from "locomotive-scroll";
+
 import "locomotive-scroll/dist/locomotive-scroll.css";
 
 import Loader from "./components/Loader.jsx";
