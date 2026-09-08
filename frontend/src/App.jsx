@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-
 import LocomotiveScroll from "locomotive-scroll";
+
 import "locomotive-scroll/dist/locomotive-scroll.css";
 
 import Loader from "./components/Loader.jsx";
@@ -56,9 +56,6 @@ function App() {
 
   /* ======================================================
      LOADER COMPLETE
-
-     SOUND STARTS ONLY HERE.
-     THERE IS NO CLICK FALLBACK.
   ====================================================== */
 
   const handleLoaderComplete = useCallback(() => {
@@ -69,9 +66,7 @@ function App() {
         audio.pause();
 
         audio.currentTime = 0;
-
         audio.volume = 1;
-
         audio.muted = false;
 
         const playPromise = audio.play();
@@ -90,10 +85,6 @@ function App() {
       }
     }
 
-    /*
-        Start hero at the same moment.
-      */
-
     setLoadingComplete(true);
   }, []);
 
@@ -111,7 +102,6 @@ function App() {
 
   useEffect(() => {
     let locomotiveScroll = null;
-
     let refreshTimer = null;
 
     if (!heroComplete) {
@@ -159,9 +149,13 @@ function App() {
     };
   }, [heroComplete]);
 
+  /* ======================================================
+     RENDER
+  ====================================================== */
+
   return (
     <>
-      {/* ONLY AUDIO ELEMENT */}
+      {/* AUDIO */}
 
       <audio ref={audioRef} src="/audio/hero.mp3" preload="auto" playsInline />
 

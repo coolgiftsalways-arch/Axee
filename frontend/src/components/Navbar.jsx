@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+
 import {
   Search,
   ShoppingBag,
@@ -6,13 +7,177 @@ import {
   Menu,
   X,
   ArrowRight,
+  ChevronDown,
 } from "lucide-react";
 
 import "../styles/navbar.css";
 
+/* =========================================================
+   SHOP CATEGORIES
+========================================================= */
+
+const shopCategories = [
+  {
+    id: "tshirts",
+    name: "T-SHIRTS",
+    number: "01",
+    href: "#tshirts",
+    image: "/products/tshirt-1.jpg",
+  },
+
+  {
+    id: "jeans",
+    name: "JEANS",
+    number: "02",
+    href: "#jeans",
+    image: "/products/jean-1.jpg",
+  },
+
+  {
+    id: "tracks",
+    name: "TRACK PANTS",
+    number: "03",
+    href: "#tracks",
+    image: "/products/track-1.jpg",
+  },
+
+  {
+    id: "shirts",
+    name: "SHIRTS",
+    number: "04",
+    href: "#shirts",
+    image: "/products/shirt-1.jpg",
+  },
+
+  {
+    id: "shorts",
+    name: "SHORTS",
+    number: "05",
+    href: "#shorts",
+    image: "/products/short-1.jpg",
+  },
+];
+
 function Navbar() {
+  /* =========================================================
+     MOBILE STATES
+  ========================================================= */
+
   const [menuOpen, setMenuOpen] = useState(false);
+
   const [searchOpen, setSearchOpen] = useState(false);
+
+  const [mobileShopOpen, setMobileShopOpen] = useState(false);
+
+  /* =========================================================
+     DESKTOP SHOP STATES
+  ========================================================= */
+
+  const [shopOpen, setShopOpen] = useState(false);
+
+  const [activeShopItem, setActiveShopItem] = useState(shopCategories[0]);
+
+  const shopCloseTimer = useRef(null);
+
+  /* =========================================================
+     CART
+  ========================================================= */
+
+  const [cartCount, setCartCount] = useState(0);
+
+  /* =========================================================
+     OPEN DESKTOP SHOP
+  ========================================================= */
+
+  const openShopMenu = () => {
+    if (shopCloseTimer.current) {
+      clearTimeout(shopCloseTimer.current);
+
+      shopCloseTimer.current = null;
+    }
+
+    setShopOpen(true);
+  };
+
+  /* =========================================================
+     CLOSE DESKTOP SHOP
+  ========================================================= */
+
+  const closeShopMenu = () => {
+    if (shopCloseTimer.current) {
+      clearTimeout(shopCloseTimer.current);
+    }
+
+    shopCloseTimer.current = setTimeout(() => {
+      setShopOpen(false);
+
+      shopCloseTimer.current = null;
+    }, 250);
+  };
+
+  /* =========================================================
+     CLEAR TIMER
+  ========================================================= */
+
+  useEffect(() => {
+    return () => {
+      if (shopCloseTimer.current) {
+        clearTimeout(shopCloseTimer.current);
+      }
+    };
+  }, []);
+
+  /* =========================================================
+     CART COUNT
+  ========================================================= */
+
+  const updateCartCount = () => {
+    try {
+      const cart = JSON.parse(localStorage.getItem("axiee-cart")) || [];
+
+      const totalQuantity = cart.reduce((total, item) => {
+        return total + Number(item.quantity || 1);
+      }, 0);
+
+      setCartCount(totalQuantity);
+    } catch (error) {
+      console.error("Cart count error:", error);
+
+      setCartCount(0);
+    }
+  };
+
+  /* =========================================================
+     CART LISTENER
+  ========================================================= */
+
+  useEffect(() => {
+    updateCartCount();
+
+    const handleCartUpdate = () => {
+      updateCartCount();
+    };
+
+    const handleStorage = (event) => {
+      if (event.key === "axiee-cart") {
+        updateCartCount();
+      }
+    };
+
+    window.addEventListener("axiee-cart-updated", handleCartUpdate);
+
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("axiee-cart-updated", handleCartUpdate);
+
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
+
+  /* =========================================================
+     LOCK BODY
+  ========================================================= */
 
   useEffect(() => {
     if (menuOpen || searchOpen) {
@@ -26,39 +191,198 @@ function Navbar() {
     };
   }, [menuOpen, searchOpen]);
 
+  /* =========================================================
+     CLOSE EVERYTHING
+  ========================================================= */
+
   const closeAll = () => {
     setMenuOpen(false);
+
     setSearchOpen(false);
+
+    setMobileShopOpen(false);
+
+    setShopOpen(false);
+
+    if (shopCloseTimer.current) {
+      clearTimeout(shopCloseTimer.current);
+
+      shopCloseTimer.current = null;
+    }
   };
 
   return (
     <>
+      {/* =====================================================
+          MAIN NAVBAR
+      ===================================================== */}
+
       <header className="ax-navbar">
-        {/* LOGO */}
-        <a href="#home" className="ax-navbar-logo">
+        {/* =================================================
+            LOGO
+        ================================================= */}
+
+        <a href="#home" className="ax-navbar-logo" onClick={closeAll}>
           <span className="ax-logo-a"></span>
+
           <span>X</span>
           <span>I</span>
           <span>E</span>
           <span>E</span>
         </a>
 
-        {/* DESKTOP LINKS */}
+        {/* =================================================
+            DESKTOP LINKS
+        ================================================= */}
+
         <nav className="ax-navbar-links">
           <a href="#home" className="active">
             HOME
           </a>
 
-          <a href="#shop">SHOP</a>
+          {/* =================================================
+              DESKTOP SHOP
+          ================================================= */}
+
+          <div
+            className="ax-shop-nav-item"
+            onMouseEnter={openShopMenu}
+            onMouseLeave={closeShopMenu}
+          >
+            <button
+              type="button"
+              className={
+                shopOpen ? "ax-shop-trigger active" : "ax-shop-trigger"
+              }
+            >
+              SHOP
+              <span className="ax-shop-trigger-dot"></span>
+            </button>
+
+            {/* =============================================
+                MEGA MENU
+            ============================================= */}
+
+            <div
+              className={shopOpen ? "ax-shop-mega active" : "ax-shop-mega"}
+              onMouseEnter={openShopMenu}
+              onMouseLeave={closeShopMenu}
+            >
+              {/* =========================================
+                  LEFT SIDE
+              ========================================= */}
+
+              <div className="ax-shop-mega-left">
+                <div className="ax-shop-mega-top">
+                  <span>SHOP / COLLECTIONS</span>
+
+                  <span>AXIEE © 2026</span>
+                </div>
+
+                <div className="ax-shop-mega-title">
+                  <span>EXPLORE</span>
+
+                  <h2>
+                    THE
+                    <br />
+                    UNKNOWN
+                  </h2>
+                </div>
+
+                {/* =====================================
+                    CATEGORIES
+                ===================================== */}
+
+                <div className="ax-shop-category-list">
+                  {shopCategories.map((item) => (
+                    <a
+                      key={item.id}
+                      href={item.href}
+                      className={
+                        activeShopItem.id === item.id
+                          ? "ax-shop-category active"
+                          : "ax-shop-category"
+                      }
+                      onMouseEnter={() => setActiveShopItem(item)}
+                      onClick={closeAll}
+                    >
+                      <span className="ax-shop-category-number">
+                        {item.number}
+                      </span>
+
+                      <strong>{item.name}</strong>
+
+                      <ArrowRight size={21} strokeWidth={1.3} />
+                    </a>
+                  ))}
+                </div>
+
+                {/* =====================================
+                    BOTTOM
+                ===================================== */}
+
+                <div className="ax-shop-mega-bottom">
+                  <span>
+                    MORE THAN CLOTHES.
+                    <br />A MINDSET.
+                  </span>
+
+                  <a href="#collections" onClick={closeAll}>
+                    VIEW ALL
+                    <ArrowRight size={15} />
+                  </a>
+                </div>
+              </div>
+
+              {/* =========================================
+                  RIGHT IMAGE
+              ========================================= */}
+
+              <div className="ax-shop-mega-right">
+                <div key={activeShopItem.id} className="ax-shop-preview-image">
+                  <img src={activeShopItem.image} alt={activeShopItem.name} />
+                </div>
+
+                <div className="ax-shop-image-dark"></div>
+
+                <div className="ax-shop-image-top">
+                  <span>{activeShopItem.number}</span>
+
+                  <span>
+                    AXIEE
+                    <br />
+                    COLLECTION
+                  </span>
+                </div>
+
+                <div className="ax-shop-image-content">
+                  <span>SELECTED CATEGORY</span>
+
+                  <h3>{activeShopItem.name}</h3>
+
+                  <a href={activeShopItem.href} onClick={closeAll}>
+                    DISCOVER
+                    <ArrowRight size={16} />
+                  </a>
+                </div>
+
+                <div className="ax-shop-image-word">AXIEE</div>
+              </div>
+            </div>
+          </div>
 
           <a href="#collections">COLLECTIONS</a>
 
           <a href="#about">ABOUT</a>
         </nav>
 
-        {/* RIGHT SIDE */}
+        {/* =================================================
+            RIGHT ACTIONS
+        ================================================= */}
+
         <div className="ax-navbar-actions">
-          {/* DESKTOP SEARCH */}
+          {/* SEARCH */}
+
           <div className="ax-navbar-search">
             <Search size={18} strokeWidth={1.7} />
 
@@ -69,45 +393,72 @@ function Navbar() {
             />
           </div>
 
-          {/* MOBILE SEARCH BUTTON */}
+          {/* MOBILE SEARCH */}
+
           <button
+            type="button"
             className="ax-mobile-search-button"
+            aria-label="Search"
             onClick={() => {
               setSearchOpen(true);
+
               setMenuOpen(false);
+
+              setMobileShopOpen(false);
+
+              setShopOpen(false);
             }}
-            aria-label="Search"
           >
             <Search size={19} strokeWidth={1.7} />
           </button>
 
           {/* ACCOUNT */}
-          <button className="ax-account-button" aria-label="Account">
+
+          <button
+            type="button"
+            className="ax-account-button"
+            aria-label="Account"
+          >
             <UserRound size={20} strokeWidth={1.6} />
           </button>
 
           {/* CART */}
-          <button className="ax-cart-button" aria-label="Cart">
+
+          <button
+            type="button"
+            className="ax-cart-button"
+            aria-label={`Cart with ${cartCount} items`}
+          >
             <ShoppingBag size={20} strokeWidth={1.6} />
 
-            <span className="ax-cart-count">0</span>
+            <span className="ax-cart-count">{cartCount}</span>
           </button>
 
           {/* EXPLORE */}
-          <a href="#shop" className="ax-explore-button">
+
+          <a href="#tshirts" className="ax-explore-button">
             <span>EXPLORE</span>
 
             <ArrowRight size={17} strokeWidth={1.5} />
           </a>
 
           {/* MOBILE MENU BUTTON */}
+
           <button
+            type="button"
             className="ax-menu-button"
+            aria-label="Menu"
             onClick={() => {
               setMenuOpen((prev) => !prev);
+
               setSearchOpen(false);
+
+              setShopOpen(false);
+
+              if (menuOpen) {
+                setMobileShopOpen(false);
+              }
             }}
-            aria-label="Menu"
           >
             {menuOpen ? (
               <X size={22} strokeWidth={1.5} />
@@ -118,14 +469,17 @@ function Navbar() {
         </div>
       </header>
 
-      {/* =========================
-          MOBILE MENU
-      ========================= */}
+      {/* =====================================================
+          MOBILE FULLSCREEN MENU
+      ===================================================== */}
 
       <div className={`ax-mobile-menu ${menuOpen ? "active" : ""}`}>
+        {/* HEADER */}
+
         <div className="ax-mobile-menu-header">
           <a href="#home" className="ax-navbar-logo" onClick={closeAll}>
             <span className="ax-logo-a"></span>
+
             <span>X</span>
             <span>I</span>
             <span>E</span>
@@ -133,12 +487,18 @@ function Navbar() {
           </a>
 
           <button
+            type="button"
             className="ax-mobile-close"
-            onClick={() => setMenuOpen(false)}
+            aria-label="Close menu"
+            onClick={closeAll}
           >
             <X size={23} strokeWidth={1.5} />
           </button>
         </div>
+
+        {/* =================================================
+            MOBILE LINKS
+        ================================================= */}
 
         <nav className="ax-mobile-links">
           <a href="#home" className="active" onClick={closeAll}>
@@ -146,10 +506,41 @@ function Navbar() {
             HOME
           </a>
 
-          <a href="#shop" onClick={closeAll}>
-            <i></i>
-            SHOP
-          </a>
+          {/* =================================================
+              MOBILE SHOP DROPDOWN
+          ================================================= */}
+
+          <div className={`ax-mobile-shop ${mobileShopOpen ? "active" : ""}`}>
+            <button
+              type="button"
+              className="ax-mobile-shop-trigger"
+              onClick={() => setMobileShopOpen((prev) => !prev)}
+            >
+              <span className="ax-mobile-shop-trigger-left">
+                <i></i>
+
+                <span>SHOP</span>
+              </span>
+
+              <ChevronDown size={20} strokeWidth={1.5} />
+            </button>
+
+            {/* =============================================
+                MOBILE SHOP ITEMS
+            ============================================= */}
+
+            <div className="ax-mobile-shop-dropdown">
+              {shopCategories.map((item) => (
+                <a key={item.id} href={item.href} onClick={closeAll}>
+                  <span>{item.number}</span>
+
+                  <strong>{item.name}</strong>
+
+                  <ArrowRight size={17} strokeWidth={1.4} />
+                </a>
+              ))}
+            </div>
+          </div>
 
           <a href="#collections" onClick={closeAll}>
             <i></i>
@@ -162,12 +553,20 @@ function Navbar() {
           </a>
         </nav>
 
+        {/* DIVIDER */}
+
         <div className="ax-mobile-divider"></div>
+
+        {/* MOBILE ACTIONS */}
 
         <div className="ax-mobile-actions">
           <button
+            type="button"
             onClick={() => {
               setMenuOpen(false);
+
+              setMobileShopOpen(false);
+
               setSearchOpen(true);
             }}
           >
@@ -175,34 +574,39 @@ function Navbar() {
             Search products...
           </button>
 
-          <button>
+          <button type="button">
             <UserRound size={18} strokeWidth={1.6} />
             My Account
           </button>
 
-          <button>
+          <button type="button">
             <ShoppingBag size={18} strokeWidth={1.6} />
-            Cart (0)
+            Cart ({cartCount})
           </button>
         </div>
 
+        {/* TEXT */}
+
         <div className="ax-mobile-copy">
           <span>CLOTHES</span>
+
           <span>CULTURE</span>
+
           <span>BEYOND</span>
         </div>
 
         <div className="ax-mobile-glow"></div>
       </div>
 
-      {/* =========================
-          MOBILE SEARCH OVERLAY
-      ========================= */}
+      {/* =====================================================
+          SEARCH OVERLAY
+      ===================================================== */}
 
       <div className={`ax-search-overlay ${searchOpen ? "active" : ""}`}>
         <div className="ax-search-header">
           <a href="#home" className="ax-navbar-logo" onClick={closeAll}>
             <span className="ax-logo-a"></span>
+
             <span>X</span>
             <span>I</span>
             <span>E</span>
@@ -210,7 +614,9 @@ function Navbar() {
           </a>
 
           <button
+            type="button"
             className="ax-mobile-close"
+            aria-label="Close search"
             onClick={() => setSearchOpen(false)}
           >
             <X size={23} strokeWidth={1.5} />
