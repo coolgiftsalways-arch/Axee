@@ -1,21 +1,21 @@
 import React from "react";
 import CategoryPage from "../components/CategoryPage";
 
-function Shorts() {
+function Shirts() {
   return (
     <CategoryPage
-      category="SHORTS"
-      title="SHORTS"
-      subtitle="FREEDOM IN MOTION"
+      category="SHIRTS"
+      title="SHIRTS"
+      subtitle="REDEFINED FORM"
       description={
         <>
-          BUILT LIGHT.
+          STRUCTURED FORMS.
           <br />
-          MADE TO MOVE.
+          DESIGNED BEYOND CONVENTION.
         </>
       }
     />
   );
 }
 
-export default Shorts;
+export default Shirts;

@@ -1,417 +1,180 @@
 import React, { useMemo, useState } from "react";
 
-import { Link } from "react-router-dom";
+import { Search, X, Heart, ArrowRight, SlidersHorizontal } from "lucide-react";
 
-import {
-  Heart,
-  ArrowRight,
-  SlidersHorizontal,
-} from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 
-import shopHero from "../assets/shop/shophero.png";
-import shopEnd from "../assets/shop/shopEnd.jpeg";
+import products from "../data/products";
 
 import "../styles/shop.css";
 
 /* =========================================================
-   PRODUCTS
+   SHOP CATEGORIES
 ========================================================= */
 
-const products = [
-  /* ================= T-SHIRTS ================= */
-
+const categories = [
   {
-    id: 1,
-    name: "VOID TEE",
-    category: "T-SHIRTS",
-    price: 1499,
-    image: "/products/tshirt-1.jpg",
-    sizes: ["S", "M", "L", "XL"],
-    tag: "NEW",
+    id: "all",
+    label: "ALL",
+    value: "ALL",
   },
 
   {
-    id: 2,
-    name: "SIGNAL TEE",
-    category: "T-SHIRTS",
-    price: 1699,
-    image: "/products/tshirt-2.jpg",
-    sizes: ["S", "M", "L", "XL"],
-    tag: "NEW",
+    id: "tshirts",
+    label: "T-SHIRTS",
+    value: "T-SHIRTS",
   },
 
   {
-    id: 3,
-    name: "ECHO TEE",
-    category: "T-SHIRTS",
-    price: 1599,
-    image: "/products/tshirt-3.jpg",
-    sizes: ["S", "M", "L", "XL"],
-    tag: "NEW",
+    id: "jeans",
+    label: "JEANS",
+    value: "JEANS",
   },
 
   {
-    id: 4,
-    name: "UNKNOWN TEE",
-    category: "T-SHIRTS",
-    price: 1899,
-    image: "/products/tshirt-4.jpg",
-    sizes: ["S", "M", "L", "XL"],
-    tag: "NEW",
-  },
-
-  /* ================= JEANS ================= */
-
-  {
-    id: 5,
-    name: "SHADOW DENIM",
-    category: "JEANS",
-    price: 2899,
-    image: "/products/jean-1.jpg",
-    sizes: ["28", "30", "32", "34"],
-    tag: "NEW",
+    id: "trackpants",
+    label: "TRACK PANTS",
+    value: "TRACK PANTS",
   },
 
   {
-    id: 6,
-    name: "VOID DENIM",
-    category: "JEANS",
-    price: 3199,
-    image: "/products/jean-2.jpg",
-    sizes: ["28", "30", "32", "34"],
-    tag: "NEW",
+    id: "shirts",
+    label: "SHIRTS",
+    value: "SHIRTS",
   },
 
   {
-    id: 7,
-    name: "FRACTURE JEAN",
-    category: "JEANS",
-    price: 3499,
-    image: "/products/jean-3.jpg",
-    sizes: ["28", "30", "32", "34"],
-    tag: "NEW",
+    id: "shorts",
+    label: "SHORTS",
+    value: "SHORTS",
   },
 
   {
-    id: 8,
-    name: "RAW DENIM 01",
-    category: "JEANS",
-    price: 2999,
-    image: "/products/jean-4.jpg",
-    sizes: ["28", "30", "32", "34"],
-    tag: "NEW",
-  },
-
-  /* ================= TRACK PANTS ================= */
-
-  {
-    id: 9,
-    name: "MOTION TRACK",
-    category: "TRACK PANTS",
-    price: 2499,
-    image: "/products/track-1.jpg",
-    sizes: ["S", "M", "L", "XL"],
-    tag: "NEW",
+    id: "hoodies",
+    label: "HOODIES",
+    value: "HOODIES",
   },
 
   {
-    id: 10,
-    name: "CORE TRACK",
-    category: "TRACK PANTS",
-    price: 2699,
-    image: "/products/track-2.jpg",
-    sizes: ["S", "M", "L", "XL"],
-    tag: "NEW",
+    id: "coords",
+    label: "CO-ORD SETS",
+    value: "CO-ORD SETS",
   },
 
   {
-    id: 11,
-    name: "TERMINAL TRACK",
-    category: "TRACK PANTS",
-    price: 2899,
-    image: "/products/track-3.jpg",
-    sizes: ["S", "M", "L", "XL"],
-    tag: "NEW",
-  },
-
-  {
-    id: 12,
-    name: "PHANTOM TRACK",
-    category: "TRACK PANTS",
-    price: 2999,
-    image: "/products/track-4.jpg",
-    sizes: ["S", "M", "L", "XL"],
-    tag: "NEW",
-  },
-
-  /* ================= SHIRTS ================= */
-
-  {
-    id: 13,
-    name: "SYSTEM SHIRT",
-    category: "SHIRTS",
-    price: 2199,
-    image: "/products/shirt-1.jpg",
-    sizes: ["S", "M", "L", "XL"],
-    tag: "NEW",
-  },
-
-  {
-    id: 14,
-    name: "SIGNAL SHIRT",
-    category: "SHIRTS",
-    price: 2399,
-    image: "/products/shirt-2.jpg",
-    sizes: ["S", "M", "L", "XL"],
-    tag: "NEW",
-  },
-
-  {
-    id: 15,
-    name: "SHADOW SHIRT",
-    category: "SHIRTS",
-    price: 2599,
-    image: "/products/shirt-3.jpg",
-    sizes: ["S", "M", "L", "XL"],
-    tag: "NEW",
-  },
-
-  {
-    id: 16,
-    name: "FRAME SHIRT",
-    category: "SHIRTS",
-    price: 2299,
-    image: "/products/shirt-4.jpg",
-    sizes: ["S", "M", "L", "XL"],
-    tag: "NEW",
-  },
-
-  /* ================= SHORTS ================= */
-
-  {
-    id: 17,
-    name: "VOID SHORT",
-    category: "SHORTS",
-    price: 1799,
-    image: "/products/short-1.jpg",
-    sizes: ["S", "M", "L", "XL"],
-    tag: "NEW",
-  },
-
-  {
-    id: 18,
-    name: "CARGO SHORT",
-    category: "SHORTS",
-    price: 1999,
-    image: "/products/short-2.jpg",
-    sizes: ["S", "M", "L", "XL"],
-    tag: "NEW",
-  },
-
-  {
-    id: 19,
-    name: "MOTION SHORT",
-    category: "SHORTS",
-    price: 1899,
-    image: "/products/short-3.jpg",
-    sizes: ["S", "M", "L", "XL"],
-    tag: "NEW",
-  },
-
-  {
-    id: 20,
-    name: "UTILITY SHORT",
-    category: "SHORTS",
-    price: 2199,
-    image: "/products/short-4.jpg",
-    sizes: ["S", "M", "L", "XL"],
-    tag: "NEW",
+    id: "jackets",
+    label: "JACKETS",
+    value: "JACKETS",
   },
 ];
 
 /* =========================================================
-   PRODUCT CARD
+   QUICK SEARCH
 ========================================================= */
 
-function ShopProductCard({
-  product,
-  selectedSize,
-  onSizeChange,
-  onAddCart,
-  onBuyNow,
-}) {
-  return (
-    <article className="shop-product-card">
-      {/* PRODUCT IMAGE */}
-
-      <Link
-        to={`/product/${product.id}`}
-        className="shop-product-image-box"
-      >
-        <img
-          src={product.image}
-          alt={product.name}
-          className="shop-product-image"
-        />
-
-        <span className="shop-new-tag">
-          {product.tag}
-        </span>
-
-        <button
-          type="button"
-          className="shop-heart"
-          onClick={(event) => {
-            event.preventDefault();
-          }}
-          aria-label={`Add ${product.name} to wishlist`}
-        >
-          <Heart
-            size={16}
-            strokeWidth={1.5}
-          />
-        </button>
-
-        <div className="shop-image-fog" />
-      </Link>
-
-      {/* PRODUCT DETAILS */}
-
-      <div className="shop-product-content">
-        <div className="shop-product-name-row">
-          <div>
-            <h3>{product.name}</h3>
-
-            <p>
-              ₹
-              {product.price.toLocaleString(
-                "en-IN"
-              )}
-            </p>
-          </div>
-
-          <Link
-            to={`/product/${product.id}`}
-            className="shop-product-arrow"
-            aria-label={`View ${product.name}`}
-          >
-            <ArrowRight size={14} />
-          </Link>
-        </div>
-
-        {/* SIZE LIST */}
-
-        <div className="shop-size-list">
-          {product.sizes.map((size) => (
-            <button
-              type="button"
-              key={size}
-              className={
-                selectedSize === size
-                  ? "shop-size active"
-                  : "shop-size"
-              }
-              onClick={() =>
-                onSizeChange(
-                  product.id,
-                  size
-                )
-              }
-            >
-              {size}
-            </button>
-          ))}
-        </div>
-
-        {/* PRODUCT BUTTONS */}
-
-        <div className="shop-product-actions">
-          <button
-            type="button"
-            className="shop-add-cart"
-            onClick={() =>
-              onAddCart(product)
-            }
-          >
-            ADD TO CART
-          </button>
-
-          <button
-            type="button"
-            className="shop-buy-now"
-            onClick={() =>
-              onBuyNow(product)
-            }
-          >
-            BUY NOW
-          </button>
-        </div>
-      </div>
-    </article>
-  );
-}
+const quickSearchItems = [
+  "BLACK",
+  "WHITE",
+  "GREY",
+  "RED",
+  "BLUE",
+  "OVERSIZED",
+  "BAGGY",
+  "STREETWEAR",
+];
 
 /* =========================================================
-   SHOP PAGE
+   SHOP
 ========================================================= */
 
 function Shop() {
-  const [sort, setSort] =
-    useState("featured");
+  const navigate = useNavigate();
 
-  const [
-    selectedSizes,
-    setSelectedSizes,
-  ] = useState({});
+  const [search, setSearch] = useState("");
+
+  const [activeCategory, setActiveCategory] = useState("ALL");
+
+  const [sort, setSort] = useState("featured");
+
+  const [selectedSizes, setSelectedSizes] = useState({});
+
+  const [likedProducts, setLikedProducts] = useState({});
 
   /* =========================================================
-     SORT PRODUCTS
+     FILTER PRODUCTS
   ========================================================= */
 
-  const filteredProducts =
-    useMemo(() => {
-      const result = [...products];
+  const filteredProducts = useMemo(() => {
+    let result = [...products];
 
-      if (sort === "low") {
-        result.sort(
-          (a, b) =>
-            a.price - b.price
-        );
-      }
+    /* CATEGORY */
 
-      if (sort === "high") {
-        result.sort(
-          (a, b) =>
-            b.price - a.price
-        );
-      }
+    if (activeCategory !== "ALL") {
+      result = result.filter((product) => product.category === activeCategory);
+    }
 
-      if (sort === "name") {
-        result.sort(
-          (a, b) =>
-            a.name.localeCompare(
-              b.name
-            )
-        );
-      }
+    /* SEARCH */
 
-      return result;
-    }, [sort]);
+    const cleanSearch = search.trim().toLowerCase();
+
+    if (cleanSearch) {
+      result = result.filter((product) => {
+        const searchableText = [
+          product.name,
+          product.category,
+          product.color,
+          ...(product.colors || []),
+          product.fit,
+          product.style,
+          ...(product.keywords || []),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        return searchableText.includes(cleanSearch);
+      });
+    }
+
+    /* SORT */
+
+    if (sort === "low-high") {
+      result.sort((a, b) => Number(a.price) - Number(b.price));
+    }
+
+    if (sort === "high-low") {
+      result.sort((a, b) => Number(b.price) - Number(a.price));
+    }
+
+    if (sort === "name") {
+      result.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    return result;
+  }, [activeCategory, search, sort]);
 
   /* =========================================================
      SELECT SIZE
   ========================================================= */
 
-  const selectSize = (
-    productId,
-    size
-  ) => {
-    setSelectedSizes(
-      (previous) => ({
-        ...previous,
-        [productId]: size,
-      })
-    );
+  const selectSize = (productId, size) => {
+    setSelectedSizes((previous) => ({
+      ...previous,
+
+      [productId]: size,
+    }));
+  };
+
+  /* =========================================================
+     LIKE PRODUCT
+  ========================================================= */
+
+  const toggleLike = (productId) => {
+    setLikedProducts((previous) => ({
+      ...previous,
+
+      [productId]: !previous[productId],
+    }));
   };
 
   /* =========================================================
@@ -419,57 +182,40 @@ function Shop() {
   ========================================================= */
 
   const addToCart = (product) => {
-    const size =
-      selectedSizes[product.id];
+    const selectedSize = selectedSizes[product.id] || product.sizes?.[0];
 
-    if (!size) {
-      alert(
-        "Please select a size first."
-      );
+    if (!selectedSize) {
+      alert("Please select a size.");
 
       return;
     }
 
-    const cart =
-      JSON.parse(
-        localStorage.getItem(
-          "axiee-cart"
-        )
-      ) || [];
+    try {
+      const currentCart = JSON.parse(localStorage.getItem("axiee-cart")) || [];
 
-    const existingIndex =
-      cart.findIndex(
-        (item) =>
-          item.id === product.id &&
-          item.size === size
+      const existingItemIndex = currentCart.findIndex(
+        (item) => item.id === product.id && item.size === selectedSize,
       );
 
-    if (existingIndex !== -1) {
-      cart[
-        existingIndex
-      ].quantity =
-        Number(
-          cart[existingIndex]
-            .quantity || 1
-        ) + 1;
-    } else {
-      cart.push({
-        ...product,
-        size,
-        quantity: 1,
-      });
+      if (existingItemIndex !== -1) {
+        currentCart[existingItemIndex].quantity =
+          Number(currentCart[existingItemIndex].quantity || 1) + 1;
+      } else {
+        currentCart.push({
+          ...product,
+
+          size: selectedSize,
+
+          quantity: 1,
+        });
+      }
+
+      localStorage.setItem("axiee-cart", JSON.stringify(currentCart));
+
+      window.dispatchEvent(new Event("axiee-cart-updated"));
+    } catch (error) {
+      console.error("Add to cart error:", error);
     }
-
-    localStorage.setItem(
-      "axiee-cart",
-      JSON.stringify(cart)
-    );
-
-    window.dispatchEvent(
-      new Event(
-        "axiee-cart-updated"
-      )
-    );
   };
 
   /* =========================================================
@@ -477,434 +223,419 @@ function Shop() {
   ========================================================= */
 
   const buyNow = (product) => {
-    const size =
-      selectedSizes[product.id];
+    const selectedSize = selectedSizes[product.id] || product.sizes?.[0];
 
-    if (!size) {
-      alert(
-        "Please select a size first."
-      );
+    if (!selectedSize) {
+      alert("Please select a size.");
 
       return;
     }
 
-    const checkoutProduct = {
+    const buyNowProduct = {
       ...product,
-      size,
+
+      size: selectedSize,
+
       quantity: 1,
     };
 
-    localStorage.setItem(
-      "axiee-buy-now",
-      JSON.stringify(
-        checkoutProduct
-      )
-    );
+    localStorage.setItem("axiee-buy-now", JSON.stringify(buyNowProduct));
 
-    window.location.href =
-      "/checkout";
+    navigate("/checkout");
   };
 
   /* =========================================================
-     RENDER
+     PRODUCT URL
   ========================================================= */
+
+  const productUrl = (product) => {
+    return `/product/${product.id}`;
+  };
 
   return (
     <main className="shop-page">
-
       {/* =====================================================
-          HERO
+          SHOP HERO
       ===================================================== */}
 
-      <section className="shop-hero">
-        <img
-          src={shopHero}
-          alt="AXIEE Shop The Unknown"
-          className="shop-hero-image"
-        />
+      <section className="category-text-hero">
+        <div className="category-grid-bg"></div>
 
-        <div className="shop-hero-overlay" />
+        <div className="category-glow category-glow-one"></div>
 
-        <div className="shop-hero-content">
-          <span>
-            HOME / SHOP
+        <div className="category-glow category-glow-two"></div>
+
+        {/* LEFT */}
+
+        <div className="category-text-content">
+          <span className="category-breadcrumb">
+            AXIEE / SHOP / ALL COLLECTIONS
           </span>
 
-          <h1>
-            SHOP
+          <div className="category-title-row">
+            <h1>SHOP</h1>
 
-            <small>
-              ({products.length})
-            </small>
-          </h1>
+            <span className="category-product-number">
+              {String(products.length).padStart(2, "0")}
+            </span>
+          </div>
 
-          <h2>
-            CLOTHES FOR A HIGHER SELF
-          </h2>
+          <h2>THE COMPLETE SYSTEM</h2>
 
           <p>
-            WEAR THE UNKNOWN.
+            CLOTHING FOR THE UNKNOWN.
             <br />
-            A NEW ERA IN MOTION.
+            BUILT BEYOND CONVENTION.
           </p>
         </div>
 
-        <div className="shop-hero-side">
-          <span>NOT</span>
-          <span>JUST</span>
-          <span>CLOTHES</span>
-          <span>A</span>
-          <span>MINDSET</span>
-        </div>
-      </section>
+        {/* RIGHT TECHNICAL ART */}
 
-      {/* =====================================================
-          CATEGORY NAVIGATION
-      ===================================================== */}
-
-      <section className="shop-category-section">
-        <div className="shop-category-scroll">
-
-          {/* ALL */}
-
-          <Link
-            to="/shop"
-            className="shop-category active"
+        <div className="category-visual">
+          <svg
+            className="category-orbit-svg"
+            viewBox="0 0 700 430"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
           >
-            <span className="shop-category-number">
-              20
-            </span>
-
-            <strong>
-              ALL
-            </strong>
-          </Link>
-
-          {/* T-SHIRTS */}
-
-          <Link
-            to="/tshirts"
-            className="shop-category"
-          >
-            <span className="shop-category-number">
-              04
-            </span>
-
-            <strong>
-              T-SHIRTS
-            </strong>
-          </Link>
-
-          {/* JEANS */}
-
-          <Link
-            to="/jeans"
-            className="shop-category"
-          >
-            <span className="shop-category-number">
-              04
-            </span>
-
-            <strong>
-              JEANS
-            </strong>
-          </Link>
-
-          {/* TRACK PANTS */}
-
-          <Link
-            to="/track-pants"
-            className="shop-category"
-          >
-            <span className="shop-category-number">
-              04
-            </span>
-
-            <strong>
-              TRACK PANTS
-            </strong>
-          </Link>
-
-          {/* SHIRTS */}
-
-          <Link
-            to="/shirts"
-            className="shop-category"
-          >
-            <span className="shop-category-number">
-              04
-            </span>
-
-            <strong>
-              SHIRTS
-            </strong>
-          </Link>
-
-          {/* SHORTS */}
-
-          <Link
-            to="/shorts"
-            className="shop-category"
-          >
-            <span className="shop-category-number">
-              04
-            </span>
-
-            <strong>
-              SHORTS
-            </strong>
-          </Link>
-
-        </div>
-      </section>
-
-      {/* =====================================================
-          PRODUCTS HEADER
-      ===================================================== */}
-
-      <section
-        className="shop-products-section"
-        id="shop-products"
-      >
-        <div className="shop-products-toolbar">
-
-          <div className="shop-products-count">
-            <SlidersHorizontal
-              size={15}
+            <circle
+              cx="350"
+              cy="215"
+              r="145"
+              stroke="currentColor"
+              strokeWidth="1"
+              opacity="0.32"
             />
 
+            <circle
+              cx="350"
+              cy="215"
+              r="105"
+              stroke="currentColor"
+              strokeWidth="1"
+              opacity="0.18"
+            />
+
+            <ellipse
+              cx="350"
+              cy="215"
+              rx="250"
+              ry="92"
+              stroke="currentColor"
+              opacity="0.28"
+            />
+
+            <ellipse
+              cx="350"
+              cy="215"
+              rx="250"
+              ry="92"
+              transform="rotate(55 350 215)"
+              stroke="currentColor"
+              opacity="0.2"
+            />
+
+            <ellipse
+              cx="350"
+              cy="215"
+              rx="250"
+              ry="92"
+              transform="rotate(-55 350 215)"
+              stroke="currentColor"
+              opacity="0.2"
+            />
+
+            <line
+              x1="75"
+              y1="215"
+              x2="625"
+              y2="215"
+              stroke="currentColor"
+              opacity="0.15"
+            />
+
+            <line
+              x1="350"
+              y1="20"
+              x2="350"
+              y2="410"
+              stroke="currentColor"
+              opacity="0.15"
+            />
+
+            <circle cx="350" cy="215" r="8" fill="currentColor" />
+
+            <circle cx="523" cy="215" r="4" fill="currentColor" />
+          </svg>
+
+          <div className="category-side-copy category-side-copy-one">
+            <span>AXIEE</span>
+
+            <span>FORM</span>
+
+            <span>SYSTEM</span>
+          </div>
+
+          <div className="category-side-copy category-side-copy-two">
+            <span>COLLECTION</span>
+
+            <span>08 / SERIES</span>
+          </div>
+
+          <span className="category-coordinate top">19°04'26"N</span>
+
+          <span className="category-coordinate bottom">72°52'18"E</span>
+        </div>
+
+        {/* BOTTOM */}
+
+        <div className="category-hero-bottom">
+          <span>AXIEE © 2026</span>
+
+          <span>CLOTHES / CULTURE / BEYOND</span>
+        </div>
+      </section>
+
+      {/* =====================================================
+          GLOBAL SEARCH
+      ===================================================== */}
+
+      <section className="category-global-search">
+        <div className="category-global-search-top">
+          <span>SEARCH COLLECTION</span>
+
+          <small>{filteredProducts.length} RESULTS</small>
+        </div>
+
+        <div className="category-global-search-box">
+          <Search
+            className="category-global-search-icon"
+            size={20}
+            strokeWidth={1.4}
+          />
+
+          <input
+            type="text"
+            value={search}
+            placeholder="SEARCH BLACK JEANS, WHITE HOODIE, OVERSIZED..."
+            onChange={(event) => setSearch(event.target.value)}
+          />
+
+          {search && (
+            <button
+              type="button"
+              className="category-search-clear"
+              onClick={() => setSearch("")}
+            >
+              <span>CLEAR</span>
+
+              <X size={15} strokeWidth={1.4} />
+            </button>
+          )}
+        </div>
+
+        {/* QUICK SEARCH */}
+
+        <div className="category-quick-search">
+          <span className="category-quick-title">QUICK SEARCH</span>
+
+          {quickSearchItems.map((item) => (
+            <button
+              type="button"
+              key={item}
+              className={search.toUpperCase() === item ? "active" : ""}
+              onClick={() => setSearch(item)}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* =====================================================
+          PRODUCTS
+      ===================================================== */}
+
+      <section className="shop-products-section">
+        {/* =================================================
+            CATEGORY FILTER
+        ================================================= */}
+
+        <div className="shop-category-filter">
+          {categories.map((category) => (
+            <button
+              type="button"
+              key={category.id}
+              className={activeCategory === category.value ? "active" : ""}
+              onClick={() => setActiveCategory(category.value)}
+            >
+              {category.label}
+            </button>
+          ))}
+        </div>
+
+        {/* =================================================
+            TOOLBAR
+        ================================================= */}
+
+        <div className="shop-products-toolbar">
+          <div className="shop-products-count">
+            <SlidersHorizontal size={14} strokeWidth={1.4} />
+
             <span>
-              {
-                filteredProducts.length
-              }{" "}
-              PRODUCTS
+              {String(filteredProducts.length).padStart(2, "0")} PRODUCTS
             </span>
           </div>
 
           <div className="shop-sort">
-            <span>
-              SORT BY:
-            </span>
+            <span>SORT BY:</span>
 
             <select
               value={sort}
-              onChange={(event) =>
-                setSort(
-                  event.target.value
-                )
-              }
+              onChange={(event) => setSort(event.target.value)}
             >
-              <option value="featured">
-                FEATURED
-              </option>
+              <option value="featured">FEATURED</option>
 
-              <option value="low">
-                PRICE: LOW TO HIGH
-              </option>
+              <option value="low-high">PRICE LOW → HIGH</option>
 
-              <option value="high">
-                PRICE: HIGH TO LOW
-              </option>
+              <option value="high-low">PRICE HIGH → LOW</option>
 
-              <option value="name">
-                NAME
-              </option>
+              <option value="name">NAME A → Z</option>
             </select>
           </div>
         </div>
 
-        {/* ===================================================
+        {/* =================================================
             PRODUCT GRID
-        =================================================== */}
+        ================================================= */}
 
         <div className="shop-product-grid">
-          {filteredProducts.map(
-            (product) => (
-              <ShopProductCard
-                key={product.id}
-                product={product}
-                selectedSize={
-                  selectedSizes[
-                    product.id
-                  ]
-                }
-                onSizeChange={
-                  selectSize
-                }
-                onAddCart={
-                  addToCart
-                }
-                onBuyNow={
-                  buyNow
-                }
-              />
-            )
+          {filteredProducts.length > 0 ? (
+            filteredProducts.map((product) => (
+              <article key={product.id} className="shop-product-card">
+                {/* IMAGE */}
+
+                <Link
+                  to={productUrl(product)}
+                  className="shop-product-image-box"
+                >
+                  <img
+                    src={product.image || product.images?.[0]}
+                    alt={product.name}
+                    className="shop-product-image"
+                  />
+
+                  <div className="shop-image-fog"></div>
+
+                  {product.isNew !== false && (
+                    <span className="shop-new-tag">NEW</span>
+                  )}
+                </Link>
+
+                {/* HEART */}
+
+                <button
+                  type="button"
+                  className="shop-heart"
+                  aria-label="Wishlist"
+                  onClick={() => toggleLike(product.id)}
+                >
+                  <Heart
+                    size={16}
+                    strokeWidth={1.4}
+                    fill={likedProducts[product.id] ? "currentColor" : "none"}
+                  />
+                </button>
+
+                {/* CONTENT */}
+
+                <div className="shop-product-content">
+                  <div className="shop-product-name-row">
+                    <div>
+                      <h3>{product.name}</h3>
+
+                      <p>₹{Number(product.price).toLocaleString("en-IN")}</p>
+                    </div>
+
+                    <Link
+                      to={productUrl(product)}
+                      className="shop-product-arrow"
+                    >
+                      <ArrowRight size={14} strokeWidth={1.4} />
+                    </Link>
+                  </div>
+
+                  {/* PRODUCT META */}
+
+                  <div className="category-product-meta">
+                    <span>{product.color || product.category}</span>
+
+                    <strong>{product.fit || product.style || "AXIEE"}</strong>
+                  </div>
+
+                  {/* SIZE */}
+
+                  <div className="shop-size-list">
+                    {product.sizes?.map((size) => (
+                      <button
+                        type="button"
+                        key={size}
+                        className={
+                          selectedSizes[product.id] === size
+                            ? "shop-size active"
+                            : "shop-size"
+                        }
+                        onClick={() => selectSize(product.id, size)}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* ACTIONS */}
+
+                  <div className="shop-product-actions">
+                    <button
+                      type="button"
+                      className="shop-add-cart"
+                      onClick={() => addToCart(product)}
+                    >
+                      ADD TO CART
+                    </button>
+
+                    <button
+                      type="button"
+                      className="shop-buy-now"
+                      onClick={() => buyNow(product)}
+                    >
+                      BUY NOW
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))
+          ) : (
+            <div className="category-no-results">
+              <span>00 / NO RESULTS</span>
+
+              <h3>NOTHING FOUND.</h3>
+
+              <p>TRY ANOTHER SEARCH OR CATEGORY.</p>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+
+                  setActiveCategory("ALL");
+                }}
+              >
+                RESET SEARCH
+              </button>
+            </div>
           )}
         </div>
       </section>
-
-      {/* =====================================================
-          CINEMATIC END BANNER
-      ===================================================== */}
-
-      <section className="shop-end-banner">
-        <img
-          src={shopEnd}
-          alt="AXIEE Collection"
-        />
-
-        <div className="shop-end-overlay" />
-
-        <div className="shop-end-content">
-          <span>
-            AXIEE / DROP 01
-          </span>
-
-          <h2>
-            BEYOND
-            <br />
-            THE ORDINARY.
-          </h2>
-
-          <p>
-            NOT JUST CLOTHES.
-            <br />
-            A MINDSET.
-          </p>
-
-          <a href="#shop-products">
-            EXPLORE COLLECTION
-
-            <ArrowRight
-              size={16}
-            />
-          </a>
-        </div>
-
-        <div className="shop-end-side">
-          <span>
-            CLOTHES
-          </span>
-
-          <span>
-            CULTURE
-          </span>
-
-          <span>
-            BEYOND
-          </span>
-        </div>
-      </section>
-
-      {/* =====================================================
-          BENEFITS
-      ===================================================== */}
-
-      <section className="shop-benefits">
-
-        <div>
-          <span>01</span>
-
-          <strong>
-            WORLDWIDE SHIPPING
-          </strong>
-
-          <p>
-            Fast & reliable delivery
-          </p>
-        </div>
-
-        <div>
-          <span>02</span>
-
-          <strong>
-            SECURE PAYMENTS
-          </strong>
-
-          <p>
-            100% secure checkout
-          </p>
-        </div>
-
-        <div>
-          <span>03</span>
-
-          <strong>
-            EASY RETURNS
-          </strong>
-
-          <p>
-            Hassle-free returns
-          </p>
-        </div>
-
-        <div>
-          <span>04</span>
-
-          <strong>
-            PREMIUM QUALITY
-          </strong>
-
-          <p>
-            Built to last
-          </p>
-        </div>
-
-      </section>
-
-      {/* =====================================================
-          NEWSLETTER
-      ===================================================== */}
-
-      <section className="shop-newsletter">
-
-        <div className="shop-newsletter-left">
-          <span>
-            STAY
-            <br />
-            IN
-            <br />
-            THE
-            <br />
-            LOOP
-          </span>
-        </div>
-
-        <div className="shop-newsletter-copy">
-          <h3>
-            JOIN THE MOVEMENT
-          </h3>
-
-          <p>
-            Sign up for drops,
-            exclusive access and
-            more.
-          </p>
-        </div>
-
-        <form
-          className="shop-newsletter-form"
-          onSubmit={(event) =>
-            event.preventDefault()
-          }
-        >
-          <input
-            type="email"
-            placeholder="Enter your email"
-            required
-          />
-
-          <button type="submit">
-            SUBSCRIBE
-
-            <ArrowRight
-              size={15}
-            />
-          </button>
-        </form>
-
-      </section>
-
     </main>
   );
 }

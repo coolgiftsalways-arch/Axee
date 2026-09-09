@@ -6,12 +6,13 @@ function Tshirts() {
     <CategoryPage
       category="T-SHIRTS"
       title="T-SHIRTS"
-      subtitle="BUILT BEYOND THE BASIC"
+      subtitle="ESSENTIAL FORM"
+      visualType="tshirts"
       description={
         <>
-          OVERSIZED SILHOUETTES.
+          ENGINEERED SILHOUETTES.
           <br />
-          MADE FOR THE UNKNOWN.
+          BUILT FOR EVERYDAY MOVEMENT.
         </>
       }
     />

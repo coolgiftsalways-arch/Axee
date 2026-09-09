@@ -7,6 +7,7 @@ function Shirts() {
       category="SHIRTS"
       title="SHIRTS"
       subtitle="REDEFINED FORM"
+      visualType="shirts"
       description={
         <>
           STRUCTURED FORMS.

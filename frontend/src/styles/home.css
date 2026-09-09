@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Eater&display=swap');
 *,
 *::before,
 *::after {
@@ -104,19 +105,13 @@ img {
      top: -1vh;
 
      width: max-content;
+     font-family: "Eater", serif;
 
      margin: 0;
      padding: 0;
 
      color: #f3efe5;
 
-     font-family:
-          Didot,
-          "Bodoni 72",
-          "Bodoni MT",
-          Georgia,
-          "Times New Roman",
-          serif;
 
      font-size: clamp(120px, 14.5vw, 280px);
 

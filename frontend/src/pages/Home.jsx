@@ -1,7 +1,9 @@
 import React, { useLayoutEffect, useRef, useState } from "react";
+
 import { Link, useNavigate } from "react-router-dom";
 
 import gsap from "gsap";
+
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 import heroSpace from "../assets/hero-space.png";
@@ -25,6 +27,7 @@ const productSections = [
     eyebrow: "ESSENTIAL / FORM",
     title: "T-SHIRTS",
     subtitle: "Engineered silhouettes for everyday movement.",
+
     products: [
       {
         id: "void-tee",
@@ -33,6 +36,7 @@ const productSections = [
         image: "/products/tshirt-1.jpg",
         sizes: ["S", "M", "L", "XL"],
       },
+
       {
         id: "signal-tee",
         name: "SIGNAL TEE",
@@ -40,6 +44,7 @@ const productSections = [
         image: "/products/tshirt-2.jpg",
         sizes: ["S", "M", "L", "XL"],
       },
+
       {
         id: "echo-tee",
         name: "ECHO TEE",
@@ -47,6 +52,7 @@ const productSections = [
         image: "/products/tshirt-3.jpg",
         sizes: ["S", "M", "L", "XL"],
       },
+
       {
         id: "unknown-tee",
         name: "UNKNOWN TEE",
@@ -63,6 +69,7 @@ const productSections = [
     eyebrow: "DENIM / DISTORTION",
     title: "JEANS",
     subtitle: "Oversized denim built beyond convention.",
+
     products: [
       {
         id: "shadow-denim",
@@ -71,6 +78,7 @@ const productSections = [
         image: "/products/jean-1.jpg",
         sizes: ["28", "30", "32", "34"],
       },
+
       {
         id: "void-denim",
         name: "VOID DENIM",
@@ -78,6 +86,7 @@ const productSections = [
         image: "/products/jean-2.jpg",
         sizes: ["28", "30", "32", "34"],
       },
+
       {
         id: "fracture-jean",
         name: "FRACTURE JEAN",
@@ -85,6 +94,7 @@ const productSections = [
         image: "/products/jean-3.jpg",
         sizes: ["28", "30", "32", "34"],
       },
+
       {
         id: "raw-denim",
         name: "RAW DENIM 01",
@@ -101,6 +111,7 @@ const productSections = [
     eyebrow: "MOTION / SYSTEM",
     title: "TRACK PANTS",
     subtitle: "Utility forms designed for unrestricted movement.",
+
     products: [
       {
         id: "motion-track",
@@ -109,6 +120,7 @@ const productSections = [
         image: "/products/track-1.jpg",
         sizes: ["S", "M", "L", "XL"],
       },
+
       {
         id: "core-track",
         name: "CORE TRACK",
@@ -116,6 +128,7 @@ const productSections = [
         image: "/products/track-2.jpg",
         sizes: ["S", "M", "L", "XL"],
       },
+
       {
         id: "terminal-track",
         name: "TERMINAL TRACK",
@@ -123,6 +136,7 @@ const productSections = [
         image: "/products/track-3.jpg",
         sizes: ["S", "M", "L", "XL"],
       },
+
       {
         id: "phantom-track",
         name: "PHANTOM TRACK",
@@ -139,6 +153,7 @@ const productSections = [
     eyebrow: "STRUCTURE / LAYER",
     title: "SHIRTS",
     subtitle: "Dark tailoring reshaped for the next world.",
+
     products: [
       {
         id: "system-shirt",
@@ -147,6 +162,7 @@ const productSections = [
         image: "/products/shirt-1.jpg",
         sizes: ["S", "M", "L", "XL"],
       },
+
       {
         id: "signal-shirt",
         name: "SIGNAL SHIRT",
@@ -154,6 +170,7 @@ const productSections = [
         image: "/products/shirt-2.jpg",
         sizes: ["S", "M", "L", "XL"],
       },
+
       {
         id: "shadow-shirt",
         name: "SHADOW SHIRT",
@@ -161,6 +178,7 @@ const productSections = [
         image: "/products/shirt-3.jpg",
         sizes: ["S", "M", "L", "XL"],
       },
+
       {
         id: "frame-shirt",
         name: "FRAME SHIRT",
@@ -177,6 +195,7 @@ const productSections = [
     eyebrow: "UTILITY / SUMMER",
     title: "SHORTS",
     subtitle: "Reduced construction. Maximum movement.",
+
     products: [
       {
         id: "void-short",
@@ -185,6 +204,7 @@ const productSections = [
         image: "/products/short-1.jpg",
         sizes: ["S", "M", "L", "XL"],
       },
+
       {
         id: "cargo-short",
         name: "CARGO SHORT",
@@ -192,6 +212,7 @@ const productSections = [
         image: "/products/short-2.jpg",
         sizes: ["S", "M", "L", "XL"],
       },
+
       {
         id: "motion-short",
         name: "MOTION SHORT",
@@ -199,6 +220,7 @@ const productSections = [
         image: "/products/short-3.jpg",
         sizes: ["S", "M", "L", "XL"],
       },
+
       {
         id: "utility-short",
         name: "UTILITY SHORT",
@@ -216,18 +238,25 @@ const productSections = [
 
 function ProductCard({ product, selectedSizes, setSelectedSizes }) {
   const navigate = useNavigate();
+
   const selectedSize = selectedSizes[product.id];
 
   const chooseSize = (size) => {
     setSelectedSizes((previous) => ({
       ...previous,
+
       [product.id]: size,
     }));
   };
 
+  /* ======================================================
+     ADD TO CART
+  ====================================================== */
+
   const addToCart = () => {
     if (!selectedSize) {
       alert("Please select a size first.");
+
       return;
     }
 
@@ -244,14 +273,18 @@ function ProductCard({ product, selectedSizes, setSelectedSizes }) {
 
       updatedCart[existingIndex] = {
         ...updatedCart[existingIndex],
-        quantity: updatedCart[existingIndex].quantity + 1,
+
+        quantity: Number(updatedCart[existingIndex].quantity || 1) + 1,
       };
     } else {
       updatedCart = [
         ...oldCart,
+
         {
           ...product,
+
           size: selectedSize,
+
           quantity: 1,
         },
       ];
@@ -264,17 +297,25 @@ function ProductCard({ product, selectedSizes, setSelectedSizes }) {
     alert(`${product.name} - Size ${selectedSize} added to cart`);
   };
 
+  /* ======================================================
+     BUY NOW
+  ====================================================== */
+
   const buyNow = () => {
     if (!selectedSize) {
       alert("Please select a size first.");
+
       return;
     }
 
     localStorage.setItem(
       "axiee-buy-now",
+
       JSON.stringify({
         ...product,
+
         size: selectedSize,
+
         quantity: 1,
       }),
     );
@@ -309,6 +350,7 @@ function ProductCard({ product, selectedSizes, setSelectedSizes }) {
           aria-label="Add to wishlist"
           onClick={(event) => {
             event.preventDefault();
+
             event.stopPropagation();
           }}
         >
@@ -358,6 +400,7 @@ function ProductCard({ product, selectedSizes, setSelectedSizes }) {
         <div className="ax-product-actions">
           <button type="button" className="ax-add-cart" onClick={addToCart}>
             <span>ADD TO CART</span>
+
             <span>＋</span>
           </button>
 
@@ -391,7 +434,12 @@ function ProductSection({ section, selectedSizes, setSelectedSizes }) {
           <p>{section.subtitle}</p>
         </div>
 
-        <Link to={`/shop?category=${section.id}`} className="ax-view-all">
+        <Link
+          to={
+            section.id === "shirts" ? "/shirts" : `/shop?category=${section.id}`
+          }
+          className="ax-view-all"
+        >
           VIEW ALL
           <span>↗</span>
         </Link>
@@ -415,21 +463,38 @@ function ProductSection({ section, selectedSizes, setSelectedSizes }) {
    HOME
 ========================================================= */
 
-function Home({ startAnimation, heroComplete, onHeroComplete }) {
+function Home({
+  startAnimation,
+  heroComplete,
+  heroAlreadyPlayed,
+  onHeroComplete,
+}) {
   const homeRef = useRef(null);
+
   const heroRef = useRef(null);
 
   const spaceRef = useRef(null);
+
   const unboundWrapRef = useRef(null);
+
   const unboundRef = useRef(null);
+
   const mountainRef = useRef(null);
+
   const modelRef = useRef(null);
+
   const neonRef = useRef(null);
+
   const fogBackRef = useRef(null);
+
   const fogFrontRef = useRef(null);
+
   const leftUIRef = useRef(null);
+
   const numbersRef = useRef(null);
+
   const exploreRef = useRef(null);
+
   const engineeredRef = useRef(null);
 
   const [selectedSizes, setSelectedSizes] = useState({});
@@ -439,9 +504,113 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
   ====================================================== */
 
   useLayoutEffect(() => {
+    /* =====================================================
+       RETURNING TO HOME
+
+       Home → Shirts → Home
+
+       Intro already played,
+       so show final state instantly.
+    ===================================================== */
+
+    if (heroAlreadyPlayed && !startAnimation) {
+      const ctx = gsap.context(() => {
+        gsap.set(heroRef.current, {
+          x: 0,
+          y: 0,
+        });
+
+        gsap.set(spaceRef.current, {
+          opacity: 1,
+
+          scale: 1,
+
+          yPercent: 0,
+        });
+
+        gsap.set(unboundWrapRef.current, {
+          xPercent: 0,
+
+          yPercent: 0,
+
+          opacity: 1,
+        });
+
+        gsap.set(unboundRef.current, {
+          filter: "blur(0px)",
+        });
+
+        gsap.set(mountainRef.current, {
+          yPercent: 0,
+
+          opacity: 1,
+        });
+
+        gsap.set(modelRef.current, {
+          yPercent: 0,
+
+          opacity: 1,
+        });
+
+        gsap.set(neonRef.current, {
+          opacity: 1,
+
+          scale: 1,
+
+          rotation: 0,
+        });
+
+        gsap.set(fogBackRef.current, {
+          opacity: 0.72,
+
+          y: 0,
+
+          scale: 1,
+        });
+
+        gsap.set(fogFrontRef.current, {
+          opacity: 0.88,
+
+          y: 0,
+
+          yPercent: 0,
+
+          scale: 1,
+        });
+
+        gsap.set(
+          [
+            leftUIRef.current,
+            numbersRef.current,
+            exploreRef.current,
+            engineeredRef.current,
+          ],
+          {
+            opacity: 1,
+
+            y: 0,
+          },
+        );
+      }, homeRef);
+
+      return () => {
+        ctx.revert();
+      };
+    }
+
+    /* =====================================================
+       LOADER NOT FINISHED
+    ===================================================== */
+
     if (!startAnimation) {
       return;
     }
+
+    /* =====================================================
+       FIRST OPEN / REFRESH
+
+       Full cinematic intro.
+    ===================================================== */
 
     const ctx = gsap.context(() => {
       gsap.killTweensOf([
@@ -460,20 +629,31 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
         engineeredRef.current,
       ]);
 
+      /* HERO */
+
       gsap.set(heroRef.current, {
         x: 0,
+
         y: 0,
       });
 
+      /* SPACE */
+
       gsap.set(spaceRef.current, {
         opacity: 0,
+
         scale: 1.08,
+
         yPercent: 0,
       });
 
+      /* UNBOUND */
+
       gsap.set(unboundWrapRef.current, {
         xPercent: 120,
+
         yPercent: 0,
+
         opacity: 0,
       });
 
@@ -481,34 +661,55 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
         filter: "blur(16px)",
       });
 
+      /* MOUNTAIN */
+
       gsap.set(mountainRef.current, {
         yPercent: -120,
+
         opacity: 0,
       });
+
+      /* MODEL */
 
       gsap.set(modelRef.current, {
         yPercent: -125,
+
         opacity: 0,
       });
+
+      /* NEON */
 
       gsap.set(neonRef.current, {
         opacity: 0,
+
         scale: 0.65,
+
         rotation: -15,
       });
 
+      /* BACK FOG */
+
       gsap.set(fogBackRef.current, {
         opacity: 0,
+
         y: 150,
+
         scale: 1.18,
       });
 
+      /* FRONT FOG */
+
       gsap.set(fogFrontRef.current, {
         opacity: 0,
+
         y: 160,
+
         yPercent: 0,
+
         scale: 1.2,
       });
+
+      /* FINAL UI */
 
       gsap.set(
         [
@@ -519,9 +720,14 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
         ],
         {
           opacity: 0,
+
           y: 22,
         },
       );
+
+      /* ===============================================
+             TIMELINE
+          =============================================== */
 
       const tl = gsap.timeline({
         defaults: {
@@ -539,8 +745,11 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
         unboundWrapRef.current,
         {
           xPercent: 0,
+
           opacity: 1,
+
           duration: 1.25,
+
           ease: "expo.out",
         },
         0,
@@ -550,7 +759,9 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
         unboundRef.current,
         {
           filter: "blur(0px)",
+
           duration: 0.9,
+
           ease: "power3.out",
         },
         0,
@@ -562,8 +773,11 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
         spaceRef.current,
         {
           opacity: 1,
+
           scale: 1,
+
           duration: 1.1,
+
           ease: "power3.out",
         },
         0.65,
@@ -575,8 +789,11 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
         mountainRef.current,
         {
           yPercent: 0,
+
           opacity: 1,
+
           duration: 0.9,
+
           ease: "expo.in",
         },
         1.65,
@@ -586,38 +803,47 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
 
       tl.to(heroRef.current, {
         x: -6,
+
         duration: 0.04,
       });
 
       tl.to(heroRef.current, {
         x: 6,
+
         duration: 0.04,
       });
 
       tl.to(heroRef.current, {
         x: -3,
+
         duration: 0.04,
       });
 
       tl.to(heroRef.current, {
         x: 2,
+
         duration: 0.04,
       });
 
       tl.to(heroRef.current, {
         x: 0,
+
         duration: 0.08,
       });
 
-      /* FOG */
+      /* BACK FOG */
 
       tl.to(
         fogBackRef.current,
         {
           y: 0,
+
           opacity: 0.72,
+
           scale: 1,
+
           duration: 0.7,
+
           ease: "power4.out",
         },
         "-=0.12",
@@ -629,8 +855,11 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
         modelRef.current,
         {
           yPercent: 0,
+
           opacity: 1,
+
           duration: 0.82,
+
           ease: "expo.in",
         },
         "-=0.08",
@@ -640,21 +869,25 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
 
       tl.to(heroRef.current, {
         y: 7,
+
         duration: 0.045,
       });
 
       tl.to(heroRef.current, {
         y: -4,
+
         duration: 0.045,
       });
 
       tl.to(heroRef.current, {
         y: 2,
+
         duration: 0.045,
       });
 
       tl.to(heroRef.current, {
         y: 0,
+
         duration: 0.08,
       });
 
@@ -664,9 +897,13 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
         fogFrontRef.current,
         {
           y: 0,
+
           opacity: 0.88,
+
           scale: 1,
+
           duration: 0.68,
+
           ease: "power4.out",
         },
         "-=0.13",
@@ -678,9 +915,13 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
         neonRef.current,
         {
           opacity: 1,
+
           scale: 1,
+
           rotation: 0,
+
           duration: 0.9,
+
           ease: "expo.out",
         },
         "-=0.32",
@@ -697,9 +938,13 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
         ],
         {
           opacity: 1,
+
           y: 0,
+
           duration: 0.65,
+
           stagger: 0.09,
+
           ease: "power3.out",
         },
         "-=0.2",
@@ -709,7 +954,7 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
     return () => {
       ctx.revert();
     };
-  }, [startAnimation, onHeroComplete]);
+  }, [startAnimation, heroAlreadyPlayed, onHeroComplete]);
 
   /* ======================================================
      HERO SCROLL PARALLAX
@@ -721,77 +966,116 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
     }
 
     const ctx = gsap.context(() => {
+      /* SPACE */
+
       gsap.to(spaceRef.current, {
         yPercent: 8,
+
         scale: 1.04,
+
         ease: "none",
 
         scrollTrigger: {
           trigger: heroRef.current,
+
           start: "top top",
+
           end: "bottom top",
+
           scrub: 1.5,
         },
       });
 
+      /* UNBOUND */
+
       gsap.to(unboundWrapRef.current, {
         yPercent: -7,
+
         ease: "none",
 
         scrollTrigger: {
           trigger: heroRef.current,
+
           start: "top top",
+
           end: "bottom top",
+
           scrub: 1.2,
         },
       });
 
+      /* MOUNTAIN */
+
       gsap.to(mountainRef.current, {
         yPercent: -17,
+
         ease: "none",
 
         scrollTrigger: {
           trigger: heroRef.current,
+
           start: "top top",
+
           end: "bottom top",
+
           scrub: 1.25,
         },
       });
 
+      /* MODEL */
+
       gsap.to(modelRef.current, {
         yPercent: -6,
+
         ease: "none",
 
         scrollTrigger: {
           trigger: heroRef.current,
+
           start: "top top",
+
           end: "bottom top",
+
           scrub: 1.35,
         },
       });
 
+      /* NEON */
+
       gsap.to(neonRef.current, {
         rotation: 7,
+
         scale: 1.05,
+
         ease: "none",
 
         scrollTrigger: {
           trigger: heroRef.current,
+
           start: "top top",
+
           end: "bottom top",
+
           scrub: 1.3,
         },
       });
 
+      /* FRONT FOG */
+
       gsap.to(fogFrontRef.current, {
         opacity: 0,
+
         yPercent: -7,
+
         ease: "none",
 
         scrollTrigger: {
           trigger: heroRef.current,
+
           start: "top top",
+
           end: "70% top",
+
           scrub: 1,
         },
       });
@@ -809,63 +1093,88 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
   ====================================================== */
 
   useLayoutEffect(() => {
-    if (!heroComplete) return;
+    if (!heroComplete) {
+      return;
+    }
 
     const sections = gsap.utils.toArray(".ax-product-section");
 
-    const triggers = [];
+    const tweens = [];
 
     sections.forEach((section) => {
       const heading = section.querySelector(".ax-product-section-top");
 
       const cards = section.querySelectorAll(".ax-product-card");
 
-      const headingTween = gsap.fromTo(
-        heading,
-        {
-          opacity: 0,
-          y: 45,
-        },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 1,
-          ease: "power3.out",
-          scrollTrigger: {
-            trigger: section,
-            start: "top 82%",
+      if (heading) {
+        const headingTween = gsap.fromTo(
+          heading,
+
+          {
+            opacity: 0,
+
+            y: 45,
           },
-        },
-      );
 
-      const cardsTween = gsap.fromTo(
-        cards,
-        {
-          opacity: 0,
-          y: 70,
-        },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 1,
-          stagger: 0.1,
-          ease: "power3.out",
+          {
+            opacity: 1,
 
-          scrollTrigger: {
-            trigger: section,
-            start: "top 72%",
+            y: 0,
+
+            duration: 1,
+
+            ease: "power3.out",
+
+            scrollTrigger: {
+              trigger: section,
+
+              start: "top 82%",
+            },
           },
-        },
-      );
+        );
 
-      triggers.push(headingTween, cardsTween);
+        tweens.push(headingTween);
+      }
+
+      if (cards.length) {
+        const cardsTween = gsap.fromTo(
+          cards,
+
+          {
+            opacity: 0,
+
+            y: 70,
+          },
+
+          {
+            opacity: 1,
+
+            y: 0,
+
+            duration: 1,
+
+            stagger: 0.1,
+
+            ease: "power3.out",
+
+            scrollTrigger: {
+              trigger: section,
+
+              start: "top 72%",
+            },
+          },
+        );
+
+        tweens.push(cardsTween);
+      }
     });
 
     ScrollTrigger.refresh();
 
     return () => {
-      triggers.forEach((tween) => {
+      tweens.forEach((tween) => {
         tween?.scrollTrigger?.kill();
+
         tween?.kill();
       });
     };
@@ -878,13 +1187,19 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
       ================================================= */}
 
       <section ref={heroRef} className="ax-hero" id="home">
+        {/* SPACE */}
+
         <img ref={spaceRef} src={heroSpace} className="hero-space" alt="" />
+
+        {/* UNBOUND */}
 
         <div ref={unboundWrapRef} className="hero-unbound-wrapper">
           <h1 ref={unboundRef} className="hero-unbound">
             UNBOUND
           </h1>
         </div>
+
+        {/* MOUNTAINS */}
 
         <img
           ref={mountainRef}
@@ -893,6 +1208,8 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
           alt=""
         />
 
+        {/* BACK FOG */}
+
         <img
           ref={fogBackRef}
           src={heroFog}
@@ -900,7 +1217,11 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
           alt=""
         />
 
+        {/* NEON */}
+
         <img ref={neonRef} src={heroNeon} className="hero-neon" alt="" />
+
+        {/* MODEL */}
 
         <img
           ref={modelRef}
@@ -909,6 +1230,8 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
           alt="AXIEE Techwear"
         />
 
+        {/* FRONT FOG */}
+
         <img
           ref={fogFrontRef}
           src={heroFog}
@@ -916,7 +1239,11 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
           alt=""
         />
 
+        {/* VIGNETTE */}
+
         <div className="hero-vignette" />
+
+        {/* LEFT UI */}
 
         <div ref={leftUIRef} className="hero-left-ui">
           <span>AXIEE</span>
@@ -930,19 +1257,28 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
           </p>
         </div>
 
+        {/* SLIDE NUMBERS */}
+
         <div ref={numbersRef} className="hero-numbers">
           <span className="active">01</span>
 
           <span>02</span>
+
           <span>03</span>
+
           <span>04</span>
+
           <span>05</span>
         </div>
+
+        {/* EXPLORE */}
 
         <a ref={exploreRef} href="#tshirts" className="hero-explore">
           EXPLORE DROP
           <span>→</span>
         </a>
+
+        {/* ENGINEERED */}
 
         <div ref={engineeredRef} className="hero-engineered">
           <p>
@@ -980,7 +1316,7 @@ function Home({ startAnimation, heroComplete, onHeroComplete }) {
       </section>
 
       {/* =================================================
-          PRODUCTS
+          PRODUCT COLLECTIONS
       ================================================= */}
 
       <div className="ax-collections">
