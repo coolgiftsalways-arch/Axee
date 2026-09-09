@@ -1,0 +1,152 @@
+/* =========================================================
+   AXIEE CO-ORD SETS PAGE
+========================================================= */
+
+.category-visual-coordsets {
+  position: absolute;
+  top: 0;
+  right: 0;
+
+  width: 53%;
+  height: 100%;
+
+  overflow: hidden;
+  pointer-events: none;
+
+  background:
+    radial-gradient(
+      circle at 55% 50%,
+      rgba(186, 255, 0, 0.05),
+      transparent 56%
+    );
+}
+
+.category-coordsets-svg {
+  position: absolute;
+
+  width: min(660px, 96%);
+  height: auto;
+
+  top: 53%;
+  left: 55%;
+
+  transform: translate(-50%, -50%);
+
+  color: #baff00;
+  opacity: 0.95;
+
+  pointer-events: none;
+
+  filter:
+    drop-shadow(0 0 2px rgba(186, 255, 0, 0.24))
+    drop-shadow(0 0 16px rgba(186, 255, 0, 0.045));
+}
+
+/* TECH FRAME */
+
+.category-visual-coordsets::before {
+  content: "";
+
+  position: absolute;
+
+  width: 405px;
+  height: 405px;
+
+  top: 53%;
+  left: 55%;
+
+  transform: translate(-50%, -50%) rotate(45deg);
+
+  border: 1px solid rgba(186, 255, 0, 0.055);
+
+  pointer-events: none;
+}
+
+/* TECH LABEL */
+
+.category-visual-coordsets::after {
+  content: "SYNC / UNIFIED / 08";
+
+  position: absolute;
+
+  right: 4%;
+  top: 16%;
+
+  font-size: 7px;
+  font-weight: 600;
+
+  letter-spacing: 0.28em;
+
+  writing-mode: vertical-rl;
+
+  color: rgba(186, 255, 0, 0.45);
+
+  text-transform: uppercase;
+}
+
+.category-coordsets-svg path,
+.category-coordsets-svg circle,
+.category-coordsets-svg rect,
+.category-coordsets-svg line {
+  vector-effect: non-scaling-stroke;
+}
+
+/* TABLET */
+
+@media (max-width: 900px) {
+  .category-visual-coordsets {
+    width: 60%;
+    right: -7%;
+  }
+
+  .category-coordsets-svg {
+    width: 105%;
+
+    top: 55%;
+    left: 59%;
+  }
+
+  .category-visual-coordsets::before {
+    width: 315px;
+    height: 315px;
+
+    top: 55%;
+    left: 59%;
+  }
+}
+
+/* MOBILE */
+
+@media (max-width: 600px) {
+  .category-visual-coordsets {
+    width: 100%;
+
+    right: -39%;
+
+    opacity: 0.42;
+  }
+
+  .category-coordsets-svg {
+    width: 122%;
+
+    top: 58%;
+    left: 57%;
+  }
+
+  .category-visual-coordsets::before {
+    width: 250px;
+    height: 250px;
+
+    top: 58%;
+    left: 57%;
+  }
+
+  .category-visual-coordsets::after {
+    right: 2%;
+    top: 13%;
+
+    font-size: 5px;
+
+    letter-spacing: 0.2em;
+  }
+}

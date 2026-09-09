@@ -1,0 +1,158 @@
+/* =========================================================
+   AXIEE JEANS PAGE
+========================================================= */
+
+.category-visual-jeans {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* =========================================================
+   MAIN JEANS SVG
+========================================================= */
+
+.category-jeans-svg {
+  position: absolute;
+
+  width: min(560px, 84%);
+  height: auto;
+
+  top: 55%;
+  left: 58%;
+
+  transform: translate(-50%, -50%);
+
+  color: #baff00;
+
+  opacity: 0.88;
+
+  pointer-events: none;
+}
+
+/* =========================================================
+   TECHNICAL FRAME
+========================================================= */
+
+.category-visual-jeans::before {
+  content: "";
+
+  position: absolute;
+
+  width: 350px;
+  height: 350px;
+
+  top: 55%;
+  left: 58%;
+
+  transform: translate(-50%, -50%) rotate(45deg);
+
+  border: 1px solid rgba(186, 255, 0, 0.06);
+
+  pointer-events: none;
+}
+
+/* =========================================================
+   TECHNICAL LABEL
+========================================================= */
+
+.category-visual-jeans::after {
+  content: "DENIM / STRUCTURE / 02";
+
+  position: absolute;
+
+  right: 5%;
+  top: 18%;
+
+  font-size: 7px;
+  font-weight: 600;
+
+  letter-spacing: 0.28em;
+
+  color: rgba(186, 255, 0, 0.4);
+
+  writing-mode: vertical-rl;
+
+  text-transform: uppercase;
+}
+
+/* =========================================================
+   SVG LINE EFFECT
+========================================================= */
+
+.category-jeans-svg path,
+.category-jeans-svg line,
+.category-jeans-svg polyline,
+.category-jeans-svg rect,
+.category-jeans-svg circle {
+  vector-effect: non-scaling-stroke;
+}
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 900px) {
+  .category-visual-jeans {
+    right: -5%;
+    width: 58%;
+  }
+
+  .category-jeans-svg {
+    width: 95%;
+
+    top: 56%;
+    left: 60%;
+  }
+
+  .category-visual-jeans::before {
+    width: 300px;
+    height: 300px;
+
+    top: 56%;
+    left: 60%;
+  }
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 600px) {
+  .category-visual-jeans {
+    right: -35%;
+
+    width: 100%;
+
+    opacity: 0.42;
+  }
+
+  .category-jeans-svg {
+    width: 112%;
+
+    top: 58%;
+    left: 58%;
+  }
+
+  .category-visual-jeans::before {
+    width: 240px;
+    height: 240px;
+
+    top: 58%;
+    left: 58%;
+  }
+
+  .category-visual-jeans::after {
+    right: 2%;
+
+    top: 14%;
+
+    font-size: 5px;
+
+    letter-spacing: 0.2em;
+  }
+}

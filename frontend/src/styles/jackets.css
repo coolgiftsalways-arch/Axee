@@ -1,0 +1,152 @@
+/* =========================================================
+   AXIEE JACKETS PAGE
+========================================================= */
+
+.category-visual-jackets {
+  position: absolute;
+  top: 0;
+  right: 0;
+
+  width: 52%;
+  height: 100%;
+
+  overflow: hidden;
+  pointer-events: none;
+
+  background:
+    radial-gradient(
+      circle at 55% 50%,
+      rgba(186, 255, 0, 0.045),
+      transparent 55%
+    );
+}
+
+.category-jackets-svg {
+  position: absolute;
+
+  width: min(650px, 96%);
+  height: auto;
+
+  top: 53%;
+  left: 55%;
+
+  transform: translate(-50%, -50%);
+
+  color: #baff00;
+  opacity: 0.94;
+
+  pointer-events: none;
+
+  filter:
+    drop-shadow(0 0 2px rgba(186, 255, 0, 0.25))
+    drop-shadow(0 0 14px rgba(186, 255, 0, 0.05));
+}
+
+/* TECH FRAME */
+
+.category-visual-jackets::before {
+  content: "";
+
+  position: absolute;
+
+  width: 395px;
+  height: 395px;
+
+  top: 53%;
+  left: 55%;
+
+  transform: translate(-50%, -50%) rotate(45deg);
+
+  border: 1px solid rgba(186, 255, 0, 0.055);
+
+  pointer-events: none;
+}
+
+/* TECH LABEL */
+
+.category-visual-jackets::after {
+  content: "OUTER / PROTECTION / 07";
+
+  position: absolute;
+
+  right: 4%;
+  top: 16%;
+
+  font-size: 7px;
+  font-weight: 600;
+
+  letter-spacing: 0.28em;
+
+  writing-mode: vertical-rl;
+
+  color: rgba(186, 255, 0, 0.44);
+
+  text-transform: uppercase;
+}
+
+.category-jackets-svg path,
+.category-jackets-svg circle,
+.category-jackets-svg rect,
+.category-jackets-svg line {
+  vector-effect: non-scaling-stroke;
+}
+
+/* TABLET */
+
+@media (max-width: 900px) {
+  .category-visual-jackets {
+    width: 60%;
+    right: -7%;
+  }
+
+  .category-jackets-svg {
+    width: 105%;
+
+    top: 55%;
+    left: 59%;
+  }
+
+  .category-visual-jackets::before {
+    width: 310px;
+    height: 310px;
+
+    top: 55%;
+    left: 59%;
+  }
+}
+
+/* MOBILE */
+
+@media (max-width: 600px) {
+  .category-visual-jackets {
+    width: 100%;
+
+    right: -38%;
+
+    opacity: 0.42;
+  }
+
+  .category-jackets-svg {
+    width: 120%;
+
+    top: 58%;
+    left: 57%;
+  }
+
+  .category-visual-jackets::before {
+    width: 245px;
+    height: 245px;
+
+    top: 58%;
+    left: 57%;
+  }
+
+  .category-visual-jackets::after {
+    right: 2%;
+    top: 13%;
+
+    font-size: 5px;
+
+    letter-spacing: 0.2em;
+  }
+}

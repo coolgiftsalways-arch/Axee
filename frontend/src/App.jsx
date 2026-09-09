@@ -33,6 +33,11 @@ import Tshirts from "./pages/Tshirts.jsx";
 import Shirts from "./pages/Shirts.jsx";
 
 import Hoodies from "./pages/Hoodies.jsx";
+import Jeans from "./pages/Jeans.jsx";
+import TrackPants from "./pages/TrackPants.jsx";
+import Shorts from "./pages/Shorts.jsx";
+import Jackets from "./pages/jackets.jsx";
+import CoOrdSets from "./pages/CoOrdSets.jsx";
 
 /* =========================================================
    GSAP
@@ -319,6 +324,9 @@ function App() {
 
           <Route path="/tshirts" element={<Tshirts />} />
 
+          <Route path="/jeans" element={<Jeans />} />
+          <Route path="/track-pants" element={<TrackPants />} />
+
           {/* =================================
               SHIRTS
           ================================= */}
@@ -330,6 +338,11 @@ function App() {
           ================================= */}
 
           <Route path="/hoodies" element={<Hoodies />} />
+          <Route path="/shorts" element={<Shorts />} />
+
+<Route path="/jackets" element={<Jackets />} />
+
+<Route path="/co-ord-sets" element={<CoOrdSets />} />
 
           {/* =================================
               TEMPORARY SHOP

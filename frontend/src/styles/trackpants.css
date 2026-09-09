@@ -1,0 +1,162 @@
+/* =========================================================
+   AXIEE TRACK PANTS PAGE
+========================================================= */
+
+.category-visual-trackpants {
+  position: absolute;
+  top: 0;
+  right: 0;
+
+  width: 50%;
+  height: 100%;
+
+  overflow: hidden;
+
+  pointer-events: none;
+}
+
+/* =========================================================
+   MAIN TRACK PANTS SVG
+========================================================= */
+
+.category-trackpants-svg {
+  position: absolute;
+
+  width: min(620px, 92%);
+  height: auto;
+
+  top: 54%;
+  left: 56%;
+
+  transform: translate(-50%, -50%);
+
+  color: #baff00;
+
+  opacity: 0.9;
+
+  pointer-events: none;
+}
+
+/* =========================================================
+   TECHNICAL FRAME
+========================================================= */
+
+.category-visual-trackpants::before {
+  content: "";
+
+  position: absolute;
+
+  width: 380px;
+  height: 380px;
+
+  top: 54%;
+  left: 56%;
+
+  transform: translate(-50%, -50%) rotate(45deg);
+
+  border: 1px solid rgba(186, 255, 0, 0.06);
+
+  pointer-events: none;
+}
+
+/* =========================================================
+   TECHNICAL LABEL
+========================================================= */
+
+.category-visual-trackpants::after {
+  content: "MOTION / STRUCTURE / 03";
+
+  position: absolute;
+
+  right: 5%;
+  top: 18%;
+
+  font-size: 7px;
+  font-weight: 600;
+
+  letter-spacing: 0.28em;
+
+  color: rgba(186, 255, 0, 0.4);
+
+  writing-mode: vertical-rl;
+
+  text-transform: uppercase;
+}
+
+/* =========================================================
+   SVG LINE EFFECT
+========================================================= */
+
+.category-trackpants-svg path,
+.category-trackpants-svg line,
+.category-trackpants-svg polyline,
+.category-trackpants-svg rect,
+.category-trackpants-svg circle {
+  vector-effect: non-scaling-stroke;
+}
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 900px) {
+  .category-visual-trackpants {
+    right: -5%;
+
+    width: 58%;
+  }
+
+  .category-trackpants-svg {
+    width: 98%;
+
+    top: 56%;
+    left: 60%;
+  }
+
+  .category-visual-trackpants::before {
+    width: 300px;
+    height: 300px;
+
+    top: 56%;
+    left: 60%;
+  }
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 600px) {
+  .category-visual-trackpants {
+    right: -35%;
+
+    width: 100%;
+
+    opacity: 0.42;
+  }
+
+  .category-trackpants-svg {
+    width: 112%;
+
+    top: 58%;
+    left: 58%;
+  }
+
+  .category-visual-trackpants::before {
+    width: 240px;
+    height: 240px;
+
+    top: 58%;
+    left: 58%;
+  }
+
+  .category-visual-trackpants::after {
+    right: 2%;
+
+    top: 14%;
+
+    font-size: 5px;
+
+    letter-spacing: 0.2em;
+  }
+}

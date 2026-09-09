@@ -1,17 +1,19 @@
 import React from "react";
 import CategoryPage from "../components/CategoryPage";
+import "../styles/trackpants.css";
 
 function TrackPants() {
   return (
     <CategoryPage
       category="TRACK PANTS"
       title="TRACK PANTS"
-      subtitle="MOVEMENT WITHOUT RULES"
+      subtitle="MOTION SYSTEM"
+      visualType="trackpants"
       description={
         <>
-          BUILT FOR MOTION.
+          RELAXED MOVEMENT.
           <br />
-          DESIGNED FOR THE NEXT ERA.
+          BUILT FOR EVERYDAY MOTION.
         </>
       }
     />

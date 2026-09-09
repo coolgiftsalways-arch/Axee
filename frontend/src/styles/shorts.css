@@ -1,0 +1,144 @@
+/* =========================================================
+   AXIEE SHORTS PAGE
+========================================================= */
+
+.category-visual-shorts {
+  position: absolute;
+  top: 0;
+  right: 0;
+
+  width: 50%;
+  height: 100%;
+
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.category-shorts-svg {
+  position: absolute;
+
+  width: min(620px, 94%);
+  height: auto;
+
+  top: 54%;
+  left: 56%;
+
+  transform: translate(-50%, -50%);
+
+  color: #baff00;
+  opacity: 0.92;
+
+  pointer-events: none;
+
+  filter:
+    drop-shadow(0 0 2px rgba(186, 255, 0, 0.22))
+    drop-shadow(0 0 12px rgba(186, 255, 0, 0.05));
+}
+
+/* TECH FRAME */
+
+.category-visual-shorts::before {
+  content: "";
+
+  position: absolute;
+
+  width: 370px;
+  height: 370px;
+
+  top: 54%;
+  left: 56%;
+
+  transform: translate(-50%, -50%) rotate(45deg);
+
+  border: 1px solid rgba(186, 255, 0, 0.055);
+
+  pointer-events: none;
+}
+
+/* TECH LABEL */
+
+.category-visual-shorts::after {
+  content: "UTILITY / MOTION / 05";
+
+  position: absolute;
+
+  right: 5%;
+  top: 18%;
+
+  font-size: 7px;
+  font-weight: 600;
+
+  letter-spacing: 0.28em;
+
+  writing-mode: vertical-rl;
+
+  color: rgba(186, 255, 0, 0.42);
+
+  text-transform: uppercase;
+}
+
+.category-shorts-svg path,
+.category-shorts-svg circle,
+.category-shorts-svg rect,
+.category-shorts-svg line {
+  vector-effect: non-scaling-stroke;
+}
+
+/* TABLET */
+
+@media (max-width: 900px) {
+  .category-visual-shorts {
+    width: 58%;
+    right: -5%;
+  }
+
+  .category-shorts-svg {
+    width: 100%;
+    top: 56%;
+    left: 60%;
+  }
+
+  .category-visual-shorts::before {
+    width: 300px;
+    height: 300px;
+
+    top: 56%;
+    left: 60%;
+  }
+}
+
+/* MOBILE */
+
+@media (max-width: 600px) {
+  .category-visual-shorts {
+    width: 100%;
+
+    right: -35%;
+
+    opacity: 0.42;
+  }
+
+  .category-shorts-svg {
+    width: 115%;
+
+    top: 58%;
+    left: 58%;
+  }
+
+  .category-visual-shorts::before {
+    width: 240px;
+    height: 240px;
+
+    top: 58%;
+    left: 58%;
+  }
+
+  .category-visual-shorts::after {
+    right: 2%;
+    top: 14%;
+
+    font-size: 5px;
+
+    letter-spacing: 0.2em;
+  }
+}

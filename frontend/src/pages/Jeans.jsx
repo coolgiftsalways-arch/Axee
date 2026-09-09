@@ -6,10 +6,11 @@ function Jeans() {
     <CategoryPage
       category="JEANS"
       title="JEANS"
-      subtitle="DENIM WITHOUT LIMITS"
+      subtitle="BAGGY RECONSTRUCTED"
+      visualType="jeans"
       description={
         <>
-          RAW STRUCTURE.
+          RELAXED SILHOUETTES.
           <br />
           BUILT FOR MOVEMENT.
         </>
