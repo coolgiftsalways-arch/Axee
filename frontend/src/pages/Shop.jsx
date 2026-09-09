@@ -1,1552 +1,643 @@
-/* =========================================================
-   AXIEE CATEGORY PAGE
-========================================================= */
+import React, { useMemo, useState } from "react";
 
-.shop-page {
-  width: 100%;
-  min-height: 100vh;
+import { Search, X, Heart, ArrowRight, SlidersHorizontal } from "lucide-react";
 
-  overflow-x: hidden;
-  margin-top: 1rem;
+import { Link, useNavigate } from "react-router-dom";
 
-  background: #020202;
-  color: #f4f1e9;
-}
+import products from "../data/products";
+
+import "../styles/shop.css";
 
 /* =========================================================
-   TEXT-ONLY HERO
+   SHOP CATEGORIES
 ========================================================= */
 
-.category-text-hero {
-  position: relative;
+const categories = [
+  {
+    id: "all",
+    label: "ALL",
+    value: "ALL",
+  },
 
-  width: 100%;
-  height: 400px;
-  min-height: 400px;
+  {
+    id: "tshirts",
+    label: "T-SHIRTS",
+    value: "T-SHIRTS",
+  },
 
-  overflow: hidden;
+  {
+    id: "jeans",
+    label: "JEANS",
+    value: "JEANS",
+  },
 
-  border-bottom:
-    1px solid rgba(255, 255, 255, 0.09);
+  {
+    id: "trackpants",
+    label: "TRACK PANTS",
+    value: "TRACK PANTS",
+  },
 
-  background:
-    radial-gradient(circle at 76% 48%,
-      rgba(199, 255, 19, 0.045),
-      transparent 22%),
-    radial-gradient(circle at 90% 0%,
-      rgba(255, 255, 255, 0.025),
-      transparent 25%),
-    #020202;
-}
+  {
+    id: "shirts",
+    label: "SHIRTS",
+    value: "SHIRTS",
+  },
+
+  {
+    id: "shorts",
+    label: "SHORTS",
+    value: "SHORTS",
+  },
+
+  {
+    id: "hoodies",
+    label: "HOODIES",
+    value: "HOODIES",
+  },
+
+  {
+    id: "coords",
+    label: "CO-ORD SETS",
+    value: "CO-ORD SETS",
+  },
+
+  {
+    id: "jackets",
+    label: "JACKETS",
+    value: "JACKETS",
+  },
+];
 
 /* =========================================================
-   VERY SUBTLE GRID
+   QUICK SEARCH
 ========================================================= */
 
-.category-grid-bg {
-  position: absolute;
-  inset: 0;
-
-  opacity: 0.18;
-
-  pointer-events: none;
-
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.025) 1px,
-      transparent 1px),
-    linear-gradient(90deg,
-      rgba(255, 255, 255, 0.025) 1px,
-      transparent 1px);
-
-  background-size:
-    72px 72px;
-}
+const quickSearchItems = [
+  "BLACK",
+  "WHITE",
+  "GREY",
+  "RED",
+  "BLUE",
+  "OVERSIZED",
+  "BAGGY",
+  "STREETWEAR",
+];
 
 /* =========================================================
-   GLOWS
+   SHOP
 ========================================================= */
 
-.category-glow {
-  position: absolute;
+function Shop() {
+  const navigate = useNavigate();
 
-  border-radius: 50%;
+  const [search, setSearch] = useState("");
 
-  pointer-events: none;
+  const [activeCategory, setActiveCategory] = useState("ALL");
 
-  filter: blur(100px);
-}
-
-.category-glow-one {
-  width: 280px;
-  height: 280px;
-
-  right: 15%;
-  top: 8%;
-
-  background:
-    rgba(199, 255, 19, 0.035);
-}
-
-.category-glow-two {
-  width: 180px;
-  height: 180px;
-
-  right: 38%;
-  bottom: -30%;
-
-  background:
-    rgba(255, 255, 255, 0.025);
-}
-
-/* =========================================================
-   LEFT HERO CONTENT
-========================================================= */
-
-.category-text-content {
-  position: absolute;
-
-  z-index: 5;
-
-  top: 50%;
-  left: 4.2vw;
-
-  width: 47%;
-
-  transform:
-    translateY(-47%);
-}
-
-/* BREADCRUMB */
-
-.category-breadcrumb {
-  display: block;
-
-  margin-bottom: 18px;
-
-  color:
-    rgba(255, 255, 255, 0.46);
-
-  font-size: 8px;
-  font-weight: 500;
-
-  letter-spacing: 0.23em;
-}
-
-/* =========================================================
-   TITLE ROW
-========================================================= */
-
-.category-title-row {
-  display: flex;
-
-  align-items: flex-end;
-
-  gap: 16px;
-}
-
-.category-title-row h1 {
-  margin: 0;
-
-  color: #f4f1e9;
-
-  font-family:
-    Didot,
-    "Bodoni MT",
-    Georgia,
-    "Times New Roman",
-    serif;
-
-  font-size:
-    clamp(76px,
-      8vw,
-      132px);
-
-  font-weight: 400;
-
-  line-height: 0.76;
-
-  letter-spacing:
-    -0.06em;
-}
-
-/* PRODUCT COUNT */
-
-.category-product-number {
-  margin-bottom: 7px;
-
-  color: #c7ff13;
-
-  font-size: 8px;
-
-  font-weight: 600;
-
-  letter-spacing:
-    0.08em;
-}
-
-/* =========================================================
-   HERO SUBTITLE
-========================================================= */
-
-.category-text-content h2 {
-  margin:
-    28px 0 0;
-
-  color:
-    rgba(255, 255, 255, 0.85);
-
-  font-size: 9px;
-
-  font-weight: 500;
-
-  letter-spacing:
-    0.48em;
-}
-
-/* =========================================================
-   DESCRIPTION
-========================================================= */
-
-.category-text-content p {
-  margin:
-    18px 0 0;
-
-  color:
-    rgba(255, 255, 255, 0.4);
-
-  font-size: 7px;
-
-  line-height: 1.85;
-
-  letter-spacing:
-    0.21em;
-}
-
-/* =========================================================
-   RIGHT VISUAL
-========================================================= */
-
-.category-visual {
-  position: absolute;
-
-  z-index: 3;
-
-  top: 0;
-  right: 2.5vw;
-
-  width: 52%;
-  height: 100%;
-
-  color: #c7ff13;
-}
-
-/* =========================================================
-   ORBIT SVG
-========================================================= */
-
-.category-orbit-svg {
-  position: absolute;
-
-  top: 50%;
-  left: 50%;
-
-  width: min(690px, 100%);
-  height: auto;
-
-  transform:
-    translate(-50%,
-      -50%);
-
-  color:
-    rgba(199,
-      255,
-      19,
-      0.6);
-}
-
-/* =========================================================
-   SIDE WORDS
-========================================================= */
-
-.category-side-copy {
-  position: absolute;
-
-  display: flex;
-
-  flex-direction: column;
-
-  gap: 9px;
-
-  padding-left: 20px;
-
-  border-left:
-    1px solid rgba(255, 255, 255, 0.24);
-
-  color:
-    rgba(255, 255, 255, 0.54);
-
-  font-size: 6px;
-
-  line-height: 1;
-
-  letter-spacing:
-    0.4em;
-}
-
-.category-side-copy-one {
-  top: 22%;
-  right: 1.5%;
-}
-
-.category-side-copy-two {
-  right: 13%;
-  bottom: 15%;
-
-  opacity: 0.42;
-}
-
-/* =========================================================
-   RIGHT ARROW
-========================================================= */
-
-.category-visual-arrow {
-  position: absolute;
-
-  top: 55%;
-  right: 7%;
-
-  width: 48px;
-  height: 48px;
-
-  display: grid;
-
-  place-items: center;
-
-  border:
-    1px solid rgba(255, 255, 255, 0.13);
-
-  border-radius: 50%;
-
-  color:
-    rgba(255, 255, 255, 0.7);
-}
-
-/* =========================================================
-   COORDINATES
-========================================================= */
-
-.category-coordinate {
-  position: absolute;
-
-  color:
-    rgba(255, 255, 255, 0.2);
-
-  font-size: 5px;
-
-  letter-spacing:
-    0.25em;
-}
-
-.category-coordinate.top {
-  top: 13%;
-  left: 22%;
-}
-
-.category-coordinate.bottom {
-  right: 26%;
-  bottom: 10%;
-}
-
-/* =========================================================
-   HERO BOTTOM INFO
-========================================================= */
-
-.category-hero-bottom {
-  position: absolute;
-
-  z-index: 5;
-
-  left: 4.2vw;
-  right: 4.2vw;
-
-  bottom: 20px;
-
-  display: flex;
-
-  justify-content:
-    space-between;
-
-  color:
-    rgba(255, 255, 255, 0.18);
-
-  font-size: 5px;
-
-  letter-spacing:
-    0.3em;
-}
-
-/* =========================================================
-   PRODUCTS
-========================================================= */
-
-.shop-products-section {
-  width: 100%;
-
-  padding:
-    34px 3vw 80px;
-
-  background: #020202;
-}
-
-/* =========================================================
-   TOOLBAR
-========================================================= */
-
-.shop-products-toolbar {
-  width: 100%;
-
-  min-height: 54px;
-
-  margin-bottom: 18px;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content:
-    space-between;
-
-  gap: 20px;
-
-  border-bottom:
-    1px solid rgba(255, 255, 255, 0.1);
-}
-
-.shop-products-count {
-  display: flex;
-
-  align-items: center;
-
-  gap: 10px;
-
-  color:
-    rgba(255, 255, 255, 0.67);
-
-  font-size: 8px;
-
-  letter-spacing:
-    0.2em;
-}
-
-.shop-sort {
-  display: flex;
-
-  align-items: center;
-
-  gap: 12px;
-}
-
-.shop-sort span {
-  color:
-    rgba(255, 255, 255, 0.27);
-
-  font-size: 7px;
-
-  letter-spacing:
-    0.15em;
-}
-
-.shop-sort select {
-  min-width: 105px;
-
-  border: none;
-
-  outline: none;
-
-  background: transparent;
-
-  color:
-    rgba(255, 255, 255, 0.85);
-
-  font-family: inherit;
-
-  font-size: 7px;
-
-  letter-spacing:
-    0.13em;
-
-  cursor: pointer;
-}
-
-.shop-sort option {
-  background: #080808;
-
-  color: #ffffff;
-}
-
-/* =========================================================
-   OLD PRODUCT CARD GRID
-   DESKTOP = 4
-========================================================= */
-
-.shop-product-grid {
-  width: 100%;
-
-  display: grid;
-
-  grid-template-columns:
-    repeat(4,
-      minmax(0, 1fr));
-
-  gap: 13px;
-}
-
-/* =========================================================
-   OLD PRODUCT CARD
-========================================================= */
-
-.shop-product-card {
-  min-width: 0;
-
-  overflow: hidden;
-
-  border:
-    1px solid rgba(255, 255, 255, 0.12);
-
-  border-radius: 3px;
-
-  background: #050505;
-
-  transition:
-    border-color 0.4s ease,
-    transform 0.4s ease,
-    box-shadow 0.4s ease;
-}
-
-.shop-product-card:hover {
-  transform:
-    translateY(-4px);
-
-  border-color:
-    rgba(199,
-      255,
-      19,
-      0.7);
-
-  box-shadow:
-    0 0 0 1px rgba(199,
-      255,
-      19,
-      0.03),
-    0 0 30px rgba(199,
-      255,
-      19,
-      0.055);
-}
-
-/* =========================================================
-   PRODUCT IMAGE
-========================================================= */
-
-.shop-product-image-box {
-  position: relative;
-
-  display: block;
-
-  width: 100%;
-
-  aspect-ratio: 0.88;
-
-  overflow: hidden;
-
-  text-decoration: none;
-
-  background:
-    radial-gradient(circle at 50% 43%,
-      #191919,
-      #050505 71%);
-}
-
-.shop-product-image {
-  display: block;
-
-  width: 100%;
-  height: 100%;
-
-  object-fit: cover;
-
-  object-position: center;
-
-  filter:
-    brightness(0.88) contrast(1.07) saturate(0.88);
-
-  transition:
-    transform 0.85s cubic-bezier(0.19,
-      1,
-      0.22,
-      1),
-    filter 0.5s ease;
-}
-
-.shop-product-card:hover .shop-product-image {
-  transform:
-    scale(1.05);
-
-  filter:
-    brightness(1) contrast(1.04) saturate(1);
-}
-
-/* IMAGE BOTTOM DARK */
-
-.shop-product-image-box::after {
-  content: "";
-
-  position: absolute;
-
-  z-index: 2;
-
-  inset: 0;
-
-  pointer-events: none;
-
-  background:
-    linear-gradient(to bottom,
-      transparent 55%,
-      rgba(0,
-        0,
-        0,
-        0.7) 100%);
-}
-
-/* =========================================================
-   FOG
-========================================================= */
-
-.shop-image-fog {
-  position: absolute;
-
-  z-index: 3;
-
-  left: -15%;
-  right: -15%;
-
-  bottom: -16%;
-
-  height: 42%;
-
-  opacity: 0.3;
-
-  filter: blur(25px);
-
-  pointer-events: none;
-
-  background:
-    radial-gradient(ellipse,
-      rgba(255,
-        255,
-        255,
-        0.13),
-      transparent 65%);
-}
-
-/* =========================================================
-   NEW TAG
-========================================================= */
-
-.shop-new-tag {
-  position: absolute;
-
-  z-index: 5;
-
-  top: 10px;
-  left: 10px;
-
-  padding:
-    4px 6px;
-
-  border:
-    1px solid #c7ff13;
-
-  background:
-    rgba(0,
-      0,
-      0,
-      0.58);
-
-  color: #c7ff13;
-
-  font-size: 5px;
-
-  letter-spacing:
-    0.12em;
-}
-
-/* =========================================================
-   HEART
-========================================================= */
-
-.shop-heart {
-  position: absolute;
-
-  z-index: 5;
-
-  top: 9px;
-  right: 9px;
-
-  width: 30px;
-  height: 30px;
-
-  display: grid;
-
-  place-items: center;
-
-  padding: 0;
-
-  border: 0;
-
-  background: transparent;
-
-  color: #ffffff;
-
-  cursor: pointer;
-
-  transition:
-    color 0.3s ease;
-}
-
-.shop-heart:hover {
-  color: #c7ff13;
-}
-
-/* =========================================================
-   PRODUCT CONTENT
-========================================================= */
-
-.shop-product-content {
-  padding:
-    12px 11px 11px;
-}
-
-.shop-product-name-row {
-  display: flex;
-
-  align-items: flex-start;
-
-  justify-content:
-    space-between;
-
-  gap: 8px;
-}
-
-.shop-product-name-row h3 {
-  margin:
-    0 0 5px;
-
-  color: #ffffff;
-
-  font-size: 10px;
-
-  font-weight: 500;
-
-  line-height: 1.25;
-
-  letter-spacing:
-    0.05em;
-}
-
-.shop-product-name-row p {
-  margin: 0;
-
-  color:
-    rgba(255,
-      255,
-      255,
-      0.87);
-
-  font-size: 11px;
-}
-
-/* =========================================================
-   PRODUCT ARROW
-========================================================= */
-
-.shop-product-arrow {
-  width: 28px;
-  height: 28px;
-
-  flex: 0 0 auto;
-
-  display: grid;
-
-  place-items: center;
-
-  border:
-    1px solid rgba(255,
-      255,
-      255,
-      0.15);
-
-  border-radius: 50%;
-
-  color: #ffffff;
-
-  text-decoration: none;
-
-  transition:
-    0.3s ease;
-}
-
-.shop-product-arrow:hover {
-  border-color: #c7ff13;
-
-  background:
-    #c7ff13;
-
-  color: #050505;
-}
-
-/* =========================================================
-   SIZE LIST
-========================================================= */
-
-.shop-size-list {
-  margin-top:
-    11px;
-
-  display: grid;
-
-  grid-template-columns:
-    repeat(4,
-      1fr);
-
-  gap: 5px;
-}
-
-.shop-size {
-  height: 26px;
-
-  padding: 0;
-
-  border:
-    1px solid rgba(255,
-      255,
-      255,
-      0.13);
-
-  border-radius: 2px;
-
-  background:
-    transparent;
-
-  color:
-    rgba(255,
-      255,
-      255,
-      0.62);
-
-  font-family: inherit;
-
-  font-size: 6px;
-
-  cursor: pointer;
-
-  transition:
-    0.25s ease;
-}
-
-.shop-size:hover {
-  border-color:
-    rgba(199,
-      255,
-      19,
-      0.62);
-
-  color: #ffffff;
-}
-
-.shop-size.active {
-  border-color:
-    #c7ff13;
-
-  background:
-    rgba(199,
-      255,
-      19,
-      0.09);
-
-  color: #c7ff13;
-}
-
-/* =========================================================
-   CARD BUTTONS
-========================================================= */
-
-.shop-product-actions {
-  margin-top:
-    7px;
-
-  display: grid;
-
-  grid-template-columns:
-    1fr;
-
-  gap: 5px;
-}
-
-.shop-add-cart,
-.shop-buy-now {
-  width: 100%;
-
-  height: 31px;
-
-  padding:
-    0 8px;
-
-  border-radius:
-    2px;
-
-  font-family:
-    inherit;
-
-  font-size: 6px;
-
-  letter-spacing:
-    0.12em;
-
-  cursor: pointer;
-
-  transition:
-    0.3s ease;
-}
-
-/* ADD CART */
-
-.shop-add-cart {
-  border:
-    1px solid rgba(255,
-      255,
-      255,
-      0.45);
-
-  background:
-    transparent;
-
-  color: #ffffff;
-}
-
-.shop-add-cart:hover {
-  border-color:
-    #c7ff13;
-
-  background:
-    #c7ff13;
+  const [sort, setSort] = useState("featured");
 
-  color: #050505;
-}
-
-/* BUY NOW */
-
-.shop-buy-now {
-  border:
-    1px solid rgba(255,
-      255,
-      255,
-      0.12);
-
-  background:
-    rgba(255,
-      255,
-      255,
-      0.02);
-
-  color:
-    rgba(255,
-      255,
-      255,
-      0.65);
-}
-
-.shop-buy-now:hover {
-  border-color:
-    rgba(255,
-      255,
-      255,
-      0.4);
-
-  color: #ffffff;
-}
-
-/* =========================================================
-   TABLET
-========================================================= */
-
-@media (max-width: 1100px) {
-  .category-text-hero {
-    height: 390px;
-  }
-
-  .category-title-row h1 {
-    font-size:
-      clamp(70px,
-        10vw,
-        105px);
-  }
-
-  .category-visual {
-    width: 55%;
-  }
-
-  .shop-product-grid {
-    grid-template-columns:
-      repeat(3,
-        minmax(0,
-          1fr));
-  }
-}
-
-/* =========================================================
-   SMALL TABLET
-========================================================= */
-
-@media (max-width: 820px) {
-  .category-text-hero {
-    height: 370px;
-  }
-
-  .category-text-content {
-    width: 58%;
-  }
-
-  .category-visual {
-    right: -8%;
-
-    width: 62%;
-
-    opacity: 0.72;
-  }
-
-  .category-side-copy-two,
-  .category-coordinate {
-    display: none;
-  }
-}
-
-/* =========================================================
-   MOBILE
-========================================================= */
-
-@media (max-width: 600px) {
-  /* HERO */
-
-  .category-text-hero {
-    height: 350px;
-    min-height: 350px;
-  }
-
-  .category-grid-bg {
-    background-size:
-      45px 45px;
-  }
-
-  .category-text-content {
-    left: 20px;
-    right: 20px;
-
-    top: 50%;
-
-    width: auto;
-
-    transform:
-      translateY(-46%);
-  }
-
-  .category-breadcrumb {
-    margin-bottom:
-      11px;
-
-    font-size: 6px;
-  }
-
-  .category-title-row {
-    gap: 8px;
-  }
-
-  .category-title-row h1 {
-    font-size:
-      clamp(55px,
-        18vw,
-        82px);
-  }
-
-  .category-product-number {
-    margin-bottom:
-      4px;
-
-    font-size: 6px;
-  }
-
-  .category-text-content h2 {
-    margin-top:
-      18px;
-
-    font-size: 7px;
-
-    letter-spacing:
-      0.32em;
-  }
-
-  .category-text-content p {
-    margin-top:
-      12px;
-
-    font-size: 5px;
-
-    line-height: 1.65;
-  }
-
-  /* SVG */
-
-  .category-visual {
-    right: -45%;
-
-    width: 105%;
-
-    opacity: 0.43;
-  }
-
-  .category-orbit-svg {
-    width: 520px;
-  }
-
-  .category-side-copy {
-    display: none;
-  }
-
-  .category-visual-arrow {
-    right: 20px;
-
-    top: 50%;
-
-    width: 38px;
-    height: 38px;
-  }
-
-  .category-hero-bottom {
-    left: 20px;
-    right: 20px;
-
-    bottom: 13px;
-
-    font-size: 4px;
-  }
-
-  .category-hero-bottom span:last-child {
-    display: none;
-  }
-
-  /* PRODUCT SECTION */
-
-  .shop-products-section {
-    padding:
-      20px 8px 50px;
-  }
-
-  .shop-products-toolbar {
-    min-height:
-      44px;
-
-    margin-bottom:
-      10px;
-  }
-
-  .shop-products-count {
-    gap: 7px;
-
-    font-size: 6px;
-  }
+  const [selectedSizes, setSelectedSizes] = useState({});
 
-  .shop-sort span {
-    display: none;
-  }
+  const [likedProducts, setLikedProducts] = useState({});
 
-  .shop-sort select {
-    min-width: auto;
+  /* =========================================================
+     FILTER PRODUCTS
+  ========================================================= */
 
-    max-width:
-      115px;
+  const filteredProducts = useMemo(() => {
+    let result = [...products];
 
-    font-size:
-      6px;
-  }
+    /* CATEGORY */
 
-  /* =====================================================
-     MOBILE = 2 CARDS
-  ===================================================== */
+    if (activeCategory !== "ALL") {
+      result = result.filter((product) => product.category === activeCategory);
+    }
 
-  .shop-product-grid {
-    grid-template-columns:
-      repeat(2,
-        minmax(0,
-          1fr));
+    /* SEARCH */
 
-    gap: 6px;
-  }
+    const cleanSearch = search.trim().toLowerCase();
 
-  .shop-product-image-box {
-    aspect-ratio: 0.88;
-  }
+    if (cleanSearch) {
+      result = result.filter((product) => {
+        const searchableText = [
+          product.name,
+          product.category,
+          product.color,
+          ...(product.colors || []),
+          product.fit,
+          product.style,
+          ...(product.keywords || []),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
 
-  .shop-product-content {
-    padding:
-      8px 7px;
-  }
+        return searchableText.includes(cleanSearch);
+      });
+    }
 
-  .shop-product-name-row {
-    gap: 4px;
-  }
+    /* SORT */
 
-  .shop-product-name-row h3 {
-    margin-bottom:
-      3px;
+    if (sort === "low-high") {
+      result.sort((a, b) => Number(a.price) - Number(b.price));
+    }
 
-    font-size:
-      7px;
-  }
+    if (sort === "high-low") {
+      result.sort((a, b) => Number(b.price) - Number(a.price));
+    }
 
-  .shop-product-name-row p {
-    font-size:
-      8px;
-  }
+    if (sort === "name") {
+      result.sort((a, b) => a.name.localeCompare(b.name));
+    }
 
-  .shop-product-arrow {
-    width: 23px;
-    height: 23px;
-  }
+    return result;
+  }, [activeCategory, search, sort]);
 
-  .shop-new-tag {
-    top: 7px;
-    left: 7px;
+  /* =========================================================
+     SELECT SIZE
+  ========================================================= */
 
-    padding:
-      3px 4px;
+  const selectSize = (productId, size) => {
+    setSelectedSizes((previous) => ({
+      ...previous,
 
-    font-size:
-      4px;
-  }
+      [productId]: size,
+    }));
+  };
 
-  .shop-heart {
-    top: 5px;
-    right: 5px;
+  /* =========================================================
+     LIKE PRODUCT
+  ========================================================= */
 
-    width: 27px;
-    height: 27px;
-  }
+  const toggleLike = (productId) => {
+    setLikedProducts((previous) => ({
+      ...previous,
 
-  .shop-size-list {
-    margin-top:
-      8px;
+      [productId]: !previous[productId],
+    }));
+  };
 
-    gap: 3px;
-  }
+  /* =========================================================
+     ADD TO CART
+  ========================================================= */
 
-  .shop-size {
-    height: 22px;
+  const addToCart = (product) => {
+    const selectedSize = selectedSizes[product.id] || product.sizes?.[0];
 
-    font-size: 5px;
-  }
+    if (!selectedSize) {
+      alert("Please select a size.");
 
-  .shop-product-actions {
-    margin-top:
-      5px;
+      return;
+    }
 
-    gap: 4px;
-  }
+    try {
+      const currentCart = JSON.parse(localStorage.getItem("axiee-cart")) || [];
 
-  .shop-add-cart,
-  .shop-buy-now {
-    height: 27px;
+      const existingItemIndex = currentCart.findIndex(
+        (item) => item.id === product.id && item.size === selectedSize,
+      );
 
-    padding:
-      0 2px;
+      if (existingItemIndex !== -1) {
+        currentCart[existingItemIndex].quantity =
+          Number(currentCart[existingItemIndex].quantity || 1) + 1;
+      } else {
+        currentCart.push({
+          ...product,
 
-    font-size:
-      4.5px;
-  }
-}
-
-/* =========================================================
-   VERY SMALL MOBILE
-========================================================= */
-
-@media (max-width: 390px) {
-  .category-text-hero {
-    height: 330px;
-    min-height: 330px;
-  }
-
-  .category-title-row h1 {
-    font-size: 16vw;
-  }
-
-  .shop-product-grid {
-    gap: 5px;
-  }
-
-  .shop-product-content {
-    padding:
-      7px 6px;
-  }
-
-  .shop-size {
-    font-size: 4.5px;
-  }
-
-  .shop-add-cart,
-  .shop-buy-now {
-    font-size: 4px;
-  }
-}
-
-/* =========================================================
-   ALL CATEGORY PAGE SEARCH
-========================================================= */
-
-.category-global-search {
-  position: relative;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 42px 4% 34px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.065);
-  background:
-    radial-gradient(circle at 50% 50%, rgba(186, 255, 0, 0.025), transparent 48%);
-}
-
-.category-global-search-top {
-  width: min(850px, 92%);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 11px;
-}
-
-.category-global-search-top span {
-  color: #baff00;
-  font-size: 7px;
-  letter-spacing: 0.3em;
-}
-
-.category-global-search-top small {
-  color: rgba(255, 255, 255, 0.2);
-  font-size: 6px;
-  letter-spacing: 0.27em;
-}
-
-.category-global-search-box {
-  position: relative;
-  width: min(850px, 92%);
-  height: 64px;
-  display: flex;
-  align-items: center;
-  gap: 17px;
-  padding: 0 23px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.01);
-  transition:
-    border-color 0.3s ease,
-    background 0.3s ease,
-    box-shadow 0.3s ease;
-}
-
-.category-global-search-box::before {
-  content: "";
-  position: absolute;
-  top: -1px;
-  left: -1px;
-  width: 0;
-  height: 1px;
-  background: #baff00;
-  transition: width 0.35s ease;
-}
-
-.category-global-search-box::after {
-  content: "";
-  position: absolute;
-  right: -1px;
-  bottom: -1px;
-  width: 0;
-  height: 1px;
-  background: #baff00;
-  transition: width 0.35s ease;
-}
-
-.category-global-search-box:focus-within {
-  border-color: rgba(186, 255, 0, 0.55);
-  background: rgba(186, 255, 0, 0.012);
-  box-shadow: 0 0 40px rgba(186, 255, 0, 0.035);
-}
-
-.category-global-search-box:focus-within::before,
-.category-global-search-box:focus-within::after {
-  width: 45px;
-}
-
-.category-global-search-icon {
-  flex-shrink: 0;
-  color: #baff00;
-}
-
-.category-global-search-box input {
-  flex: 1;
-  width: 100%;
-  height: 100%;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: #ffffff;
-  font-family: inherit;
-  font-size: 9px;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-}
-
-.category-global-search-box input::placeholder {
-  color: rgba(255, 255, 255, 0.25);
-}
+          size: selectedSize,
 
-.category-search-clear {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: none;
-  padding: 0;
-  background: transparent;
-  color: #baff00;
-  cursor: pointer;
-}
-
-.category-search-clear span {
-  font-size: 6px;
-  letter-spacing: 0.18em;
-}
-
-.category-quick-search {
-  width: min(850px, 92%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 9px;
-  margin-top: 14px;
-}
-
-.category-quick-title {
-  margin-right: 6px;
-  color: rgba(255, 255, 255, 0.2);
-  font-size: 6px;
-  letter-spacing: 0.23em;
-}
-
-.category-quick-search button {
-  min-width: 64px;
-  height: 32px;
-  padding: 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: transparent;
-  color: rgba(255, 255, 255, 0.48);
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 6px;
-  letter-spacing: 0.16em;
-  transition:
-    border-color 0.25s ease,
-    background 0.25s ease,
-    color 0.25s ease;
-}
-
-.category-quick-search button:hover,
-.category-quick-search button.active {
-  border-color: rgba(186, 255, 0, 0.5);
-  color: #baff00;
-  background: rgba(186, 255, 0, 0.035);
-}
-
-.category-product-meta {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
+          quantity: 1,
+        });
+      }
 
-.category-product-meta span {
-  color: rgba(255, 255, 255, 0.25);
-  font-size: 6px;
-  letter-spacing: 0.18em;
-}
-
-.category-product-meta strong {
-  color: rgba(255, 255, 255, 0.65);
-  font-size: 7px;
-  font-weight: 400;
-  letter-spacing: 0.15em;
-}
-
-.category-no-results {
-  grid-column: 1 / -1;
-  width: 100%;
-  min-height: 400px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 35px 20px;
-  text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.category-no-results>span {
-  margin-bottom: 17px;
-  color: #baff00;
-  font-size: 7px;
-  letter-spacing: 0.3em;
-}
+      localStorage.setItem("axiee-cart", JSON.stringify(currentCart));
 
-.category-no-results h3 {
-  margin: 0;
-  color: #ffffff;
-  font-size: clamp(25px, 3vw, 43px);
-  font-weight: 400;
-  line-height: 1.05;
-}
-
-.category-no-results p {
-  margin: 17px 0 24px;
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 7px;
-  letter-spacing: 0.18em;
-}
-
-.category-no-results button {
-  height: 42px;
-  padding: 0 22px;
-  border: 1px solid #baff00;
-  background: transparent;
-  color: #baff00;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 7px;
-  letter-spacing: 0.18em;
-  transition:
-    background 0.25s ease,
-    color 0.25s ease;
-}
-
-.category-no-results button:hover {
-  background: #baff00;
-  color: #000000;
-}
+      window.dispatchEvent(new Event("axiee-cart-updated"));
+    } catch (error) {
+      console.error("Add to cart error:", error);
+    }
+  };
+
+  /* =========================================================
+     BUY NOW
+  ========================================================= */
+
+  const buyNow = (product) => {
+    const selectedSize = selectedSizes[product.id] || product.sizes?.[0];
+
+    if (!selectedSize) {
+      alert("Please select a size.");
+
+      return;
+    }
+
+    const buyNowProduct = {
+      ...product,
+
+      size: selectedSize,
+
+      quantity: 1,
+    };
+
+    localStorage.setItem("axiee-buy-now", JSON.stringify(buyNowProduct));
+
+    navigate("/checkout");
+  };
+
+  /* =========================================================
+     PRODUCT URL
+  ========================================================= */
+
+  const productUrl = (product) => {
+    return `/product/${product.id}`;
+  };
+
+  return (
+    <main className="shop-page">
+      {/* =====================================================
+          SHOP HERO
+      ===================================================== */}
+
+      <section className="category-text-hero">
+        <div className="category-grid-bg"></div>
+
+        <div className="category-glow category-glow-one"></div>
+
+        <div className="category-glow category-glow-two"></div>
+
+        {/* LEFT */}
+
+        <div className="category-text-content">
+          <span className="category-breadcrumb">
+            AXIEE / SHOP / ALL COLLECTIONS
+          </span>
+
+          <div className="category-title-row">
+            <h1>SHOP</h1>
+
+            <span className="category-product-number">
+              {String(products.length).padStart(2, "0")}
+            </span>
+          </div>
+
+          <h2>THE COMPLETE SYSTEM</h2>
+
+          <p>
+            CLOTHING FOR THE UNKNOWN.
+            <br />
+            BUILT BEYOND CONVENTION.
+          </p>
+        </div>
+
+        {/* RIGHT TECHNICAL ART */}
+
+        <div className="category-visual">
+          <svg
+            className="category-orbit-svg"
+            viewBox="0 0 700 430"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="350"
+              cy="215"
+              r="145"
+              stroke="currentColor"
+              strokeWidth="1"
+              opacity="0.32"
+            />
+
+            <circle
+              cx="350"
+              cy="215"
+              r="105"
+              stroke="currentColor"
+              strokeWidth="1"
+              opacity="0.18"
+            />
+
+            <ellipse
+              cx="350"
+              cy="215"
+              rx="250"
+              ry="92"
+              stroke="currentColor"
+              opacity="0.28"
+            />
+
+            <ellipse
+              cx="350"
+              cy="215"
+              rx="250"
+              ry="92"
+              transform="rotate(55 350 215)"
+              stroke="currentColor"
+              opacity="0.2"
+            />
+
+            <ellipse
+              cx="350"
+              cy="215"
+              rx="250"
+              ry="92"
+              transform="rotate(-55 350 215)"
+              stroke="currentColor"
+              opacity="0.2"
+            />
+
+            <line
+              x1="75"
+              y1="215"
+              x2="625"
+              y2="215"
+              stroke="currentColor"
+              opacity="0.15"
+            />
+
+            <line
+              x1="350"
+              y1="20"
+              x2="350"
+              y2="410"
+              stroke="currentColor"
+              opacity="0.15"
+            />
+
+            <circle cx="350" cy="215" r="8" fill="currentColor" />
+
+            <circle cx="523" cy="215" r="4" fill="currentColor" />
+          </svg>
+
+          <div className="category-side-copy category-side-copy-one">
+            <span>AXIEE</span>
+
+            <span>FORM</span>
+
+            <span>SYSTEM</span>
+          </div>
+
+          <div className="category-side-copy category-side-copy-two">
+            <span>COLLECTION</span>
+
+            <span>08 / SERIES</span>
+          </div>
+
+          <span className="category-coordinate top">19°04'26"N</span>
+
+          <span className="category-coordinate bottom">72°52'18"E</span>
+        </div>
+
+        {/* BOTTOM */}
+
+        <div className="category-hero-bottom">
+          <span>AXIEE © 2026</span>
+
+          <span>CLOTHES / CULTURE / BEYOND</span>
+        </div>
+      </section>
+
+      {/* =====================================================
+          GLOBAL SEARCH
+      ===================================================== */}
+
+      <section className="category-global-search">
+        <div className="category-global-search-top">
+          <span>SEARCH COLLECTION</span>
+
+          <small>{filteredProducts.length} RESULTS</small>
+        </div>
+
+        <div className="category-global-search-box">
+          <Search
+            className="category-global-search-icon"
+            size={20}
+            strokeWidth={1.4}
+          />
+
+          <input
+            type="text"
+            value={search}
+            placeholder="SEARCH BLACK JEANS, WHITE HOODIE, OVERSIZED..."
+            onChange={(event) => setSearch(event.target.value)}
+          />
+
+          {search && (
+            <button
+              type="button"
+              className="category-search-clear"
+              onClick={() => setSearch("")}
+            >
+              <span>CLEAR</span>
+
+              <X size={15} strokeWidth={1.4} />
+            </button>
+          )}
+        </div>
+
+        {/* QUICK SEARCH */}
+
+        <div className="category-quick-search">
+          <span className="category-quick-title">QUICK SEARCH</span>
+
+          {quickSearchItems.map((item) => (
+            <button
+              type="button"
+              key={item}
+              className={search.toUpperCase() === item ? "active" : ""}
+              onClick={() => setSearch(item)}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* =====================================================
+          PRODUCTS
+      ===================================================== */}
+
+      <section className="shop-products-section">
+        {/* =================================================
+            CATEGORY FILTER
+        ================================================= */}
+
+        <div className="shop-category-filter">
+          {categories.map((category) => (
+            <button
+              type="button"
+              key={category.id}
+              className={activeCategory === category.value ? "active" : ""}
+              onClick={() => setActiveCategory(category.value)}
+            >
+              {category.label}
+            </button>
+          ))}
+        </div>
+
+        {/* =================================================
+            TOOLBAR
+        ================================================= */}
+
+        <div className="shop-products-toolbar">
+          <div className="shop-products-count">
+            <SlidersHorizontal size={14} strokeWidth={1.4} />
+
+            <span>
+              {String(filteredProducts.length).padStart(2, "0")} PRODUCTS
+            </span>
+          </div>
+
+          <div className="shop-sort">
+            <span>SORT BY:</span>
+
+            <select
+              value={sort}
+              onChange={(event) => setSort(event.target.value)}
+            >
+              <option value="featured">FEATURED</option>
+
+              <option value="low-high">PRICE LOW → HIGH</option>
+
+              <option value="high-low">PRICE HIGH → LOW</option>
+
+              <option value="name">NAME A → Z</option>
+            </select>
+          </div>
+        </div>
+
+        {/* =================================================
+            PRODUCT GRID
+        ================================================= */}
+
+        <div className="shop-product-grid">
+          {filteredProducts.length > 0 ? (
+            filteredProducts.map((product) => (
+              <article key={product.id} className="shop-product-card">
+                {/* IMAGE */}
+
+                <Link
+                  to={productUrl(product)}
+                  className="shop-product-image-box"
+                >
+                  <img
+                    src={product.image || product.images?.[0]}
+                    alt={product.name}
+                    className="shop-product-image"
+                  />
+
+                  <div className="shop-image-fog"></div>
+
+                  {product.isNew !== false && (
+                    <span className="shop-new-tag">NEW</span>
+                  )}
+                </Link>
+
+                {/* HEART */}
+
+                <button
+                  type="button"
+                  className="shop-heart"
+                  aria-label="Wishlist"
+                  onClick={() => toggleLike(product.id)}
+                >
+                  <Heart
+                    size={16}
+                    strokeWidth={1.4}
+                    fill={likedProducts[product.id] ? "currentColor" : "none"}
+                  />
+                </button>
+
+                {/* CONTENT */}
+
+                <div className="shop-product-content">
+                  <div className="shop-product-name-row">
+                    <div>
+                      <h3>{product.name}</h3>
+
+                      <p>₹{Number(product.price).toLocaleString("en-IN")}</p>
+                    </div>
+
+                    <Link
+                      to={productUrl(product)}
+                      className="shop-product-arrow"
+                    >
+                      <ArrowRight size={14} strokeWidth={1.4} />
+                    </Link>
+                  </div>
+
+                  {/* PRODUCT META */}
+
+                  <div className="category-product-meta">
+                    <span>{product.color || product.category}</span>
+
+                    <strong>{product.fit || product.style || "AXIEE"}</strong>
+                  </div>
+
+                  {/* SIZE */}
+
+                  <div className="shop-size-list">
+                    {product.sizes?.map((size) => (
+                      <button
+                        type="button"
+                        key={size}
+                        className={
+                          selectedSizes[product.id] === size
+                            ? "shop-size active"
+                            : "shop-size"
+                        }
+                        onClick={() => selectSize(product.id, size)}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* ACTIONS */}
+
+                  <div className="shop-product-actions">
+                    <button
+                      type="button"
+                      className="shop-add-cart"
+                      onClick={() => addToCart(product)}
+                    >
+                      ADD TO CART
+                    </button>
+
+                    <button
+                      type="button"
+                      className="shop-buy-now"
+                      onClick={() => buyNow(product)}
+                    >
+                      BUY NOW
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))
+          ) : (
+            <div className="category-no-results">
+              <span>00 / NO RESULTS</span>
+
+              <h3>NOTHING FOUND.</h3>
+
+              <p>TRY ANOTHER SEARCH OR CATEGORY.</p>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+
+                  setActiveCategory("ALL");
+                }}
+              >
+                RESET SEARCH
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
+    </main>
+  );
+}
+
+export default Shop;
