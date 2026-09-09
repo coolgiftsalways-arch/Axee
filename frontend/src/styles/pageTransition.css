@@ -1,0 +1,371 @@
+/* =========================================================
+   AXIEE PAGE TRANSITION
+========================================================= */
+
+.ax-page-transition {
+     position: fixed;
+
+     inset: 0;
+
+     z-index: 999999;
+
+     display: none;
+     visibility: hidden;
+
+     overflow: hidden;
+
+     pointer-events: none;
+
+     background: transparent;
+}
+
+/* =========================================================
+   TRANSITION PANELS
+========================================================= */
+
+.ax-transition-panel {
+     position: absolute;
+
+     left: 0;
+
+     width: 100%;
+
+     transform: scaleX(0);
+
+     will-change: transform;
+
+     background: #020202;
+}
+
+/* TOP PANEL */
+
+.ax-transition-top {
+     top: 0;
+
+     height: 34%;
+}
+
+/* MIDDLE PANEL */
+
+.ax-transition-middle {
+     top: 33%;
+
+     height: 35%;
+
+     background:
+          linear-gradient(90deg,
+               #020202 0%,
+               #060606 50%,
+               #020202 100%);
+}
+
+/* BOTTOM PANEL */
+
+.ax-transition-bottom {
+     bottom: 0;
+
+     height: 34%;
+}
+
+/* =========================================================
+   SUBTLE TEXTURE
+========================================================= */
+
+.ax-page-transition::before {
+     content: "";
+
+     position: absolute;
+
+     z-index: 2;
+
+     inset: 0;
+
+     pointer-events: none;
+
+     opacity: 0.18;
+
+     background-image:
+          linear-gradient(rgba(255, 255, 255, 0.025) 1px,
+               transparent 1px),
+          linear-gradient(90deg,
+               rgba(255, 255, 255, 0.025) 1px,
+               transparent 1px);
+
+     background-size:
+          70px 70px;
+}
+
+/* =========================================================
+   CENTER AREA
+========================================================= */
+
+.ax-transition-center {
+     position: absolute;
+
+     z-index: 10;
+
+     top: 50%;
+     left: 50%;
+
+     transform:
+          translate(-50%,
+               -50%);
+
+     display: flex;
+
+     flex-direction: column;
+
+     align-items: center;
+
+     justify-content: center;
+
+     gap: 13px;
+
+     pointer-events: none;
+}
+
+/* =========================================================
+   AXIEE TEXT
+========================================================= */
+
+.ax-transition-text {
+     display: block;
+
+     opacity: 0;
+
+     transform:
+          translateY(20px);
+
+     color: #f4f1e9;
+
+     font-family:
+          Arial,
+          Helvetica,
+          sans-serif;
+
+     font-size:
+          clamp(20px,
+               2vw,
+               34px);
+
+     font-weight: 700;
+
+     line-height: 1;
+
+     letter-spacing: 0.42em;
+
+     text-transform: uppercase;
+
+     white-space: nowrap;
+
+     will-change:
+          transform,
+          opacity;
+}
+
+/* =========================================================
+   GREEN LINE
+========================================================= */
+
+.ax-transition-line {
+     display: block;
+
+     width: 130px;
+     height: 2px;
+
+     transform: scaleX(0);
+
+     transform-origin:
+          left center;
+
+     background: #c7ff13;
+
+     box-shadow:
+          0 0 8px rgba(199,
+               255,
+               19,
+               0.55),
+          0 0 20px rgba(199,
+               255,
+               19,
+               0.2);
+
+     will-change: transform;
+}
+
+/* =========================================================
+   CENTER GLOW
+========================================================= */
+
+.ax-transition-center::before {
+     content: "";
+
+     position: absolute;
+
+     z-index: -1;
+
+     top: 50%;
+     left: 50%;
+
+     width: 280px;
+     height: 150px;
+
+     transform:
+          translate(-50%,
+               -50%);
+
+     border-radius: 50%;
+
+     pointer-events: none;
+
+     opacity: 0.22;
+
+     filter: blur(70px);
+
+     background:
+          rgba(199,
+               255,
+               19,
+               0.16);
+}
+
+/* =========================================================
+   TECHNICAL DETAILS
+========================================================= */
+
+.ax-page-transition::after {
+     content:
+          "AXIEE / SYSTEM 2026";
+
+     position: absolute;
+
+     z-index: 8;
+
+     left: 3vw;
+     bottom: 22px;
+
+     color:
+          rgba(255,
+               255,
+               255,
+               0.22);
+
+     font-family:
+          Arial,
+          Helvetica,
+          sans-serif;
+
+     font-size: 6px;
+
+     font-weight: 500;
+
+     letter-spacing: 0.3em;
+
+     pointer-events: none;
+}
+
+/* =========================================================
+   PANEL LINES
+========================================================= */
+
+.ax-transition-top::after,
+.ax-transition-middle::after {
+     content: "";
+
+     position: absolute;
+
+     left: 0;
+     right: 0;
+
+     bottom: 0;
+
+     height: 1px;
+
+     background:
+          rgba(255,
+               255,
+               255,
+               0.055);
+
+     pointer-events: none;
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+     .ax-page-transition::before {
+          background-size:
+               45px 45px;
+     }
+
+     .ax-transition-text {
+          font-size:
+               clamp(18px,
+                    6vw,
+                    24px);
+
+          letter-spacing: 0.34em;
+     }
+
+     .ax-transition-line {
+          width: 95px;
+
+          height: 2px;
+     }
+
+     .ax-transition-center {
+          gap: 11px;
+     }
+
+     .ax-transition-center::before {
+          width: 200px;
+          height: 110px;
+
+          filter: blur(55px);
+     }
+
+     .ax-page-transition::after {
+          left: 18px;
+          bottom: 16px;
+
+          font-size: 5px;
+
+          letter-spacing: 0.22em;
+     }
+}
+
+/* =========================================================
+   SMALL MOBILE
+========================================================= */
+
+@media (max-width: 420px) {
+     .ax-transition-text {
+          font-size: 17px;
+
+          letter-spacing: 0.28em;
+     }
+
+     .ax-transition-line {
+          width: 78px;
+     }
+
+     .ax-transition-center::before {
+          width: 170px;
+          height: 90px;
+     }
+}
+
+/* =========================================================
+   REDUCED MOTION
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+     .ax-transition-panel,
+     .ax-transition-text,
+     .ax-transition-line {
+          transition: none;
+     }
+}

@@ -1447,7 +1447,7 @@
 }
 
 .ax-mobile-shop.active .ax-mobile-shop-dropdown {
-     max-height: 340px;
+     max-height: 420px;
 
      opacity: 1;
 }
@@ -2050,5 +2050,336 @@
      .ax-search-content {
           padding:
                95px 20px 0;
+     }
+}
+
+/* =====================================================
+   BUTTON COMPATIBILITY FOR CLEAN NAVBAR.JSX
+===================================================== */
+
+.ax-shop-category-list button,
+.ax-shop-mega-bottom button,
+.ax-shop-image-content button,
+.ax-mobile-shop-dropdown button {
+     font: inherit;
+     border: 0;
+     cursor: pointer;
+}
+
+.ax-shop-category-list button.ax-shop-category {
+     width: 100%;
+     text-align: left;
+     background: transparent;
+}
+
+.ax-shop-category-list button.ax-shop-category:hover,
+.ax-shop-category-list button.ax-shop-category.active {
+     background: linear-gradient(90deg, rgba(207, 255, 36, 0.05), transparent);
+}
+
+.ax-shop-mega-bottom button {
+     display: flex;
+     align-items: center;
+     gap: 8px;
+     padding: 0;
+     background: transparent;
+     color: #cfff24;
+     font-size: 9px;
+     letter-spacing: 0.14em;
+}
+
+.ax-shop-image-content button {
+     min-height: 38px;
+     padding: 0 18px;
+     display: inline-flex;
+     align-items: center;
+     gap: 10px;
+     border-radius: 999px;
+     background: #cfff24;
+     color: #050505;
+     font-size: 9px;
+     font-weight: 700;
+     letter-spacing: 0.13em;
+     transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.ax-shop-image-content button:hover {
+     transform: translateY(-2px);
+     box-shadow: 0 8px 30px rgba(207, 255, 36, 0.25);
+}
+
+.ax-mobile-shop-dropdown button {
+     width: 100%;
+     min-height: 55px;
+     padding: 0 8px 0 28px;
+     display: grid;
+     grid-template-columns: 36px 1fr auto;
+     align-items: center;
+     border-top: 1px solid rgba(255, 255, 255, 0.05);
+     background: rgba(255, 255, 255, 0.015);
+     color: rgba(255, 255, 255, 0.55);
+     text-align: left;
+     transition: color 0.3s ease, padding-left 0.3s ease, background 0.3s ease;
+}
+
+.ax-mobile-shop-dropdown button:first-child {
+     border-top: 1px solid rgba(207, 255, 36, 0.14);
+}
+
+.ax-mobile-shop-dropdown button>span {
+     color: rgba(255, 255, 255, 0.24);
+     font-size: 8px;
+     letter-spacing: 0.12em;
+}
+
+.ax-mobile-shop-dropdown button strong {
+     font-size: 15px;
+     font-weight: 500;
+     letter-spacing: 0.03em;
+}
+
+.ax-mobile-shop-dropdown button svg {
+     opacity: 0.45;
+}
+
+.ax-mobile-shop-dropdown button:hover,
+.ax-mobile-shop-dropdown button:active {
+     padding-left: 34px;
+     color: #cfff24;
+     background: linear-gradient(90deg, rgba(207, 255, 36, 0.055), transparent);
+}
+
+@media (max-width: 480px) {
+     .ax-mobile-shop-dropdown button {
+          min-height: 50px;
+          grid-template-columns: 34px 1fr auto;
+          padding-left: 22px;
+     }
+
+     .ax-mobile-shop-dropdown button strong {
+          font-size: 14px;
+     }
+}
+
+/* =========================================================
+   FINAL SHOP MEGA MENU LAYOUT
+   8 categories: T-shirts, Jeans, Track Pants, Shirts,
+   Shorts, Hoodies, Co-ord Sets, Jackets
+========================================================= */
+
+.ax-shop-mega {
+     width: min(1180px, calc(100vw - 48px));
+     height: min(610px, calc(100vh - 108px));
+     min-height: 520px;
+     max-height: calc(100vh - 108px);
+     overflow: hidden;
+}
+
+.ax-shop-mega-left {
+     min-height: 0;
+     padding: 22px 32px 18px;
+     overflow: hidden;
+}
+
+.ax-shop-mega-top {
+     flex: 0 0 auto;
+     padding-bottom: 12px;
+}
+
+.ax-shop-mega-title {
+     flex: 0 0 auto;
+     padding: 12px 0 9px;
+}
+
+.ax-shop-mega-title h2 {
+     font-size: clamp(29px, 2.7vw, 45px);
+     line-height: 0.82;
+}
+
+.ax-shop-category-list {
+     flex: 1 1 auto;
+     min-height: 0;
+     display: grid;
+     grid-template-rows: repeat(8, minmax(0, 1fr));
+     margin-top: 0;
+     overflow: hidden;
+}
+
+.ax-shop-category {
+     min-height: 0;
+     height: auto;
+     padding: 0 4px;
+     grid-template-columns: 42px 1fr auto;
+     flex-shrink: 1;
+}
+
+.ax-shop-category strong {
+     font-size: clamp(18px, 1.65vw, 27px);
+     line-height: 1;
+}
+
+.ax-shop-category-number {
+     font-size: 7px;
+}
+
+.ax-shop-category:hover,
+.ax-shop-category.active {
+     padding-left: 12px;
+}
+
+.ax-shop-mega-bottom {
+     flex: 0 0 auto;
+     padding-top: 10px;
+}
+
+.ax-shop-mega-bottom>span {
+     font-size: 7px;
+}
+
+.ax-shop-mega-right {
+     height: 100%;
+}
+
+.ax-shop-preview-image,
+.ax-shop-preview-image img {
+     width: 100%;
+     height: 100%;
+}
+
+.ax-shop-preview-image img {
+     object-fit: cover;
+     object-position: center;
+}
+
+@media (max-height: 850px) and (min-width: 961px) {
+     .ax-shop-mega {
+          height: calc(100vh - 108px);
+          min-height: 0;
+     }
+
+     .ax-shop-mega-left {
+          padding: 17px 30px 14px;
+     }
+
+     .ax-shop-mega-top {
+          padding-bottom: 9px;
+     }
+
+     .ax-shop-mega-title {
+          padding: 9px 0 6px;
+     }
+
+     .ax-shop-mega-title h2 {
+          font-size: clamp(27px, 2.45vw, 40px);
+     }
+
+     .ax-shop-category {
+          grid-template-columns: 38px 1fr auto;
+     }
+
+     .ax-shop-category strong {
+          font-size: clamp(17px, 1.5vw, 24px);
+     }
+
+     .ax-shop-mega-bottom {
+          padding-top: 7px;
+     }
+}
+
+@media (max-height: 720px) and (min-width: 961px) {
+     .ax-shop-mega-left {
+          padding: 12px 26px 10px;
+     }
+
+     .ax-shop-mega-top {
+          padding-bottom: 6px;
+          font-size: 7px;
+     }
+
+     .ax-shop-mega-title {
+          padding: 6px 0 4px;
+     }
+
+     .ax-shop-mega-title h2 {
+          font-size: clamp(24px, 2.2vw, 34px);
+     }
+
+     .ax-shop-category strong {
+          font-size: clamp(16px, 1.35vw, 21px);
+     }
+
+     .ax-shop-category-number {
+          font-size: 6px;
+     }
+
+     .ax-shop-mega-bottom {
+          padding-top: 4px;
+     }
+
+     .ax-shop-mega-bottom>span {
+          font-size: 6px;
+     }
+}
+
+.ax-mobile-shop.active .ax-mobile-shop-dropdown {
+     max-height: 520px;
+}
+
+.ax-mobile-shop-dropdown button {
+     width: 100%;
+     min-height: 52px;
+     padding: 0 8px 0 28px;
+     display: grid;
+     grid-template-columns: 36px 1fr auto;
+     align-items: center;
+     border: 0;
+     border-top: 1px solid rgba(255, 255, 255, 0.05);
+     background: rgba(255, 255, 255, 0.015);
+     color: rgba(255, 255, 255, 0.55);
+     text-align: left;
+     cursor: pointer;
+     transition: color 0.3s ease, padding-left 0.3s ease, background 0.3s ease;
+}
+
+.ax-mobile-shop-dropdown button:first-child {
+     border-top: 1px solid rgba(207, 255, 36, 0.14);
+}
+
+.ax-mobile-shop-dropdown button>span {
+     color: rgba(255, 255, 255, 0.24);
+     font-size: 8px;
+     letter-spacing: 0.12em;
+}
+
+.ax-mobile-shop-dropdown button strong {
+     font-size: 15px;
+     font-weight: 500;
+     letter-spacing: 0.03em;
+}
+
+.ax-mobile-shop-dropdown button svg {
+     opacity: 0.45;
+}
+
+.ax-mobile-shop-dropdown button:hover,
+.ax-mobile-shop-dropdown button:active {
+     padding-left: 34px;
+     color: #cfff24;
+     background: linear-gradient(90deg, rgba(207, 255, 36, 0.055), transparent);
+}
+
+@media (max-width: 480px) {
+     .ax-mobile-shop.active .ax-mobile-shop-dropdown {
+          max-height: 500px;
+     }
+
+     .ax-mobile-shop-dropdown button {
+          min-height: 50px;
+          grid-template-columns: 34px 1fr auto;
+          padding-left: 22px;
+     }
+
+     .ax-mobile-shop-dropdown button strong {
+          font-size: 14px;
      }
 }

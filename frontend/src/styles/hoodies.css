@@ -1,0 +1,149 @@
+/* =========================================================
+   AXIEE HOODIES PAGE ONLY
+   Import this file only in Hoodies.jsx
+========================================================= */
+
+/* =========================================================
+   HOODIE TECHNICAL HERO
+========================================================= */
+
+.category-visual-hoodies {
+     position: absolute;
+     top: 0;
+     right: 0;
+
+     width: 50%;
+     height: 100%;
+
+     overflow: hidden;
+}
+
+/* =========================================================
+   HOODIE SVG
+========================================================= */
+
+.category-hoodie-svg {
+     position: absolute;
+
+     width: min(590px, 86%);
+     height: auto;
+
+     top: 55%;
+     left: 58%;
+
+     transform: translate(-50%, -50%);
+
+     color: #baff00;
+
+     pointer-events: none;
+}
+
+/* =========================================================
+   TECHNICAL DIAMOND / FRAME
+========================================================= */
+
+.category-visual-hoodies::before {
+     content: "";
+
+     position: absolute;
+
+     width: 350px;
+     height: 350px;
+
+     top: 55%;
+     left: 58%;
+
+     transform:
+          translate(-50%, -50%) rotate(45deg);
+
+     border:
+          1px solid rgba(186, 255, 0, 0.05);
+
+     pointer-events: none;
+}
+
+/* =========================================================
+   SIDE TECH TEXT
+========================================================= */
+
+.category-visual-hoodies::after {
+     content: "LAYER / PROTECTION / 06";
+
+     position: absolute;
+
+     right: 5%;
+     top: 18%;
+
+     color:
+          rgba(255, 255, 255, 0.18);
+
+     font-size: 6px;
+
+     letter-spacing: 0.35em;
+
+     writing-mode: vertical-rl;
+
+     pointer-events: none;
+}
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 900px) {
+     .category-visual-hoodies {
+          right: -5%;
+
+          width: 58%;
+     }
+
+     .category-hoodie-svg {
+          width: 95%;
+
+          top: 56%;
+          left: 60%;
+     }
+
+     .category-visual-hoodies::before {
+          width: 300px;
+          height: 300px;
+
+          top: 56%;
+          left: 60%;
+     }
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 600px) {
+     .category-visual-hoodies {
+          right: -35%;
+
+          width: 100%;
+
+          opacity: 0.43;
+     }
+
+     .category-hoodie-svg {
+          width: 110%;
+
+          top: 58%;
+          left: 58%;
+     }
+
+     .category-visual-hoodies::before {
+          width: 240px;
+          height: 240px;
+
+          top: 58%;
+          left: 58%;
+     }
+
+     .category-visual-hoodies::after {
+          right: 2%;
+
+          font-size: 5px;
+     }
+}
