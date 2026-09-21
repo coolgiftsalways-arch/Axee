@@ -1649,3 +1649,78 @@
     height: 32px;
   }
 }
+
+/* =========================================================
+   PRODUCT CARD - GSAP IMAGE 1 -> IMAGE 2 HOVER
+========================================================= */
+
+.shop-product-image-stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.shop-product-image-stage .shop-product-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  will-change: transform, opacity;
+  transform-origin: center center;
+}
+
+.shop-product-image-first {
+  z-index: 1;
+  opacity: 1;
+}
+
+.shop-product-image-second {
+  z-index: 2;
+  opacity: 0;
+}
+
+/* GSAP controls scale now, so disable the old CSS image scale */
+.shop-product-card:hover .shop-product-image {
+  transform: none;
+  filter: brightness(1) contrast(1.04) saturate(1);
+}
+
+.shop-hover-image-label {
+  position: absolute;
+  z-index: 6;
+  left: 10px;
+  bottom: 10px;
+  padding: 4px 6px;
+  border: 1px solid rgba(199, 255, 19, 0.34);
+  background: rgba(0, 0, 0, 0.56);
+  color: rgba(199, 255, 19, 0.78);
+  font-size: 5px;
+  letter-spacing: 0.16em;
+  pointer-events: none;
+}
+
+.shop-product-image-placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(199, 255, 19, 0.07), transparent 34%),
+    #070707;
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 10px;
+  letter-spacing: 0.35em;
+}
+
+@media (max-width: 600px) {
+  .shop-hover-image-label {
+    left: 7px;
+    bottom: 7px;
+    padding: 3px 4px;
+    font-size: 4px;
+  }
+}

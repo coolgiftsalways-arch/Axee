@@ -1787,6 +1787,22 @@ function CategoryPage({
 
   const [quantities, setQuantities] = useState({});
 
+  // If a category page passes products from MongoDB, use those.
+  // Otherwise keep using the existing local products data for other categories.
+  const usingExternalProducts = Array.isArray(externalProducts);
+  const sourceProducts = usingExternalProducts ? externalProducts : products;
+
+  const getProductId = (product) =>
+    String(product?._id || product?.id || product?.slug || product?.name || "");
+
+  const getProductSizes = (product) => {
+    if (!Array.isArray(product?.sizes)) return [];
+
+    return product.sizes
+      .map((item) => (typeof item === "string" ? item : item?.size))
+      .filter(Boolean);
+  };
+
   /* =======================================================
      QUICK SEARCH FOR EVERY CATEGORY
   ======================================================= */
@@ -1900,8 +1916,13 @@ function CategoryPage({
   ======================================================= */
 
   const totalCategoryProducts = useMemo(() => {
-    return products.filter((product) => product.category === category).length;
-  }, [category]);
+    if (usingExternalProducts) {
+      return sourceProducts.length;
+    }
+
+    return sourceProducts.filter((product) => product.category === category)
+      .length;
+  }, [category, sourceProducts, usingExternalProducts]);
 
   /* =======================================================
      SELECT SIZE
@@ -1938,8 +1959,15 @@ function CategoryPage({
   ======================================================= */
 
   const addToCart = (product) => {
-    const size = selectedSizes[product.id];
-    const quantity = getQuantity(product.id);
+    const productId = getProductId(product);
+    const sizes = getProductSizes(product);
+    const size = selectedSizes[productId];
+    const quantity = getQuantity(productId);
+
+    if (sizes.length === 0) {
+      alert("Sizes are not configured for this product yet.");
+      return;
+    }
 
     if (!size) {
       alert("Please select a size first.");
@@ -1961,7 +1989,6 @@ function CategoryPage({
         ...product,
 
         size,
-
         quantity,
       });
     }
@@ -1976,8 +2003,15 @@ function CategoryPage({
   ======================================================= */
 
   const buyNow = (product) => {
-    const size = selectedSizes[product.id];
-    const quantity = getQuantity(product.id);
+    const productId = getProductId(product);
+    const sizes = getProductSizes(product);
+    const size = selectedSizes[productId];
+    const quantity = getQuantity(productId);
+
+    if (sizes.length === 0) {
+      alert("Sizes are not configured for this product yet.");
+      return;
+    }
 
     if (!size) {
       alert("Please select a size first.");
@@ -1989,7 +2023,6 @@ function CategoryPage({
       ...product,
 
       size,
-
       quantity,
     };
 
@@ -2166,139 +2199,150 @@ function CategoryPage({
               PRODUCTS
           =============================================== */}
 
-          {categoryProducts.map((product) => (
-            <article className="shop-product-card" key={product.id}>
-              {/* IMAGE */}
+          {!loading &&
+            !error &&
+            categoryProducts.map((product) => {
+              const productId = getProductId(product);
+              const productSizes = getProductSizes(product);
 
-              <Link
-                to={`/product/${product.id}`}
-                className="shop-product-image-box"
-              >
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="shop-product-image"
-                />
-
-                {product.tag && (
-                  <span className="shop-new-tag">{product.tag}</span>
-                )}
-
-                <button
-                  type="button"
-                  className="shop-heart"
-                  onClick={(event) => {
-                    event.preventDefault();
-                  }}
-                  aria-label={`Add ${product.name} to wishlist`}
-                >
-                  <Heart size={16} strokeWidth={1.5} />
-                </button>
-
-                <div className="shop-image-fog" />
-              </Link>
-
-              {/* CONTENT */}
-
-              <div className="shop-product-content">
-                <div className="shop-product-name-row">
-                  <div>
-                    <h3>{product.name}</h3>
-
-                    <p>₹{product.price.toLocaleString("en-IN")}</p>
-                  </div>
+              return (
+                <article className="shop-product-card" key={productId}>
+                  {/* IMAGE */}
 
                   <Link
-                    to={`/product/${product.id}`}
-                    className="shop-product-arrow"
+                    to={`/product/${productId}`}
+                    className="shop-product-image-box"
                   >
-                    <ArrowRight size={14} />
+                    <img
+                      src={product.image || product.images?.[0]}
+                      alt={product.name}
+                      className="shop-product-image"
+                    />
+
+                    {product.tag && (
+                      <span className="shop-new-tag">{product.tag}</span>
+                    )}
+
+                    <button
+                      type="button"
+                      className="shop-heart"
+                      onClick={(event) => {
+                        event.preventDefault();
+                      }}
+                      aria-label={`Add ${product.name} to wishlist`}
+                    >
+                      <Heart size={16} strokeWidth={1.5} />
+                    </button>
+
+                    <div className="shop-image-fog" />
                   </Link>
-                </div>
 
-                {/* PRODUCT COLOUR */}
+                  {/* CONTENT */}
 
-                {product.color && (
-                  <div className="category-product-meta">
-                    <span>COLOUR</span>
+                  <div className="shop-product-content">
+                    <div className="shop-product-name-row">
+                      <div>
+                        <h3>{product.name}</h3>
 
-                    <strong>{product.color}</strong>
+                        <p>
+                          ₹{Number(product.price || 0).toLocaleString("en-IN")}
+                        </p>
+                      </div>
+
+                      <Link
+                        to={`/product/${productId}`}
+                        className="shop-product-arrow"
+                      >
+                        <ArrowRight size={14} />
+                      </Link>
+                    </div>
+
+                    {/* PRODUCT COLOUR */}
+
+                    {product.color && (
+                      <div className="category-product-meta">
+                        <span>COLOUR</span>
+
+                        <strong>{product.color}</strong>
+                      </div>
+                    )}
+
+                    {/* SIZES */}
+
+                    {productSizes.length > 0 && (
+                      <div className="shop-size-list">
+                        {productSizes.map((size) => (
+                          <button
+                            type="button"
+                            key={size}
+                            className={
+                              selectedSizes[productId] === size
+                                ? "shop-size active"
+                                : "shop-size"
+                            }
+                            onClick={() => selectSize(productId, size)}
+                          >
+                            {size}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* QUANTITY */}
+
+                    <div className="shop-quantity-area">
+                      <span className="shop-quantity-label">QUANTITY</span>
+
+                      <div className="shop-quantity-counter">
+                        <button
+                          type="button"
+                          className="shop-quantity-btn"
+                          onClick={() => changeQuantity(productId, -1)}
+                          disabled={getQuantity(productId) <= 1}
+                          aria-label={`Decrease ${product.name} quantity`}
+                        >
+                          −
+                        </button>
+
+                        <span className="shop-quantity-number">
+                          {getQuantity(productId)}
+                        </span>
+
+                        <button
+                          type="button"
+                          className="shop-quantity-btn"
+                          onClick={() => changeQuantity(productId, 1)}
+                          disabled={getQuantity(productId) >= 10}
+                          aria-label={`Increase ${product.name} quantity`}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* BUTTONS */}
+
+                    <div className="shop-product-actions">
+                      <button
+                        type="button"
+                        className="shop-add-cart"
+                        onClick={() => addToCart(product)}
+                      >
+                        ADD TO CART
+                      </button>
+
+                      <button
+                        type="button"
+                        className="shop-buy-now"
+                        onClick={() => buyNow(product)}
+                      >
+                        BUY NOW
+                      </button>
+                    </div>
                   </div>
-                )}
-
-                {/* SIZES */}
-
-                <div className="shop-size-list">
-                  {product.sizes.map((size) => (
-                    <button
-                      type="button"
-                      key={size}
-                      className={
-                        selectedSizes[product.id] === size
-                          ? "shop-size active"
-                          : "shop-size"
-                      }
-                      onClick={() => selectSize(product.id, size)}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
-
-                {/* QUANTITY */}
-
-                <div className="shop-quantity-area">
-                  <span className="shop-quantity-label">QUANTITY</span>
-
-                  <div className="shop-quantity-counter">
-                    <button
-                      type="button"
-                      className="shop-quantity-btn"
-                      onClick={() => changeQuantity(product.id, -1)}
-                      disabled={getQuantity(product.id) <= 1}
-                      aria-label={`Decrease ${product.name} quantity`}
-                    >
-                      −
-                    </button>
-
-                    <span className="shop-quantity-number">
-                      {getQuantity(product.id)}
-                    </span>
-
-                    <button
-                      type="button"
-                      className="shop-quantity-btn"
-                      onClick={() => changeQuantity(product.id, 1)}
-                      disabled={getQuantity(product.id) >= 10}
-                      aria-label={`Increase ${product.name} quantity`}
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                {/* BUTTONS */}
-
-                <div className="shop-product-actions">
-                  <button
-                    type="button"
-                    className="shop-add-cart"
-                    onClick={() => addToCart(product)}
-                  >
-                    ADD TO CART
-                  </button>
-
-                  <button
-                    type="button"
-                    className="shop-buy-now"
-                    onClick={() => buyNow(product)}
-                  >
-                    BUY NOW
-                  </button>
-                </div>
-              </div>
-            </article>
-          ))}
+                </article>
+              );
+            })}
         </div>
       </section>
     </main>
