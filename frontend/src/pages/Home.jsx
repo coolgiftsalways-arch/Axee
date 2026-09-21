@@ -236,10 +236,30 @@ const productSections = [
    PRODUCT CARD
 ========================================================= */
 
-function ProductCard({ product, selectedSizes, setSelectedSizes }) {
+function ProductCard({
+  product,
+  selectedSizes,
+  setSelectedSizes,
+  quantities,
+  setQuantities,
+}) {
   const navigate = useNavigate();
 
   const selectedSize = selectedSizes[product.id];
+
+  const quantity = quantities[product.id] || 1;
+
+  const changeQuantity = (amount) => {
+    setQuantities((previous) => {
+      const currentQuantity = previous[product.id] || 1;
+      const nextQuantity = Math.min(10, Math.max(1, currentQuantity + amount));
+
+      return {
+        ...previous,
+        [product.id]: nextQuantity,
+      };
+    });
+  };
 
   const chooseSize = (size) => {
     setSelectedSizes((previous) => ({
@@ -274,7 +294,7 @@ function ProductCard({ product, selectedSizes, setSelectedSizes }) {
       updatedCart[existingIndex] = {
         ...updatedCart[existingIndex],
 
-        quantity: Number(updatedCart[existingIndex].quantity || 1) + 1,
+        quantity: Number(updatedCart[existingIndex].quantity || 1) + quantity,
       };
     } else {
       updatedCart = [
@@ -285,7 +305,7 @@ function ProductCard({ product, selectedSizes, setSelectedSizes }) {
 
           size: selectedSize,
 
-          quantity: 1,
+          quantity,
         },
       ];
     }
@@ -316,7 +336,7 @@ function ProductCard({ product, selectedSizes, setSelectedSizes }) {
 
         size: selectedSize,
 
-        quantity: 1,
+        quantity,
       }),
     );
 
@@ -395,6 +415,36 @@ function ProductCard({ product, selectedSizes, setSelectedSizes }) {
           </div>
         </div>
 
+        {/* QUANTITY */}
+
+        <div className="ax-quantity-area">
+          <span className="ax-quantity-label">QUANTITY</span>
+
+          <div className="ax-quantity-counter">
+            <button
+              type="button"
+              className="ax-quantity-btn"
+              onClick={() => changeQuantity(-1)}
+              disabled={quantity <= 1}
+              aria-label={`Decrease ${product.name} quantity`}
+            >
+              −
+            </button>
+
+            <span className="ax-quantity-number">{quantity}</span>
+
+            <button
+              type="button"
+              className="ax-quantity-btn"
+              onClick={() => changeQuantity(1)}
+              disabled={quantity >= 10}
+              aria-label={`Increase ${product.name} quantity`}
+            >
+              +
+            </button>
+          </div>
+        </div>
+
         {/* BUTTONS */}
 
         <div className="ax-product-actions">
@@ -418,7 +468,13 @@ function ProductCard({ product, selectedSizes, setSelectedSizes }) {
    PRODUCT SECTION
 ========================================================= */
 
-function ProductSection({ section, selectedSizes, setSelectedSizes }) {
+function ProductSection({
+  section,
+  selectedSizes,
+  setSelectedSizes,
+  quantities,
+  setQuantities,
+}) {
   return (
     <section className="ax-product-section" id={section.id}>
       <div className="ax-product-section-top">
@@ -452,6 +508,8 @@ function ProductSection({ section, selectedSizes, setSelectedSizes }) {
             product={product}
             selectedSizes={selectedSizes}
             setSelectedSizes={setSelectedSizes}
+            quantities={quantities}
+            setQuantities={setQuantities}
           />
         ))}
       </div>
@@ -498,6 +556,8 @@ function Home({
   const engineeredRef = useRef(null);
 
   const [selectedSizes, setSelectedSizes] = useState({});
+
+  const [quantities, setQuantities] = useState({});
 
   /* ======================================================
      HERO INTRO
@@ -1260,15 +1320,7 @@ function Home({
         {/* SLIDE NUMBERS */}
 
         <div ref={numbersRef} className="hero-numbers">
-          <span className="active">01</span>
-
-          <span>02</span>
-
-          <span>03</span>
-
-          <span>04</span>
-
-          <span>05</span>
+       
         </div>
 
         {/* EXPLORE */}
@@ -1326,6 +1378,8 @@ function Home({
             section={section}
             selectedSizes={selectedSizes}
             setSelectedSizes={setSelectedSizes}
+            quantities={quantities}
+            setQuantities={setQuantities}
           />
         ))}
       </div>

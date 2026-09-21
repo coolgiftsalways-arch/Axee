@@ -444,13 +444,27 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* COLLECTIONS */}
+          {/* =================================================
+              BEST SELLERS
+          ================================================= */}
 
-          <a href="/#collections">COLLECTIONS</a>
+          <NavLink
+            to="/best-sellers"
+            className={({ isActive }) => (isActive ? "active" : "")}
+          >
+            BEST SELLERS
+          </NavLink>
 
-          {/* ABOUT */}
+          {/* =================================================
+              TRACK ORDER
+          ================================================= */}
 
-          <a href="/#about">ABOUT</a>
+          <NavLink
+            to="/track-order"
+            className={({ isActive }) => (isActive ? "active" : "")}
+          >
+            TRACK ORDER
+          </NavLink>
         </nav>
 
         {/* =================================================
@@ -594,19 +608,31 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* COLLECTIONS */}
+          {/* =================================================
+              BEST SELLERS
+          ================================================= */}
 
-          <a href="/#collections" onClick={closeAll}>
+          <NavLink
+            to="/best-sellers"
+            onClick={closeAll}
+            className={({ isActive }) => (isActive ? "active" : "")}
+          >
             <i></i>
-            COLLECTIONS
-          </a>
+            BEST SELLERS
+          </NavLink>
 
-          {/* ABOUT */}
+          {/* =================================================
+              TRACK ORDER
+          ================================================= */}
 
-          <a href="/#about" onClick={closeAll}>
+          <NavLink
+            to="/track-order"
+            onClick={closeAll}
+            className={({ isActive }) => (isActive ? "active" : "")}
+          >
             <i></i>
-            ABOUT
-          </a>
+            TRACK ORDER
+          </NavLink>
         </nav>
 
         <div className="ax-mobile-divider"></div>

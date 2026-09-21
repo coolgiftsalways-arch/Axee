@@ -33,12 +33,27 @@ import Tshirts from "./pages/Tshirts.jsx";
 import Shirts from "./pages/Shirts.jsx";
 
 import Hoodies from "./pages/Hoodies.jsx";
+
 import Jeans from "./pages/Jeans.jsx";
+
 import TrackPants from "./pages/TrackPants.jsx";
+
 import Shorts from "./pages/Shorts.jsx";
+
 import Jackets from "./pages/jackets.jsx";
+
 import CoOrdSets from "./pages/CoOrdSets.jsx";
 import Cart from "./pages/Cart";
+
+import BestSellers from "./pages/BestSellers.jsx";
+
+import TrackOrder from "./pages/TrackOrder.jsx";
+
+/* =========================================================
+   PRODUCT DETAILS
+========================================================= */
+
+import ProductDetails from "./pages/ProductDetails.jsx";
 
 /* =========================================================
    GSAP
@@ -51,9 +66,9 @@ gsap.registerPlugin(ScrollTrigger);
 ========================================================= */
 
 function App() {
-  /* =========================================
+  /* =====================================================
      APP STATE
-  ========================================= */
+  ===================================================== */
 
   const [loadingComplete, setLoadingComplete] = useState(false);
 
@@ -62,11 +77,11 @@ function App() {
   /*
     false = hero has not played yet
 
-    On normal route changes:
-    value stays true.
+    Normal React route changes:
+    this stays true.
 
-    On browser refresh:
-    App reloads and this goes back to false.
+    Browser refresh:
+    App reloads and goes back to false.
   */
 
   const [heroAlreadyPlayed, setHeroAlreadyPlayed] = useState(false);
@@ -77,15 +92,15 @@ function App() {
 
   const isHomePage = location.pathname === "/";
 
-  /* =========================================
+  /* =====================================================
      SHOULD HERO INTRO PLAY
-  ========================================= */
+  ===================================================== */
 
   const shouldPlayHeroIntro = loadingComplete && !heroAlreadyPlayed;
 
-  /* =========================================
+  /* =====================================================
      PRELOAD HERO AUDIO
-  ========================================= */
+  ===================================================== */
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -119,9 +134,9 @@ function App() {
     };
   }, []);
 
-  /* =========================================
+  /* =====================================================
      LOADER COMPLETE
-  ========================================= */
+  ===================================================== */
 
   const handleLoaderComplete = useCallback(() => {
     const audio = audioRef.current;
@@ -157,16 +172,15 @@ function App() {
         Loader finishes.
 
         startAnimation becomes true
-
         and Home intro begins.
       */
 
     setLoadingComplete(true);
   }, []);
 
-  /* =========================================
+  /* =====================================================
      HERO COMPLETE
-  ========================================= */
+  ===================================================== */
 
   const handleHeroComplete = useCallback(() => {
     setHeroComplete(true);
@@ -175,10 +189,11 @@ function App() {
         Prevent hero intro replay when:
 
         Home → Shirts → Home
-
         Home → T-Shirts → Home
-
         Home → Hoodies → Home
+        Home → Best Sellers → Home
+        Home → Track Order → Home
+        Home → Product → Home
 
         etc.
       */
@@ -186,9 +201,9 @@ function App() {
     setHeroAlreadyPlayed(true);
   }, []);
 
-  /* =========================================
+  /* =====================================================
      LOCOMOTIVE SCROLL
-  ========================================= */
+  ===================================================== */
 
   useEffect(() => {
     let locomotiveScroll = null;
@@ -250,9 +265,9 @@ function App() {
     };
   }, [heroComplete, isHomePage, location.pathname]);
 
-  /* =========================================
+  /* =====================================================
      SCROLL TO TOP ON ROUTE CHANGE
-  ========================================= */
+  ===================================================== */
 
   useEffect(() => {
     window.scrollTo({
@@ -272,40 +287,39 @@ function App() {
     };
   }, [location.pathname]);
 
-  /* =========================================
+  /* =====================================================
      RETURN
-  ========================================= */
+  ===================================================== */
 
   return (
     <>
-      {/* =====================================
+      {/* =================================================
           PAGE CHANGE ANIMATION
 
-          This does NOT show during
-          initial Loader.
+          Does not show during initial Loader.
 
-          It only plays after route changes.
-      ===================================== */}
+          Only plays after route changes.
+      ================================================= */}
 
       <PageTransition />
 
-      {/* =====================================
+      {/* =================================================
           HERO AUDIO
-      ===================================== */}
+      ================================================= */}
 
       <audio ref={audioRef} src="/audio/hero.mp3" preload="auto" playsInline />
 
-      {/* =====================================
+      {/* =================================================
           WEBSITE
-      ===================================== */}
+      ================================================= */}
 
       <div className="app">
         <Navbar />
 
         <Routes>
-          {/* =================================
+          {/* =============================================
               HOME
-          ================================= */}
+          ============================================= */}
 
           <Route
             path="/"
@@ -319,70 +333,99 @@ function App() {
             }
           />
 
-          {/* =================================
+          {/* =============================================
+              PRODUCT DETAILS
+
+              Example:
+              /product/68f123456789...
+              /product/track-2
+          ============================================= */}
+
+          <Route path="/product/:id" element={<ProductDetails />} />
+
+          {/* =============================================
               T-SHIRTS
-          ================================= */}
+          ============================================= */}
 
           <Route path="/tshirts" element={<Tshirts />} />
 
+          {/* =============================================
+              JEANS
+          ============================================= */}
+
           <Route path="/jeans" element={<Jeans />} />
+
+          {/* =============================================
+              TRACK PANTS
+          ============================================= */}
+
           <Route path="/track-pants" element={<TrackPants />} />
           <Route path="/cart" element={<Cart />} />
 
-          {/* =================================
+          {/* =============================================
               SHIRTS
-          ================================= */}
+          ============================================= */}
 
           <Route path="/shirts" element={<Shirts />} />
 
-          {/* =================================
+          {/* =============================================
               HOODIES
-          ================================= */}
+          ============================================= */}
 
           <Route path="/hoodies" element={<Hoodies />} />
+
+          {/* =============================================
+              SHORTS
+          ============================================= */}
+
           <Route path="/shorts" element={<Shorts />} />
 
-<Route path="/jackets" element={<Jackets />} />
+          {/* =============================================
+              JACKETS
+          ============================================= */}
 
-<Route path="/co-ord-sets" element={<CoOrdSets />} />
+          <Route path="/jackets" element={<Jackets />} />
 
-          {/* =================================
+          {/* =============================================
+              CO-ORD SETS
+          ============================================= */}
+
+          <Route path="/co-ord-sets" element={<CoOrdSets />} />
+
+          {/* =============================================
+              BEST SELLERS
+          ============================================= */}
+
+          <Route path="/best-sellers" element={<BestSellers />} />
+
+          {/* =============================================
+              TRACK ORDER
+          ============================================= */}
+
+          <Route path="/track-order" element={<TrackOrder />} />
+
+          {/* =============================================
               TEMPORARY SHOP
 
               For now /shop opens Shirts.
 
-              Later when we make the complete
-              Shop page, replace this.
-          ================================= */}
+              Later we can change this to:
+
+              import Shop from "./pages/Shop.jsx";
+
+              <Route
+                path="/shop"
+                element={<Shop />}
+              />
+          ============================================= */}
 
           <Route path="/shop" element={<Shirts />} />
-
-          {/* =================================
-              FUTURE CATEGORY ROUTES
-          ================================= */}
-
-          {/*
-          <Route
-            path="/jeans"
-            element={<Jeans />}
-          />
-
-          <Route
-            path="/track-pants"
-            element={<TrackPants />}
-          />
-
-          <Route
-            path="/shorts"
-            element={<Shorts />}
-          />
-          */}
         </Routes>
 
         <Footer />
       </div>
 
-      {/* =====================================
+      {/* =================================================
           LOADER
 
           ONLY:
@@ -393,7 +436,9 @@ function App() {
           Shirts → Home
           T-Shirts → Home
           Hoodies → Home
-      ===================================== */}
+          Best Sellers → Home
+          Product → Home
+      ================================================= */}
 
       {isHomePage && !loadingComplete && !heroAlreadyPlayed && (
         <Loader onComplete={handleLoaderComplete} />
