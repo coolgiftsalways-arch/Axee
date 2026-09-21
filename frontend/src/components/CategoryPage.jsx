@@ -2481,8 +2481,9 @@ function CategoryPage({
   ======================================================= */
 
   const categoryProducts = useMemo(() => {
-    // MongoDB products passed by TrackPants are already fetched for that category.
-    // Local/static products still use the old category filter.
+    // MongoDB category pages (like Track Pants) already pass only the
+    // products that belong on this page. Local category pages still
+    // use the original category filter from ../data/products.
     let result = usingExternalProducts
       ? [...sourceProducts]
       : sourceProducts.filter((product) => product.category === category);
@@ -2583,61 +2584,124 @@ function CategoryPage({
   /* =======================================================
      ADD TO CART
   ======================================================= */
+  const addToCart = async (product) => {
+    try {
+      const productId = getProductId(product);
+      const sizes = getProductSizes(product);
+      const size = selectedSizes[productId];
+      const quantity = getQuantity(productId);
 
-  const addToCart = (product) => {
-    const productId = getProductId(product);
-    const sizes = getProductSizes(product);
-    const size = selectedSizes[productId];
-    const quantity = getQuantity(productId);
+      if (sizes.length === 0) {
+        alert("Sizes are not configured for this product yet.");
+        return;
+      }
 
-    if (sizes.length === 0) {
-      alert("Sizes are not configured for this product yet.");
-      return;
-    }
+      if (!size) {
+        alert("Please select a size first.");
+        return;
+      }
 
-    if (!size) {
-      alert("Please select a size first.");
-      return;
-    }
+      if (quantity <= 0) {
+        alert("Please select quantity first.");
+        return;
+      }
 
-    if (quantity <= 0) {
-      alert("Please select quantity first.");
-      return;
-    }
+      const isMongoProduct = /^[a-f\\d]{24}$/i.test(productId);
+      let backendCart = null;
 
-    const cart = JSON.parse(localStorage.getItem("axiee-cart")) || [];
+      /*
+        MongoDB products:
+        use Nikita's backend cart API.
+      */
+      if (isMongoProduct) {
+        let cartId = localStorage.getItem("axiee-cart-id");
 
-    const existingIndex = cart.findIndex(
-      (item) => String(item.id) === productId && item.size === size,
-    );
+        if (!cartId) {
+          cartId = crypto.randomUUID();
+          localStorage.setItem("axiee-cart-id", cartId);
+        }
 
-    if (existingIndex !== -1) {
-      cart[existingIndex].quantity =
-        Number(cart[existingIndex].quantity || 1) + quantity;
-    } else {
-      cart.push({
-        ...product,
-        id: productId,
+        const response = await fetch(`${API_BASE}/api/cart/add`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            cartId,
+            productId,
+            size,
+            quantity,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Unable to add to cart");
+        }
+
+        backendCart = data.cart;
+
+        console.log("✅ MongoDB cart:", backendCart);
+      }
+
+      /*
+        Local/static products:
+        keep Ahmed's localStorage cart support.
+      */
+      if (!isMongoProduct) {
+        const cart = JSON.parse(localStorage.getItem("axiee-cart")) || [];
+
+        const existingIndex = cart.findIndex(
+          (item) =>
+            String(item.id || item.productId) === productId &&
+            item.size === size,
+        );
+
+        if (existingIndex !== -1) {
+          cart[existingIndex].quantity =
+            Number(cart[existingIndex].quantity || 0) + quantity;
+        } else {
+          cart.push({
+            ...product,
+            id: productId,
+            productId,
+            size,
+            quantity,
+          });
+        }
+
+        localStorage.setItem("axiee-cart", JSON.stringify(cart));
+      }
+
+      /*
+        Tell Navbar / Cart that something changed.
+      */
+      window.dispatchEvent(
+        new CustomEvent("axiee-cart-updated", {
+          detail: backendCart,
+        }),
+      );
+
+      /*
+        Premium visual confirmation.
+      */
+      setCartToast({
+        name: product.name,
         size,
         quantity,
       });
+
+      setAddedProductId(productId);
+
+      window.setTimeout(() => {
+        setAddedProductId((current) => (current === productId ? "" : current));
+      }, 1400);
+    } catch (error) {
+      console.error("❌ Add to cart error:", error);
+
+      alert(error.message || "Unable to add to cart");
     }
-
-    localStorage.setItem("axiee-cart", JSON.stringify(cart));
-    window.dispatchEvent(new Event("axiee-cart-updated"));
-
-    // Clear visual confirmation so the customer knows the click worked.
-    setCartToast({
-      name: product.name,
-      size,
-      quantity,
-    });
-
-    setAddedProductId(productId);
-
-    window.setTimeout(() => {
-      setAddedProductId((current) => (current === productId ? "" : current));
-    }, 1400);
   };
 
   /* =======================================================
@@ -2657,6 +2721,7 @@ function CategoryPage({
 
     if (!size) {
       alert("Please select a size first.");
+
       return;
     }
 
@@ -2673,6 +2738,7 @@ function CategoryPage({
     };
 
     localStorage.setItem("axiee-buy-now", JSON.stringify(checkoutProduct));
+
     navigate("/checkout");
   };
 
@@ -2827,7 +2893,7 @@ function CategoryPage({
             <div className="category-no-results">
               <span>LOADING</span>
               <h3>LOADING PRODUCTS...</h3>
-              <p>FETCHING THE LATEST AXIEE PRODUCTS</p>
+              <p>CONNECTING TO AXIEE CATALOG</p>
             </div>
           )}
 

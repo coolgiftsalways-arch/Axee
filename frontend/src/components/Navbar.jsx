@@ -158,37 +158,47 @@ function Navbar() {
   }, []);
 
   /* =========================================================
-     CART COUNT
-  ========================================================= */
-
-  /* =========================================================
-   CART COUNT - BACKEND
+   CART COUNT
 ========================================================= */
 
-const USER_ID = localStorage.getItem("userId") || "test-user-1";
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const updateCartCount = async () => {
   try {
+    const cartId = localStorage.getItem("axiee-cart-id");
+
+    if (!cartId) {
+      setCartCount(0);
+      return;
+    }
+
     const response = await fetch(
-      `http://localhost:5000/api/cart/${USER_ID}`
+      `${API_URL}/api/cart/${cartId}`
     );
 
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || "Failed to get cart");
+      throw new Error(
+        data.message || "Failed to get cart"
+      );
     }
 
     const items = data.cart?.items || [];
 
     const totalQuantity = items.reduce(
-      (total, item) => total + Number(item.quantity || 1),
+      (total, item) =>
+        total + Number(item.quantity || 1),
       0
     );
 
     setCartCount(totalQuantity);
   } catch (error) {
-    console.error("Navbar cart count error:", error);
+    console.error(
+      "Navbar cart count error:",
+      error
+    );
 
     setCartCount(0);
   }
@@ -197,8 +207,33 @@ const updateCartCount = async () => {
 useEffect(() => {
   updateCartCount();
 
-  const handleCartUpdate = () => {
+  const handleCartUpdate = (event) => {
+    // If updated cart was sent with the event,
+    // calculate instantly without another request.
+    const updatedCart = event?.detail;
+
+    if (updatedCart?.items) {
+      const totalQuantity =
+        updatedCart.items.reduce(
+          (total, item) =>
+            total + Number(item.quantity || 1),
+          0
+        );
+
+      setCartCount(totalQuantity);
+
+      return;
+    }
+
     updateCartCount();
+  };
+
+  const handleStorage = (event) => {
+    if (
+      event.key === "axiee-cart-id"
+    ) {
+      updateCartCount();
+    }
   };
 
   window.addEventListener(
@@ -206,10 +241,20 @@ useEffect(() => {
     handleCartUpdate
   );
 
+  window.addEventListener(
+    "storage",
+    handleStorage
+  );
+
   return () => {
     window.removeEventListener(
       "axiee-cart-updated",
       handleCartUpdate
+    );
+
+    window.removeEventListener(
+      "storage",
+      handleStorage
     );
   };
 }, []);
