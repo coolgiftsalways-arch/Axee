@@ -29,6 +29,27 @@ import "../styles/productDetails.css";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
+const resolveImageUrl = (value) => {
+  if (!value || typeof value !== "string") return "";
+
+  if (
+    value.startsWith("http://") ||
+    value.startsWith("https://") ||
+    value.startsWith("data:") ||
+    value.startsWith("blob:")
+  ) {
+    return value;
+  }
+
+  // Backend-served API/GridFS images need the backend origin.
+  if (value.startsWith("/api/")) {
+    return `${API_BASE}${value}`;
+  }
+
+  // Vite public assets such as /products/... should stay on the frontend.
+  return value;
+};
+
 /* =========================================================
    CHECK MONGODB ID
 ========================================================= */
@@ -71,12 +92,14 @@ const normalizeProduct = (product) => {
       })
     : [];
 
-  const normalizedImages =
+  const rawImages =
     product.images?.length > 0
       ? product.images
       : product.image
         ? [product.image]
         : [];
+
+  const normalizedImages = rawImages.map(resolveImageUrl).filter(Boolean);
 
   const calculatedStock = normalizedSizes.reduce(
     (total, item) => total + Number(item.stock || 0),
@@ -87,6 +110,8 @@ const normalizeProduct = (product) => {
     ...product,
 
     id: product._id || product.id,
+
+    image: normalizedImages[0] || resolveImageUrl(product.image),
 
     images: normalizedImages,
 

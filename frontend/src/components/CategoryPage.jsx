@@ -1,6 +1,15 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Heart, ArrowRight, SlidersHorizontal, Search, X } from "lucide-react";
+import {
+  Heart,
+  ArrowRight,
+  SlidersHorizontal,
+  Search,
+  X,
+  Check,
+  ShoppingBag,
+} from "lucide-react";
+import gsap from "gsap";
 
 import { products } from "../data/products";
 import "../styles/shop.css";
@@ -1767,6 +1776,611 @@ function CategoryVisual({ type }) {
 }
 
 /* =========================================================
+   PRODUCT CARD HOVER IMAGE
+   Image 1 = normal
+   Image 2 = mouse hover
+========================================================= */
+
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+const resolveProductImageUrl = (value) => {
+  if (!value) return "";
+
+  const url = String(value);
+
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+
+  // Old URLs saved in MongoDB: /api/images/:id
+  if (url.startsWith("/api/images/")) {
+    return `${API_BASE}${url.replace("/api/images/", "/api/catalog/images/")}`;
+  }
+
+  // Current backend API URLs.
+  if (url.startsWith("/api/")) {
+    return `${API_BASE}${url}`;
+  }
+
+  // Vite /public image such as /products/track-1.jpg
+  return url;
+};
+
+function ProductHoverImage({ product }) {
+  const stageRef = useRef(null);
+  const firstImageRef = useRef(null);
+  const secondImageRef = useRef(null);
+  const sweepRef = useRef(null);
+  const labelRef = useRef(null);
+
+  const productImages = useMemo(() => {
+    const list = [];
+
+    const addImage = (value) => {
+      const resolved = resolveProductImageUrl(value);
+
+      if (resolved && !list.includes(resolved)) {
+        list.push(resolved);
+      }
+    };
+
+    // MongoDB / GridFS images from imported ZIP products.
+    if (Array.isArray(product?.imageFiles)) {
+      [...product.imageFiles]
+        .sort((a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0))
+        .forEach((item) => {
+          const fileId = item?.fileId || item?._id || item?.id;
+
+          if (fileId) {
+            addImage(`${API_BASE}/api/catalog/images/${String(fileId)}`);
+          } else if (item?.url) {
+            addImage(item.url);
+          }
+        });
+    }
+
+    // Backend / local images array.
+    if (Array.isArray(product?.images)) {
+      product.images.forEach(addImage);
+    }
+
+    // Single-image fallbacks.
+    addImage(product?.image);
+    addImage(product?.mainImage);
+
+    return list;
+  }, [product]);
+
+  const firstImage = productImages[0] || "";
+  const secondImage = productImages[1] || "";
+  const hasSecondImage = Boolean(secondImage);
+
+  const stopAnimations = () => {
+    gsap.killTweensOf([
+      stageRef.current,
+      firstImageRef.current,
+      secondImageRef.current,
+      sweepRef.current,
+      labelRef.current,
+    ]);
+  };
+
+  const handleMouseEnter = () => {
+    if (!hasSecondImage) return;
+
+    stopAnimations();
+
+    gsap.set(secondImageRef.current, {
+      opacity: 0,
+      scale: 1.035,
+      xPercent: 3,
+      filter: "brightness(0.9) contrast(1.05) saturate(0.95)",
+    });
+
+    gsap.set(sweepRef.current, {
+      xPercent: -140,
+      opacity: 0,
+    });
+
+    gsap.set(labelRef.current, {
+      opacity: 0,
+      y: 7,
+    });
+
+    const tl = gsap.timeline({ defaults: { overwrite: "auto" } });
+
+    // Fast, obvious image change.
+    tl.to(
+      firstImageRef.current,
+      {
+        opacity: 0,
+        scale: 1.025,
+        xPercent: -1.5,
+        duration: 0.16,
+        ease: "power2.out",
+      },
+      0,
+    );
+
+    tl.to(
+      secondImageRef.current,
+      {
+        opacity: 1,
+        scale: 1,
+        xPercent: 0,
+        filter: "brightness(1) contrast(1.03) saturate(1)",
+        duration: 0.28,
+        ease: "power3.out",
+      },
+      0.03,
+    );
+
+    // Quick Awwwards-style light sweep.
+    tl.fromTo(
+      sweepRef.current,
+      {
+        xPercent: -140,
+        opacity: 0,
+      },
+      {
+        xPercent: 140,
+        opacity: 0.8,
+        duration: 0.3,
+        ease: "power2.inOut",
+      },
+      0.02,
+    );
+
+    tl.to(
+      sweepRef.current,
+      {
+        opacity: 0,
+        duration: 0.08,
+      },
+      0.24,
+    );
+
+    tl.to(
+      labelRef.current,
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.18,
+        ease: "power2.out",
+      },
+      0.1,
+    );
+
+    tl.to(
+      stageRef.current,
+      {
+        scale: 1.006,
+        duration: 0.22,
+        ease: "power2.out",
+      },
+      0,
+    );
+  };
+
+  const handleMouseMove = (event) => {
+    if (!stageRef.current) return;
+
+    const rect = stageRef.current.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width - 0.5;
+    const y = (event.clientY - rect.top) / rect.height - 0.5;
+
+    // Very small parallax: premium but not confusing.
+    gsap.to(stageRef.current, {
+      rotateY: x * 1.4,
+      rotateX: y * -1.1,
+      transformPerspective: 1000,
+      duration: 0.22,
+      ease: "power2.out",
+      overwrite: "auto",
+    });
+
+    if (hasSecondImage) {
+      gsap.to(secondImageRef.current, {
+        xPercent: x * 0.8,
+        yPercent: y * 0.65,
+        duration: 0.22,
+        ease: "power2.out",
+        overwrite: "auto",
+      });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    stopAnimations();
+
+    if (!hasSecondImage) {
+      gsap.to(stageRef.current, {
+        rotateX: 0,
+        rotateY: 0,
+        scale: 1,
+        duration: 0.22,
+        ease: "power2.out",
+      });
+      return;
+    }
+
+    const tl = gsap.timeline({ defaults: { overwrite: "auto" } });
+
+    tl.to(
+      labelRef.current,
+      {
+        opacity: 0,
+        y: 5,
+        duration: 0.1,
+        ease: "power1.in",
+      },
+      0,
+    );
+
+    tl.to(
+      secondImageRef.current,
+      {
+        opacity: 0,
+        scale: 1.02,
+        xPercent: 1.5,
+        yPercent: 0,
+        duration: 0.16,
+        ease: "power2.in",
+      },
+      0,
+    );
+
+    tl.to(
+      firstImageRef.current,
+      {
+        opacity: 1,
+        scale: 1,
+        xPercent: 0,
+        yPercent: 0,
+        filter: "brightness(0.88) contrast(1.07) saturate(0.88)",
+        duration: 0.24,
+        ease: "power3.out",
+      },
+      0.03,
+    );
+
+    tl.to(
+      stageRef.current,
+      {
+        rotateX: 0,
+        rotateY: 0,
+        scale: 1,
+        duration: 0.2,
+        ease: "power2.out",
+      },
+      0,
+    );
+  };
+
+  if (!firstImage) {
+    return (
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "grid",
+          placeItems: "center",
+          color: "rgba(255,255,255,0.18)",
+          fontSize: "10px",
+          letterSpacing: "0.25em",
+        }}
+      >
+        AXIEE
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={stageRef}
+      className="shop-product-hover-stage"
+      onMouseEnter={handleMouseEnter}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        overflow: "hidden",
+        transformOrigin: "50% 50%",
+        transformStyle: "preserve-3d",
+        willChange: "transform",
+      }}
+    >
+      <img
+        ref={firstImageRef}
+        src={firstImage}
+        alt={product?.name || "AXIEE product"}
+        className="shop-product-image shop-product-image-first"
+        draggable="false"
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          opacity: 1,
+          zIndex: 1,
+          willChange: "transform, opacity, filter",
+        }}
+      />
+
+      {hasSecondImage && (
+        <img
+          ref={secondImageRef}
+          src={secondImage}
+          alt={`${product?.name || "AXIEE product"} alternate`}
+          className="shop-product-image shop-product-image-second"
+          draggable="false"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            opacity: 0,
+            zIndex: 2,
+            willChange: "transform, opacity, filter",
+          }}
+          onError={(event) => {
+            console.error("Second hover image failed:", secondImage);
+            event.currentTarget.style.display = "none";
+          }}
+        />
+      )}
+
+      {hasSecondImage && (
+        <span
+          ref={sweepRef}
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            zIndex: 3,
+            top: "-12%",
+            bottom: "-12%",
+            left: "42%",
+            width: "18%",
+            opacity: 0,
+            pointerEvents: "none",
+            transform: "skewX(-14deg)",
+            background:
+              "linear-gradient(90deg, transparent, rgba(255,255,255,0.20), rgba(199,255,19,0.20), transparent)",
+            filter: "blur(4px)",
+            mixBlendMode: "screen",
+          }}
+        />
+      )}
+
+      {hasSecondImage && (
+        <span
+          ref={labelRef}
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            zIndex: 4,
+            left: "12px",
+            bottom: "12px",
+            padding: "6px 8px",
+            border: "1px solid rgba(199,255,19,0.45)",
+            background: "rgba(0,0,0,0.46)",
+            color: "#c7ff13",
+            fontSize: "6px",
+            letterSpacing: "0.16em",
+            opacity: 0,
+            pointerEvents: "none",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          02 / {String(productImages.length).padStart(2, "0")}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/* =========================================================
+   PREMIUM CART TOAST
+========================================================= */
+
+function CartAddedToast({ toast, setToast }) {
+  const toastRef = useRef(null);
+  const progressRef = useRef(null);
+
+  useEffect(() => {
+    if (!toast || !toastRef.current) return undefined;
+
+    const toastEl = toastRef.current;
+    const progressEl = progressRef.current;
+
+    gsap.killTweensOf([toastEl, progressEl]);
+
+    const tl = gsap.timeline();
+
+    tl.fromTo(
+      toastEl,
+      {
+        autoAlpha: 0,
+        y: 28,
+        scale: 0.96,
+        filter: "blur(8px)",
+      },
+      {
+        autoAlpha: 1,
+        y: 0,
+        scale: 1,
+        filter: "blur(0px)",
+        duration: 0.38,
+        ease: "power3.out",
+      },
+    );
+
+    if (progressEl) {
+      gsap.fromTo(
+        progressEl,
+        { scaleX: 1, transformOrigin: "left center" },
+        {
+          scaleX: 0,
+          duration: 2.6,
+          ease: "none",
+        },
+      );
+    }
+
+    const timer = window.setTimeout(() => {
+      gsap.to(toastEl, {
+        autoAlpha: 0,
+        y: 18,
+        scale: 0.98,
+        filter: "blur(6px)",
+        duration: 0.24,
+        ease: "power2.in",
+        onComplete: () => setToast(null),
+      });
+    }, 2600);
+
+    return () => {
+      window.clearTimeout(timer);
+      gsap.killTweensOf([toastEl, progressEl]);
+    };
+  }, [toast, setToast]);
+
+  if (!toast) return null;
+
+  return (
+    <div
+      ref={toastRef}
+      role="status"
+      aria-live="polite"
+      style={{
+        position: "fixed",
+        zIndex: 99999,
+        right: "clamp(14px, 2.2vw, 30px)",
+        bottom: "clamp(14px, 2.2vw, 30px)",
+        width: "min(390px, calc(100vw - 28px))",
+        overflow: "hidden",
+        border: "1px solid rgba(199,255,19,0.62)",
+        background: "rgba(5,5,5,0.94)",
+        boxShadow:
+          "0 18px 60px rgba(0,0,0,0.48), 0 0 32px rgba(199,255,19,0.08)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+        color: "#fff",
+        pointerEvents: "auto",
+      }}
+    >
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "46px minmax(0,1fr) auto",
+          alignItems: "center",
+          gap: "12px",
+          padding: "14px 14px 13px",
+        }}
+      >
+        <div
+          style={{
+            width: "46px",
+            height: "46px",
+            display: "grid",
+            placeItems: "center",
+            border: "1px solid rgba(199,255,19,0.24)",
+            background: "rgba(199,255,19,0.065)",
+            color: "#c7ff13",
+          }}
+        >
+          <ShoppingBag size={18} strokeWidth={1.6} />
+        </div>
+
+        <div style={{ minWidth: 0 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "7px",
+              marginBottom: "5px",
+              color: "#c7ff13",
+              fontSize: "7px",
+              fontWeight: 700,
+              letterSpacing: "0.2em",
+            }}
+          >
+            <Check size={12} strokeWidth={2.2} />
+            ADDED TO CART
+          </div>
+
+          <strong
+            style={{
+              display: "block",
+              overflow: "hidden",
+              color: "#fff",
+              fontSize: "12px",
+              fontWeight: 500,
+              lineHeight: 1.25,
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {toast.name}
+          </strong>
+
+          <span
+            style={{
+              display: "block",
+              marginTop: "5px",
+              color: "rgba(255,255,255,0.45)",
+              fontSize: "7px",
+              letterSpacing: "0.12em",
+            }}
+          >
+            SIZE {toast.size} · QTY {toast.quantity}
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setToast(null)}
+          aria-label="Close cart message"
+          style={{
+            width: "31px",
+            height: "31px",
+            display: "grid",
+            placeItems: "center",
+            border: "1px solid rgba(255,255,255,0.1)",
+            background: "transparent",
+            color: "rgba(255,255,255,0.55)",
+            cursor: "pointer",
+          }}
+        >
+          <X size={13} strokeWidth={1.5} />
+        </button>
+      </div>
+
+      <div
+        style={{
+          height: "2px",
+          background: "rgba(255,255,255,0.06)",
+        }}
+      >
+        <div
+          ref={progressRef}
+          style={{
+            width: "100%",
+            height: "100%",
+            background: "#c7ff13",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
    CATEGORY PAGE
 ========================================================= */
 
@@ -1789,6 +2403,10 @@ function CategoryPage({
   const [selectedSizes, setSelectedSizes] = useState({});
 
   const [quantities, setQuantities] = useState({});
+
+  const [cartToast, setCartToast] = useState(null);
+
+  const [addedProductId, setAddedProductId] = useState("");
 
   // If a category page passes products from MongoDB, use those.
   // Otherwise keep using the existing local products data for other categories.
@@ -1947,12 +2565,13 @@ function CategoryPage({
      QUANTITY
   ======================================================= */
 
-  const getQuantity = (productId) => quantities[productId] || 1;
+  // Every card starts at quantity 0.
+  const getQuantity = (productId) => quantities[productId] ?? 0;
 
   const changeQuantity = (productId, amount) => {
     setQuantities((previous) => {
-      const currentQuantity = previous[productId] || 1;
-      const nextQuantity = Math.min(10, Math.max(1, currentQuantity + amount));
+      const currentQuantity = previous[productId] ?? 0;
+      const nextQuantity = Math.min(10, Math.max(0, currentQuantity + amount));
 
       return {
         ...previous,
@@ -1981,6 +2600,11 @@ function CategoryPage({
       return;
     }
 
+    if (quantity <= 0) {
+      alert("Please select quantity first.");
+      return;
+    }
+
     const cart = JSON.parse(localStorage.getItem("axiee-cart")) || [];
 
     const existingIndex = cart.findIndex(
@@ -2001,6 +2625,19 @@ function CategoryPage({
 
     localStorage.setItem("axiee-cart", JSON.stringify(cart));
     window.dispatchEvent(new Event("axiee-cart-updated"));
+
+    // Clear visual confirmation so the customer knows the click worked.
+    setCartToast({
+      name: product.name,
+      size,
+      quantity,
+    });
+
+    setAddedProductId(productId);
+
+    window.setTimeout(() => {
+      setAddedProductId((current) => (current === productId ? "" : current));
+    }, 1400);
   };
 
   /* =======================================================
@@ -2023,6 +2660,11 @@ function CategoryPage({
       return;
     }
 
+    if (quantity <= 0) {
+      alert("Please select quantity first.");
+      return;
+    }
+
     const checkoutProduct = {
       ...product,
       id: productId,
@@ -2040,6 +2682,7 @@ function CategoryPage({
 
   return (
     <main className="shop-page">
+      <CartAddedToast toast={cartToast} setToast={setCartToast} />
       {/* ===================================================
           CATEGORY HERO
       =================================================== */}
@@ -2232,11 +2875,7 @@ function CategoryPage({
                     to={`/product/${productId}`}
                     className="shop-product-image-box"
                   >
-                    <img
-                      src={product.image || product.images?.[0]}
-                      alt={product.name}
-                      className="shop-product-image"
-                    />
+                    <ProductHoverImage product={product} />
 
                     {product.tag && (
                       <span className="shop-new-tag">{product.tag}</span>
@@ -2317,7 +2956,7 @@ function CategoryPage({
                           type="button"
                           className="shop-quantity-btn"
                           onClick={() => changeQuantity(productId, -1)}
-                          disabled={getQuantity(productId) <= 1}
+                          disabled={getQuantity(productId) <= 0}
                           aria-label={`Decrease ${product.name} quantity`}
                         >
                           −
@@ -2346,14 +2985,27 @@ function CategoryPage({
                         type="button"
                         className="shop-add-cart"
                         onClick={() => addToCart(product)}
+                        disabled={getQuantity(productId) <= 0}
+                        style={
+                          addedProductId === productId
+                            ? {
+                                background: "#c7ff13",
+                                borderColor: "#c7ff13",
+                                color: "#050505",
+                              }
+                            : undefined
+                        }
                       >
-                        ADD TO CART
+                        {addedProductId === productId
+                          ? "ADDED ✓"
+                          : "ADD TO CART"}
                       </button>
 
                       <button
                         type="button"
                         className="shop-buy-now"
                         onClick={() => buyNow(product)}
+                        disabled={getQuantity(productId) <= 0}
                       >
                         BUY NOW
                       </button>

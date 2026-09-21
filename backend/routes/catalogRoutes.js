@@ -4,12 +4,16 @@ import mongoose from "mongoose";
 const router = express.Router();
 
 /* =========================================================
-   HELPERS
+   DATABASE
 ========================================================= */
 
 const getDatabase = () => {
   return mongoose.connection.db;
 };
+
+/* =========================================================
+   GRIDFS
+========================================================= */
 
 const getGridFSBucket = () => {
   const db = getDatabase();
@@ -24,15 +28,133 @@ const getGridFSBucket = () => {
 };
 
 /* =========================================================
-   GET PRODUCTS
+   IMAGE URL
+========================================================= */
 
-   Examples:
+const imageUrl = (id) => {
+  if (!id) return "";
+
+  return `/api/catalog/images/${String(id)}`;
+};
+
+/* =========================================================
+   GET ALL PRODUCT IMAGES
+========================================================= */
+
+const getProductImages = (product) => {
+  const images = [];
+
+  /*
+    Your MongoDB currently has:
+
+    imageFiles: [
+      {
+        fileId: ObjectId(...),
+        url: "/api/images/..."
+      }
+    ]
+
+    We use fileId because your real route is:
+    /api/catalog/images/:id
+  */
+
+  if (Array.isArray(product.imageFiles)) {
+    const sorted = [...product.imageFiles].sort(
+      (a, b) => Number(a?.order || 0) - Number(b?.order || 0),
+    );
+
+    sorted.forEach((item) => {
+      const fileId = item?.fileId || item?._id || item?.id;
+
+      if (fileId) {
+        images.push(imageUrl(fileId));
+      }
+    });
+  }
+
+  /* imageIds fallback */
+
+  if (images.length === 0 && Array.isArray(product.imageIds)) {
+    product.imageIds.forEach((id) => {
+      if (id) {
+        images.push(imageUrl(id));
+      }
+    });
+  }
+
+  /* existing images fallback */
+
+  if (images.length === 0 && Array.isArray(product.images)) {
+    product.images.forEach((item) => {
+      if (!item) return;
+
+      const value = String(item);
+
+      /*
+        Convert old:
+        /api/images/ID
+
+        to:
+        /api/catalog/images/ID
+      */
+
+      if (value.startsWith("/api/images/")) {
+        images.push(value.replace("/api/images/", "/api/catalog/images/"));
+      } else {
+        images.push(value);
+      }
+    });
+  }
+
+  /* single imageId */
+
+  if (images.length === 0 && product.imageId) {
+    images.push(imageUrl(product.imageId));
+  }
+
+  /* single image */
+
+  if (images.length === 0 && product.image) {
+    const value = String(product.image);
+
+    if (value.startsWith("/api/images/")) {
+      images.push(value.replace("/api/images/", "/api/catalog/images/"));
+    } else {
+      images.push(value);
+    }
+  }
+
+  return images;
+};
+
+/* =========================================================
+   FORMAT PRODUCT
+========================================================= */
+
+const formatProduct = (product) => {
+  const images = getProductImages(product);
+
+  return {
+    ...product,
+
+    _id: String(product._id),
+
+    id: String(product._id),
+
+    image: images[0] || product.image || "",
+
+    mainImage: images[0] || product.mainImage || product.image || "",
+
+    images,
+  };
+};
+
+/* =========================================================
+   GET ALL PRODUCTS
 
    /api/catalog/products
 
    /api/catalog/products?category=Pants
-
-   /api/catalog/products?category=TRACK%20PANTS
 ========================================================= */
 
 router.get("/products", async (req, res) => {
@@ -48,7 +170,11 @@ router.get("/products", async (req, res) => {
 
     const { category } = req.query;
 
-    const filter = {};
+    const filter = {
+      isActive: {
+        $ne: false,
+      },
+    };
 
     /* =====================================================
        CATEGORY FILTER
@@ -58,12 +184,10 @@ router.get("/products", async (req, res) => {
       const cleanCategory = String(category).trim();
 
       /*
-        Your frontend currently requests:
+        Your MongoDB has:
+        category: "Pants"
 
-        ?category=Pants
-
-        This will also allow products stored as:
-        Pants
+        But this also allows:
         TRACK PANTS
         Track Pants
       */
@@ -74,16 +198,17 @@ router.get("/products", async (req, res) => {
           $options: "i",
         };
       } else {
+        const safeCategory = cleanCategory.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          "\\$&",
+        );
+
         filter.category = {
-          $regex: `^${cleanCategory.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
+          $regex: `^${safeCategory}$`,
           $options: "i",
         };
       }
     }
-
-    /* =====================================================
-       LOAD PRODUCTS
-    ===================================================== */
 
     const products = await db
       .collection("products")
@@ -94,47 +219,7 @@ router.get("/products", async (req, res) => {
       })
       .toArray();
 
-    /* =====================================================
-       FORMAT PRODUCTS
-    ===================================================== */
-
-    const formattedProducts = products.map((product) => {
-      const formatted = {
-        ...product,
-
-        _id: String(product._id),
-
-        id: String(product._id),
-      };
-
-      /*
-        Convert GridFS IDs into frontend URLs.
-
-        Supports fields such as:
-
-        imageId
-        imageIds
-
-        If your product already contains normal URLs in
-        image/images, those are kept.
-      */
-
-      if (product.imageId) {
-        formatted.image = `/api/catalog/images/${String(product.imageId)}`;
-      }
-
-      if (Array.isArray(product.imageIds) && product.imageIds.length > 0) {
-        formatted.images = product.imageIds.map(
-          (imageId) => `/api/catalog/images/${String(imageId)}`,
-        );
-
-        if (!formatted.image) {
-          formatted.image = formatted.images[0];
-        }
-      }
-
-      return formatted;
-    });
+    const formattedProducts = products.map(formatProduct);
 
     return res.status(200).json({
       success: true,
@@ -142,8 +227,7 @@ router.get("/products", async (req, res) => {
       products: formattedProducts,
     });
   } catch (error) {
-    console.error("❌ Get products error:");
-    console.error(error);
+    console.error("❌ Get catalog products error:", error);
 
     return res.status(500).json({
       success: false,
@@ -154,11 +238,9 @@ router.get("/products", async (req, res) => {
 });
 
 /* =========================================================
-   GET SINGLE PRODUCT
+   GET ONE PRODUCT
 
-   Example:
-
-   /api/catalog/products/68d...
+   /api/catalog/products/:id
 ========================================================= */
 
 router.get("/products/:id", async (req, res) => {
@@ -192,35 +274,12 @@ router.get("/products/:id", async (req, res) => {
       });
     }
 
-    const formatted = {
-      ...product,
-
-      _id: String(product._id),
-
-      id: String(product._id),
-    };
-
-    if (product.imageId) {
-      formatted.image = `/api/catalog/images/${String(product.imageId)}`;
-    }
-
-    if (Array.isArray(product.imageIds) && product.imageIds.length > 0) {
-      formatted.images = product.imageIds.map(
-        (imageId) => `/api/catalog/images/${String(imageId)}`,
-      );
-
-      if (!formatted.image) {
-        formatted.image = formatted.images[0];
-      }
-    }
-
     return res.status(200).json({
       success: true,
-      product: formatted,
+      product: formatProduct(product),
     });
   } catch (error) {
-    console.error("❌ Get product error:");
-    console.error(error);
+    console.error("❌ Get catalog product error:", error);
 
     return res.status(500).json({
       success: false,
@@ -231,11 +290,9 @@ router.get("/products/:id", async (req, res) => {
 });
 
 /* =========================================================
-   GET GRIDFS IMAGE
+   GRIDFS IMAGE
 
-   Example:
-
-   /api/catalog/images/68d...
+   /api/catalog/images/:id
 ========================================================= */
 
 router.get("/images/:id", async (req, res) => {
@@ -248,29 +305,17 @@ router.get("/images/:id", async (req, res) => {
 
     const { id } = req.params;
 
-    /* =====================================================
-       VALIDATE IMAGE ID
-    ===================================================== */
-
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).send("Invalid image ID");
     }
 
     const objectId = new mongoose.Types.ObjectId(id);
 
-    /* =====================================================
-       GRIDFS BUCKET
-    ===================================================== */
-
     const bucket = getGridFSBucket();
 
     if (!bucket) {
       return res.status(500).send("GridFS unavailable");
     }
-
-    /* =====================================================
-       FIND FILE
-    ===================================================== */
 
     const file = await db.collection("productImages.files").findOne({
       _id: objectId,
@@ -280,10 +325,6 @@ router.get("/images/:id", async (req, res) => {
       return res.status(404).send("Image not found");
     }
 
-    /* =====================================================
-       CONTENT TYPE
-    ===================================================== */
-
     const contentType =
       file.metadata?.contentType || file.contentType || "image/jpeg";
 
@@ -291,33 +332,24 @@ router.get("/images/:id", async (req, res) => {
 
     res.setHeader("Cache-Control", "public, max-age=31536000");
 
-    /* =====================================================
-       STREAM IMAGE
-    ===================================================== */
+    const stream = bucket.openDownloadStream(objectId);
 
-    const downloadStream = bucket.openDownloadStream(objectId);
-
-    downloadStream.on("error", (error) => {
-      console.error("❌ GridFS image error:", error);
+    stream.on("error", (error) => {
+      console.error("❌ GridFS stream error:", error);
 
       if (!res.headersSent) {
         res.status(404).send("Image not found");
       }
     });
 
-    downloadStream.pipe(res);
+    stream.pipe(res);
   } catch (error) {
-    console.error("❌ Image route error:");
-    console.error(error);
+    console.error("❌ GridFS image error:", error);
 
     if (!res.headersSent) {
       return res.status(500).send("Failed to load image");
     }
   }
 });
-
-/* =========================================================
-   EXPORT
-========================================================= */
 
 export default router;
