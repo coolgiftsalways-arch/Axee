@@ -1788,20 +1788,23 @@ function CategoryPage({
 
   const [selectedSizes, setSelectedSizes] = useState({});
 
-<<<<<<< HEAD
   const [quantities, setQuantities] = useState({});
-=======
+
   // If a category page passes products from MongoDB, use those.
   // Otherwise keep using the existing local products data for other categories.
   const usingExternalProducts = Array.isArray(externalProducts);
   const sourceProducts = usingExternalProducts ? externalProducts : products;
 
   const getProductId = (product) =>
-    String(product?.id || product?._id || product?.name || "");
+    String(product?._id || product?.id || product?.slug || product?.name || "");
 
-  const getProductSizes = (product) =>
-    Array.isArray(product?.sizes) ? product.sizes : [];
->>>>>>> origin/nikita
+  const getProductSizes = (product) => {
+    if (!Array.isArray(product?.sizes)) return [];
+
+    return product.sizes
+      .map((item) => (typeof item === "string" ? item : item?.size))
+      .filter(Boolean);
+  };
 
   /* =======================================================
      QUICK SEARCH FOR EVERY CATEGORY
@@ -1924,7 +1927,8 @@ function CategoryPage({
       return sourceProducts.length;
     }
 
-    return sourceProducts.filter((product) => product.category === category).length;
+    return sourceProducts.filter((product) => product.category === category)
+      .length;
   }, [category, sourceProducts, usingExternalProducts]);
 
   /* =======================================================
@@ -1962,19 +1966,15 @@ function CategoryPage({
   ======================================================= */
 
   const addToCart = (product) => {
-<<<<<<< HEAD
-    const size = selectedSizes[product.id];
-    const quantity = getQuantity(product.id);
-=======
     const productId = getProductId(product);
     const sizes = getProductSizes(product);
     const size = selectedSizes[productId];
+    const quantity = getQuantity(productId);
 
     if (sizes.length === 0) {
       alert("Sizes are not configured for this product yet.");
       return;
     }
->>>>>>> origin/nikita
 
     if (!size) {
       alert("Please select a size first.");
@@ -1995,12 +1995,7 @@ function CategoryPage({
         ...product,
         id: productId,
         size,
-<<<<<<< HEAD
-
         quantity,
-=======
-        quantity: 1,
->>>>>>> origin/nikita
       });
     }
 
@@ -2013,19 +2008,15 @@ function CategoryPage({
   ======================================================= */
 
   const buyNow = (product) => {
-<<<<<<< HEAD
-    const size = selectedSizes[product.id];
-    const quantity = getQuantity(product.id);
-=======
     const productId = getProductId(product);
     const sizes = getProductSizes(product);
     const size = selectedSizes[productId];
+    const quantity = getQuantity(productId);
 
     if (sizes.length === 0) {
       alert("Sizes are not configured for this product yet.");
       return;
     }
->>>>>>> origin/nikita
 
     if (!size) {
       alert("Please select a size first.");
@@ -2036,12 +2027,7 @@ function CategoryPage({
       ...product,
       id: productId,
       size,
-<<<<<<< HEAD
-
       quantity,
-=======
-      quantity: 1,
->>>>>>> origin/nikita
     };
 
     localStorage.setItem("axiee-buy-now", JSON.stringify(checkoutProduct));
@@ -2232,172 +2218,150 @@ function CategoryPage({
               PRODUCTS
           =============================================== */}
 
-          {!loading && !error && categoryProducts.map((product) => {
-            const productId = getProductId(product);
-            const productSizes = getProductSizes(product);
+          {!loading &&
+            !error &&
+            categoryProducts.map((product) => {
+              const productId = getProductId(product);
+              const productSizes = getProductSizes(product);
 
-            return (
-              <article className="shop-product-card" key={productId}>
-                {/* IMAGE */}
+              return (
+                <article className="shop-product-card" key={productId}>
+                  {/* IMAGE */}
 
-                <Link
-                  to={`/product/${productId}`}
-                  className="shop-product-image-box"
-                >
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="shop-product-image"
-                  />
-
-                  {product.tag && (
-                    <span className="shop-new-tag">{product.tag}</span>
-                  )}
-
-                  <button
-                    type="button"
-                    className="shop-heart"
-                    onClick={(event) => {
-                      event.preventDefault();
-                    }}
-                    aria-label={`Add ${product.name} to wishlist`}
+                  <Link
+                    to={`/product/${productId}`}
+                    className="shop-product-image-box"
                   >
-                    <Heart size={16} strokeWidth={1.5} />
-                  </button>
+                    <img
+                      src={product.image || product.images?.[0]}
+                      alt={product.name}
+                      className="shop-product-image"
+                    />
 
-                  <div className="shop-image-fog" />
-                </Link>
+                    {product.tag && (
+                      <span className="shop-new-tag">{product.tag}</span>
+                    )}
 
-                {/* CONTENT */}
-
-                <div className="shop-product-content">
-                  <div className="shop-product-name-row">
-                    <div>
-                      <h3>{product.name}</h3>
-
-                      <p>₹{Number(product.price || 0).toLocaleString("en-IN")}</p>
-                    </div>
-
-                    <Link
-                      to={`/product/${productId}`}
-                      className="shop-product-arrow"
+                    <button
+                      type="button"
+                      className="shop-heart"
+                      onClick={(event) => {
+                        event.preventDefault();
+                      }}
+                      aria-label={`Add ${product.name} to wishlist`}
                     >
-                      <ArrowRight size={14} />
-                    </Link>
-                  </div>
+                      <Heart size={16} strokeWidth={1.5} />
+                    </button>
 
-                  {/* PRODUCT COLOUR */}
+                    <div className="shop-image-fog" />
+                  </Link>
 
-                  {product.color && (
-                    <div className="category-product-meta">
-                      <span>COLOUR</span>
+                  {/* CONTENT */}
 
-                      <strong>{product.color}</strong>
+                  <div className="shop-product-content">
+                    <div className="shop-product-name-row">
+                      <div>
+                        <h3>{product.name}</h3>
+
+                        <p>
+                          ₹{Number(product.price || 0).toLocaleString("en-IN")}
+                        </p>
+                      </div>
+
+                      <Link
+                        to={`/product/${productId}`}
+                        className="shop-product-arrow"
+                      >
+                        <ArrowRight size={14} />
+                      </Link>
                     </div>
-                  )}
 
-                  {/* SIZES */}
+                    {/* PRODUCT COLOUR */}
 
-                  {productSizes.length > 0 && (
-                    <div className="shop-size-list">
-                      {productSizes.map((size) => (
+                    {product.color && (
+                      <div className="category-product-meta">
+                        <span>COLOUR</span>
+
+                        <strong>{product.color}</strong>
+                      </div>
+                    )}
+
+                    {/* SIZES */}
+
+                    {productSizes.length > 0 && (
+                      <div className="shop-size-list">
+                        {productSizes.map((size) => (
+                          <button
+                            type="button"
+                            key={size}
+                            className={
+                              selectedSizes[productId] === size
+                                ? "shop-size active"
+                                : "shop-size"
+                            }
+                            onClick={() => selectSize(productId, size)}
+                          >
+                            {size}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* QUANTITY */}
+
+                    <div className="shop-quantity-area">
+                      <span className="shop-quantity-label">QUANTITY</span>
+
+                      <div className="shop-quantity-counter">
                         <button
                           type="button"
-                          key={size}
-                          className={
-                            selectedSizes[productId] === size
-                              ? "shop-size active"
-                              : "shop-size"
-                          }
-                          onClick={() => selectSize(productId, size)}
+                          className="shop-quantity-btn"
+                          onClick={() => changeQuantity(productId, -1)}
+                          disabled={getQuantity(productId) <= 1}
+                          aria-label={`Decrease ${product.name} quantity`}
                         >
-                          {size}
+                          −
                         </button>
-                      ))}
+
+                        <span className="shop-quantity-number">
+                          {getQuantity(productId)}
+                        </span>
+
+                        <button
+                          type="button"
+                          className="shop-quantity-btn"
+                          onClick={() => changeQuantity(productId, 1)}
+                          disabled={getQuantity(productId) >= 10}
+                          aria-label={`Increase ${product.name} quantity`}
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
-                  )}
 
-                  {/* BUTTONS */}
+                    {/* BUTTONS */}
 
-                  <div className="shop-product-actions">
-                    <button
-                      type="button"
-                      className="shop-add-cart"
-                      onClick={() => addToCart(product)}
-                    >
-                      ADD TO CART
-                    </button>
+                    <div className="shop-product-actions">
+                      <button
+                        type="button"
+                        className="shop-add-cart"
+                        onClick={() => addToCart(product)}
+                      >
+                        ADD TO CART
+                      </button>
 
-                    <button
-                      type="button"
-                      className="shop-buy-now"
-                      onClick={() => buyNow(product)}
-                    >
-                      BUY NOW
-                    </button>
+                      <button
+                        type="button"
+                        className="shop-buy-now"
+                        onClick={() => buyNow(product)}
+                      >
+                        BUY NOW
+                      </button>
+                    </div>
                   </div>
-                </div>
-<<<<<<< HEAD
-
-                {/* QUANTITY */}
-
-                <div className="shop-quantity-area">
-                  <span className="shop-quantity-label">QUANTITY</span>
-
-                  <div className="shop-quantity-counter">
-                    <button
-                      type="button"
-                      className="shop-quantity-btn"
-                      onClick={() => changeQuantity(product.id, -1)}
-                      disabled={getQuantity(product.id) <= 1}
-                      aria-label={`Decrease ${product.name} quantity`}
-                    >
-                      −
-                    </button>
-
-                    <span className="shop-quantity-number">
-                      {getQuantity(product.id)}
-                    </span>
-
-                    <button
-                      type="button"
-                      className="shop-quantity-btn"
-                      onClick={() => changeQuantity(product.id, 1)}
-                      disabled={getQuantity(product.id) >= 10}
-                      aria-label={`Increase ${product.name} quantity`}
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                {/* BUTTONS */}
-
-                <div className="shop-product-actions">
-                  <button
-                    type="button"
-                    className="shop-add-cart"
-                    onClick={() => addToCart(product)}
-                  >
-                    ADD TO CART
-                  </button>
-
-                  <button
-                    type="button"
-                    className="shop-buy-now"
-                    onClick={() => buyNow(product)}
-                  >
-                    BUY NOW
-                  </button>
-                </div>
-              </div>
-            </article>
-          ))}
-=======
-              </article>
-            );
-          })}
->>>>>>> origin/nikita
+                </article>
+              );
+            })}
         </div>
       </section>
     </main>

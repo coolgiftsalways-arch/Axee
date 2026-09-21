@@ -1,4 +1,8 @@
-export const products = [
+/* =========================================================
+   AXIEE PRODUCTS
+========================================================= */
+
+const products = [
   /* =========================================================
      T-SHIRTS
   ========================================================= */
@@ -8,12 +12,16 @@ export const products = [
     name: "VOID TEE",
     category: "T-SHIRTS",
     price: 1499,
+
     image: "/products/tshirt-1.jpg",
+
     sizes: ["S", "M", "L", "XL"],
+
     tag: "NEW",
 
     color: "BLACK",
     colors: ["black"],
+
     fit: "oversized",
     style: "graphic",
 
@@ -35,11 +43,14 @@ export const products = [
     name: "SIGNAL TEE",
     category: "T-SHIRTS",
     price: 1699,
+
     image: "/products/tshirt-2.jpg",
+
     sizes: ["S", "M", "L", "XL"],
 
     color: "WHITE",
     colors: ["white", "cream"],
+
     fit: "regular",
     style: "minimal",
 
@@ -59,11 +70,14 @@ export const products = [
     name: "ECHO TEE",
     category: "T-SHIRTS",
     price: 1599,
+
     image: "/products/tshirt-3.jpg",
+
     sizes: ["S", "M", "L", "XL"],
 
     color: "RED",
     colors: ["red", "maroon"],
+
     fit: "oversized",
     style: "graphic",
 
@@ -83,11 +97,14 @@ export const products = [
     name: "UNKNOWN TEE",
     category: "T-SHIRTS",
     price: 1899,
+
     image: "/products/tshirt-4.jpg",
+
     sizes: ["S", "M", "L", "XL"],
 
     color: "GREY",
     colors: ["grey", "gray", "charcoal"],
+
     fit: "oversized",
     style: "graphic",
 
@@ -111,12 +128,16 @@ export const products = [
     name: "SHADOW DENIM",
     category: "JEANS",
     price: 2899,
+
     image: "/products/jean-1.jpg",
+
     sizes: ["28", "30", "32", "34"],
+
     tag: "NEW",
 
     color: "BLACK",
     colors: ["black"],
+
     fit: "baggy",
     style: "denim",
 
@@ -136,11 +157,14 @@ export const products = [
     name: "VOID DENIM",
     category: "JEANS",
     price: 3199,
+
     image: "/products/jean-2.jpg",
+
     sizes: ["28", "30", "32", "34"],
 
     color: "BLUE",
     colors: ["blue", "navy"],
+
     fit: "straight",
     style: "denim",
 
@@ -160,11 +184,14 @@ export const products = [
     name: "FRACTURE JEAN",
     category: "JEANS",
     price: 3499,
+
     image: "/products/jean-3.jpg",
+
     sizes: ["28", "30", "32", "34"],
 
     color: "GREY",
     colors: ["grey", "gray", "washed grey"],
+
     fit: "baggy",
     style: "distressed",
 
@@ -184,11 +211,14 @@ export const products = [
     name: "RAW DENIM 01",
     category: "JEANS",
     price: 2999,
+
     image: "/products/jean-4.jpg",
+
     sizes: ["28", "30", "32", "34"],
 
     color: "DARK BLUE",
     colors: ["dark blue", "blue", "indigo"],
+
     fit: "straight",
     style: "raw denim",
 
@@ -212,12 +242,16 @@ export const products = [
     name: "MOTION TRACK",
     category: "TRACK PANTS",
     price: 2499,
+
     image: "/products/track-1.jpg",
+
     sizes: ["S", "M", "L", "XL"],
+
     tag: "NEW",
 
     color: "BLACK",
     colors: ["black"],
+
     fit: "baggy",
     style: "sport",
 
@@ -232,26 +266,70 @@ export const products = [
     ],
   },
 
+  /* =========================================================
+     GREY C-LOGO PANTS
+     FOUR IMAGES
+  ========================================================= */
+
   {
     id: "track-2",
-    name: "CORE TRACK",
+
+    name: "C-Logo Straight Sweatpants Grey",
+
     category: "TRACK PANTS",
+
     price: 2699,
-    image: "/products/track-2.jpg",
+
+    oldPrice: 2999,
+
+    image: "/products/c-logo-grey-1.jpg",
+
+    images: [
+      "/products/c-logo-grey-1.jpg",
+      "/products/c-logo-grey-2.jpg",
+      "/products/c-logo-grey-3.jpg",
+      "/products/c-logo-grey-4.jpg",
+    ],
+
     sizes: ["S", "M", "L", "XL"],
 
+    tag: "NEW",
+
     color: "GREY",
+
     colors: ["grey", "gray"],
+
     fit: "relaxed",
-    style: "minimal",
+
+    style: "straight",
+
+    material: "Cotton Blend",
+
+    gender: "UNISEX",
+
+    description:
+      "Relaxed straight-leg grey sweatpants designed for everyday comfort and contemporary streetwear styling.",
+
+    shortDescription:
+      "Relaxed straight-leg AXIEE sweatpants built for comfort and everyday movement.",
+
+    featured: true,
+
+    bestSeller: false,
+
+    totalStock: 99,
 
     keywords: [
       "grey",
       "gray",
       "grey track pants",
+      "grey sweatpants",
+      "sweatpants",
+      "straight sweatpants",
+      "c-logo",
       "relaxed",
-      "relaxed track pants",
-      "core track",
+      "straight",
+      "streetwear",
     ],
   },
 
@@ -260,11 +338,14 @@ export const products = [
     name: "TERMINAL TRACK",
     category: "TRACK PANTS",
     price: 2899,
+
     image: "/products/track-3.jpg",
+
     sizes: ["S", "M", "L", "XL"],
 
     color: "WHITE",
     colors: ["white", "cream"],
+
     fit: "relaxed",
     style: "sport",
 
@@ -283,11 +364,14 @@ export const products = [
     name: "PHANTOM TRACK",
     category: "TRACK PANTS",
     price: 2999,
+
     image: "/products/track-4.jpg",
+
     sizes: ["S", "M", "L", "XL"],
 
     color: "CHARCOAL",
     colors: ["charcoal", "grey", "gray"],
+
     fit: "baggy",
     style: "streetwear",
 
@@ -310,12 +394,16 @@ export const products = [
     name: "SYSTEM SHIRT",
     category: "SHIRTS",
     price: 2199,
+
     image: "/products/shirt-1.jpg",
+
     sizes: ["S", "M", "L", "XL"],
+
     tag: "NEW",
 
     color: "WHITE",
     colors: ["white", "cream"],
+
     fit: "regular",
     style: "formal",
 
@@ -334,11 +422,14 @@ export const products = [
     name: "SIGNAL SHIRT",
     category: "SHIRTS",
     price: 2399,
+
     image: "/products/shirt-2.jpg",
+
     sizes: ["S", "M", "L", "XL"],
 
     color: "BLACK",
     colors: ["black"],
+
     fit: "oversized",
     style: "streetwear",
 
@@ -357,11 +448,14 @@ export const products = [
     name: "SHADOW SHIRT",
     category: "SHIRTS",
     price: 2599,
+
     image: "/products/shirt-3.jpg",
+
     sizes: ["S", "M", "L", "XL"],
 
     color: "BLUE",
     colors: ["blue", "navy"],
+
     fit: "regular",
     style: "formal",
 
@@ -380,11 +474,14 @@ export const products = [
     name: "FRAME SHIRT",
     category: "SHIRTS",
     price: 2299,
+
     image: "/products/shirt-4.jpg",
+
     sizes: ["S", "M", "L", "XL"],
 
     color: "GREY",
     colors: ["grey", "gray"],
+
     fit: "oversized",
     style: "casual",
 
@@ -407,12 +504,16 @@ export const products = [
     name: "VOID SHORT",
     category: "SHORTS",
     price: 1799,
+
     image: "/products/short-1.jpg",
+
     sizes: ["S", "M", "L", "XL"],
+
     tag: "NEW",
 
     color: "BLACK",
     colors: ["black"],
+
     fit: "oversized",
     style: "utility",
 
@@ -424,11 +525,14 @@ export const products = [
     name: "CARGO SHORT",
     category: "SHORTS",
     price: 1999,
+
     image: "/products/short-2.jpg",
+
     sizes: ["S", "M", "L", "XL"],
 
     color: "GREY",
     colors: ["grey", "gray"],
+
     fit: "relaxed",
     style: "cargo",
 
@@ -447,11 +551,14 @@ export const products = [
     name: "MOTION SHORT",
     category: "SHORTS",
     price: 1899,
+
     image: "/products/short-3.jpg",
+
     sizes: ["S", "M", "L", "XL"],
 
     color: "WHITE",
     colors: ["white", "cream"],
+
     fit: "relaxed",
     style: "sport",
 
@@ -463,11 +570,14 @@ export const products = [
     name: "UTILITY SHORT",
     category: "SHORTS",
     price: 2199,
+
     image: "/products/short-4.jpg",
+
     sizes: ["S", "M", "L", "XL"],
 
     color: "CHARCOAL",
     colors: ["charcoal", "grey", "gray"],
+
     fit: "oversized",
     style: "utility",
 
@@ -490,12 +600,16 @@ export const products = [
     name: "VOID HOODIE",
     category: "HOODIES",
     price: 3299,
+
     image: "/products/hoodie-1.jpg",
+
     sizes: ["S", "M", "L", "XL"],
+
     tag: "NEW",
 
     color: "BLACK",
     colors: ["black"],
+
     fit: "oversized",
     style: "streetwear",
 
@@ -514,11 +628,14 @@ export const products = [
     name: "SYSTEM HOODIE",
     category: "HOODIES",
     price: 3499,
+
     image: "/products/hoodie-2.jpg",
+
     sizes: ["S", "M", "L", "XL"],
 
     color: "WHITE",
     colors: ["white", "cream"],
+
     fit: "oversized",
     style: "minimal",
 
@@ -537,11 +654,14 @@ export const products = [
     name: "SHADOW HOODIE",
     category: "HOODIES",
     price: 3699,
+
     image: "/products/hoodie-3.jpg",
+
     sizes: ["S", "M", "L", "XL"],
 
     color: "RED",
     colors: ["red", "maroon"],
+
     fit: "regular",
     style: "streetwear",
 
@@ -560,11 +680,14 @@ export const products = [
     name: "TERMINAL HOODIE",
     category: "HOODIES",
     price: 3899,
+
     image: "/products/hoodie-4.jpg",
+
     sizes: ["S", "M", "L", "XL"],
 
     color: "GREY",
     colors: ["grey", "gray", "charcoal"],
+
     fit: "oversized",
     style: "technical",
 
@@ -579,3 +702,17 @@ export const products = [
     ],
   },
 ];
+
+/* =========================================================
+   EXPORTS
+
+   BOTH IMPORT STYLES NOW WORK:
+
+   import products from "../data/products";
+
+   import { products } from "../data/products";
+========================================================= */
+
+export { products };
+
+export default products;

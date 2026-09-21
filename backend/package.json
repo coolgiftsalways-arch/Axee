@@ -1,42 +1,20 @@
 {
-  "name": "backend",
+  "name": "axiee-backend",
   "version": "1.0.0",
-<<<<<<< HEAD
-  "description": "",
-=======
-  "type": "module",
->>>>>>> origin/nikita
+  "description": "AXIEE ecommerce backend",
   "main": "server.js",
   "type": "module",
   "scripts": {
     "start": "node server.js",
-<<<<<<< HEAD
     "dev": "nodemon server.js"
-=======
-    "test": "echo \"Error: no test specified\" && exit 1"
->>>>>>> origin/nikita
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "adm-zip": "^0.6.1",
-    "bcryptjs": "^3.0.3",
-    "cloudinary": "^2.11.0",
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "express-async-handler": "^1.2.0",
-    "jsonwebtoken": "^9.0.3",
-    "mongodb": "^7.6.0",
-    "mongoose": "^9.9.5",
-    "multer": "^2.3.0",
-    "nodemailer": "^10.0.0",
-    "razorpay": "^2.9.8",
-    "validator": "^13.15.35"
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "mongoose": "^8.18.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.10"
   }
 }
