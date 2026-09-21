@@ -43,6 +43,7 @@ import Shorts from "./pages/Shorts.jsx";
 import Jackets from "./pages/jackets.jsx";
 
 import CoOrdSets from "./pages/CoOrdSets.jsx";
+import Cart from "./pages/Cart";
 
 import BestSellers from "./pages/BestSellers.jsx";
 
@@ -359,6 +360,7 @@ function App() {
           ============================================= */}
 
           <Route path="/track-pants" element={<TrackPants />} />
+          <Route path="/cart" element={<Cart />} />
 
           {/* =============================================
               SHIRTS

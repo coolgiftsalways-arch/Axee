@@ -161,46 +161,58 @@ function Navbar() {
      CART COUNT
   ========================================================= */
 
-  const updateCartCount = () => {
-    try {
-      const cart = JSON.parse(localStorage.getItem("axiee-cart")) || [];
+  /* =========================================================
+   CART COUNT - BACKEND
+========================================================= */
 
-      const totalQuantity = cart.reduce(
-        (total, item) => total + Number(item.quantity || 1),
-        0,
-      );
+const USER_ID = localStorage.getItem("userId") || "test-user-1";
 
-      setCartCount(totalQuantity);
-    } catch (error) {
-      console.error("Cart count error:", error);
+const updateCartCount = async () => {
+  try {
+    const response = await fetch(
+      `http://localhost:5000/api/cart/${USER_ID}`
+    );
 
-      setCartCount(0);
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to get cart");
     }
+
+    const items = data.cart?.items || [];
+
+    const totalQuantity = items.reduce(
+      (total, item) => total + Number(item.quantity || 1),
+      0
+    );
+
+    setCartCount(totalQuantity);
+  } catch (error) {
+    console.error("Navbar cart count error:", error);
+
+    setCartCount(0);
+  }
+};
+
+useEffect(() => {
+  updateCartCount();
+
+  const handleCartUpdate = () => {
+    updateCartCount();
   };
 
-  useEffect(() => {
-    updateCartCount();
+  window.addEventListener(
+    "axiee-cart-updated",
+    handleCartUpdate
+  );
 
-    const handleCartUpdate = () => {
-      updateCartCount();
-    };
-
-    const handleStorage = (event) => {
-      if (event.key === "axiee-cart") {
-        updateCartCount();
-      }
-    };
-
-    window.addEventListener("axiee-cart-updated", handleCartUpdate);
-
-    window.addEventListener("storage", handleStorage);
-
-    return () => {
-      window.removeEventListener("axiee-cart-updated", handleCartUpdate);
-
-      window.removeEventListener("storage", handleStorage);
-    };
-  }, []);
+  return () => {
+    window.removeEventListener(
+      "axiee-cart-updated",
+      handleCartUpdate
+    );
+  };
+}, []);
 
   /* =========================================================
      BODY SCROLL
