@@ -1,119 +1,139 @@
+import mongoose from "mongoose";
 import Cart from "../models/Cart.js";
 
-// ADD PRODUCT TO CART
-export const addToCart = async (req, res) => {
+const getProduct = async (productId) => {
+  if (!mongoose.Types.ObjectId.isValid(productId)) {
+    return null;
+  }
+
+  return mongoose.connection.db
+    .collection("products")
+    .findOne({
+      _id: new mongoose.Types.ObjectId(productId),
+    });
+};
+
+// ======================================================
+// GET CART
+// ======================================================
+
+export const getCart = async (req, res) => {
   try {
-    const {
-      userId,
-      productId,
-      name,
-      image,
-      price,
-      size,
-      quantity = 1,
-    } = req.body;
+    const { cartId } = req.params;
 
-    if (!userId || !productId || !name || !price || !size) {
-      return res.status(400).json({
-        success: false,
-        message: "userId, productId, name, price and size are required",
-      });
-    }
-
-    let cart = await Cart.findOne({ userId });
+    let cart = await Cart.findOne({ cartId });
 
     if (!cart) {
-      cart = new Cart({
-        userId,
+      cart = await Cart.create({
+        cartId,
         items: [],
       });
     }
 
-    const existingItem = cart.items.find(
-      (item) =>
-        item.productId === productId &&
-        item.size === size
-    );
-
-    if (existingItem) {
-      existingItem.quantity += Number(quantity);
-    } else {
-      cart.items.push({
-        productId,
-        name,
-        image,
-        price,
-        size,
-        quantity,
-      });
-    }
-
-    await cart.save();
-
-    return res.status(200).json({
-      success: true,
-      message: "Product added to cart",
-      cart,
-    });
-  } catch (error) {
-    console.error("Add to cart error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Server error while adding product to cart",
-      error: error.message,
-    });
-  }
-};
-
-
-// GET USER CART
-export const getCart = async (req, res) => {
-  try {
-    const { userId } = req.params;
-
-    const cart = await Cart.findOne({ userId });
-
-    if (!cart) {
-      return res.status(200).json({
-        success: true,
-        cart: {
-          userId,
-          items: [],
-        },
-      });
-    }
-
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
       cart,
     });
   } catch (error) {
     console.error("Get cart error:", error);
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: "Server error while getting cart",
-      error: error.message,
+      message: "Failed to get cart",
     });
   }
 };
 
+// ======================================================
+// ADD TO CART
+// ======================================================
 
-// UPDATE CART ITEM QUANTITY
-export const updateCartItem = async (req, res) => {
+export const addToCart = async (req, res) => {
   try {
-    const { userId, itemId } = req.params;
-    const { quantity } = req.body;
+    const {
+      cartId,
+      productId,
+      size,
+      quantity = 1,
+    } = req.body;
 
-    if (!quantity || Number(quantity) < 1) {
+    if (!cartId || !productId || !size) {
       return res.status(400).json({
         success: false,
-        message: "Quantity must be at least 1",
+        message: "cartId, productId and size are required",
       });
     }
 
-    const cart = await Cart.findOne({ userId });
+    const product = await getProduct(productId);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    let cart = await Cart.findOne({ cartId });
+
+    if (!cart) {
+      cart = new Cart({
+        cartId,
+        items: [],
+      });
+    }
+
+    const existingItem = cart.items.find(
+      (item) =>
+        String(item.productId) === String(productId) &&
+        item.size === size
+    );
+
+    if (existingItem) {
+      existingItem.quantity = Math.min(
+        10,
+        existingItem.quantity + Number(quantity)
+      );
+    } else {
+      cart.items.push({
+        productId,
+        name: product.name,
+        price: Number(product.price || 699),
+        image: product.image || product.mainImage || "",
+        size,
+        quantity: Math.min(
+          10,
+          Math.max(1, Number(quantity))
+        ),
+      });
+    }
+
+    await cart.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Added to cart",
+      cart,
+    });
+  } catch (error) {
+    console.error("Add cart error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to add product to cart",
+    });
+  }
+};
+
+// ======================================================
+// UPDATE QUANTITY
+// ======================================================
+
+export const updateCartItem = async (req, res) => {
+  try {
+    const { cartId, itemId } = req.params;
+    const { quantity } = req.body;
+
+    const cart = await Cart.findOne({ cartId });
 
     if (!cart) {
       return res.status(404).json({
@@ -131,33 +151,36 @@ export const updateCartItem = async (req, res) => {
       });
     }
 
-    item.quantity = Number(quantity);
+    item.quantity = Math.min(
+      10,
+      Math.max(1, Number(quantity))
+    );
 
     await cart.save();
 
-    return res.status(200).json({
+    res.json({
       success: true,
-      message: "Cart quantity updated",
       cart,
     });
   } catch (error) {
     console.error("Update cart error:", error);
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: "Server error while updating cart",
-      error: error.message,
+      message: "Failed to update cart",
     });
   }
 };
 
+// ======================================================
+// REMOVE ITEM
+// ======================================================
 
-// REMOVE ITEM FROM CART
 export const removeCartItem = async (req, res) => {
   try {
-    const { userId, itemId } = req.params;
+    const { cartId, itemId } = req.params;
 
-    const cart = await Cart.findOne({ userId });
+    const cart = await Cart.findOne({ cartId });
 
     if (!cart) {
       return res.status(404).json({
@@ -167,58 +190,55 @@ export const removeCartItem = async (req, res) => {
     }
 
     cart.items = cart.items.filter(
-      (item) => item._id.toString() !== itemId
+      (item) => String(item._id) !== String(itemId)
     );
 
     await cart.save();
 
-    return res.status(200).json({
+    res.json({
       success: true,
-      message: "Item removed from cart",
       cart,
     });
   } catch (error) {
     console.error("Remove cart item error:", error);
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: "Server error while removing cart item",
-      error: error.message,
+      message: "Failed to remove item",
     });
   }
 };
 
+// ======================================================
+// CLEAR CART
+// ======================================================
 
-// CLEAR FULL CART
 export const clearCart = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { cartId } = req.params;
 
-    const cart = await Cart.findOne({ userId });
+    const cart = await Cart.findOneAndUpdate(
+      { cartId },
+      {
+        $set: {
+          items: [],
+        },
+      },
+      {
+        new: true,
+      }
+    );
 
-    if (!cart) {
-      return res.status(404).json({
-        success: false,
-        message: "Cart not found",
-      });
-    }
-
-    cart.items = [];
-
-    await cart.save();
-
-    return res.status(200).json({
+    res.json({
       success: true,
-      message: "Cart cleared",
       cart,
     });
   } catch (error) {
     console.error("Clear cart error:", error);
 
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: "Server error while clearing cart",
-      error: error.message,
+      message: "Failed to clear cart",
     });
   }
 };

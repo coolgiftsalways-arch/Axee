@@ -1776,6 +1776,9 @@ function CategoryPage({
   subtitle,
   description,
   visualType = "default",
+  products: externalProducts,
+  loading = false,
+  error = "",
 }) {
   const navigate = useNavigate();
 
@@ -1860,7 +1863,12 @@ function CategoryPage({
   ======================================================= */
 
   const categoryProducts = useMemo(() => {
-    let result = products.filter((product) => product.category === category);
+    // MongoDB category pages (like Track Pants) already pass only the
+    // products that belong on this page. Local category pages still
+    // use the original category filter from ../data/products.
+    let result = usingExternalProducts
+      ? [...sourceProducts]
+      : sourceProducts.filter((product) => product.category === category);
 
     /* SEARCH */
 
@@ -1909,7 +1917,13 @@ function CategoryPage({
     }
 
     return result;
-  }, [category, sort, search]);
+  }, [
+    category,
+    sort,
+    search,
+    sourceProducts,
+    usingExternalProducts,
+  ]);
 
   /* =======================================================
      TOTAL CATEGORY PRODUCTS
@@ -1957,15 +1971,21 @@ function CategoryPage({
   /* =======================================================
      ADD TO CART
   ======================================================= */
-
-  const addToCart = (product) => {
+const addToCart = async (product) => {
+  try {
     const productId = getProductId(product);
+
     const sizes = getProductSizes(product);
+
     const size = selectedSizes[productId];
+
     const quantity = getQuantity(productId);
 
     if (sizes.length === 0) {
-      alert("Sizes are not configured for this product yet.");
+      alert(
+        "Sizes are not configured for this product yet."
+      );
+
       return;
     }
 
@@ -1975,29 +1995,65 @@ function CategoryPage({
       return;
     }
 
-    const cart = JSON.parse(localStorage.getItem("axiee-cart")) || [];
-
-    const existingIndex = cart.findIndex(
-      (item) => item.id === product.id && item.size === size,
+    let cartId = localStorage.getItem(
+      "axiee-cart-id"
     );
 
-    if (existingIndex !== -1) {
-      cart[existingIndex].quantity =
-        Number(cart[existingIndex].quantity || 1) + quantity;
-    } else {
-      cart.push({
-        ...product,
+    if (!cartId) {
+      cartId = crypto.randomUUID();
 
-        size,
-        quantity,
-      });
+      localStorage.setItem(
+        "axiee-cart-id",
+        cartId
+      );
     }
 
-    localStorage.setItem("axiee-cart", JSON.stringify(cart));
+    const response = await fetch(
+      "http://localhost:5000/api/cart/add",
+      {
+        method: "POST",
 
-    window.dispatchEvent(new Event("axiee-cart-updated"));
-  };
+        headers: {
+          "Content-Type": "application/json",
+        },
 
+        body: JSON.stringify({
+          cartId,
+          productId,
+          size,
+          quantity,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message || "Unable to add to cart"
+      );
+    }
+
+    console.log("✅ MongoDB cart:", data.cart);
+
+    window.dispatchEvent(
+      new CustomEvent("axiee-cart-updated", {
+        detail: data.cart,
+      })
+    );
+
+    alert("Added to cart");
+  } catch (error) {
+    console.error(
+      "❌ Add to cart error:",
+      error
+    );
+
+    alert(
+      error.message || "Unable to add to cart"
+    );
+  }
+};
   /* =======================================================
      BUY NOW
   ======================================================= */
@@ -2021,7 +2077,7 @@ function CategoryPage({
 
     const checkoutProduct = {
       ...product,
-
+      id: productId,
       size,
       quantity,
     };
@@ -2177,7 +2233,23 @@ function CategoryPage({
               NO RESULTS
           =============================================== */}
 
-          {categoryProducts.length === 0 && (
+          {loading && (
+            <div className="category-no-results">
+              <span>LOADING</span>
+              <h3>LOADING PRODUCTS...</h3>
+              <p>CONNECTING TO AXIEE CATALOG</p>
+            </div>
+          )}
+
+          {!loading && error && (
+            <div className="category-no-results">
+              <span>ERROR</span>
+              <h3>PRODUCTS COULD NOT BE LOADED</h3>
+              <p>{error}</p>
+            </div>
+          )}
+
+          {!loading && !error && categoryProducts.length === 0 && (
             <div className="category-no-results">
               <span>NO RESULTS</span>
 

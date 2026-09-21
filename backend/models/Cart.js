@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const cartItemSchema = new mongoose.Schema(
   {
     productId: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
       required: true,
     },
 
@@ -12,14 +12,15 @@ const cartItemSchema = new mongoose.Schema(
       required: true,
     },
 
-    image: {
-      type: String,
-      default: "",
-    },
-
     price: {
       type: Number,
       required: true,
+      default: 0,
+    },
+
+    image: {
+      type: String,
+      default: "",
     },
 
     size: {
@@ -31,6 +32,7 @@ const cartItemSchema = new mongoose.Schema(
       type: Number,
       default: 1,
       min: 1,
+      max: 10,
     },
   },
   {
@@ -40,19 +42,21 @@ const cartItemSchema = new mongoose.Schema(
 
 const cartSchema = new mongoose.Schema(
   {
-    userId: {
+    cartId: {
       type: String,
       required: true,
       unique: true,
+      index: true,
     },
 
-    items: [cartItemSchema],
+    items: {
+      type: [cartItemSchema],
+      default: [],
+    },
   },
   {
     timestamps: true,
   }
 );
 
-const Cart = mongoose.model("Cart", cartSchema);
-
-export default Cart;
+export default mongoose.model("Cart", cartSchema);

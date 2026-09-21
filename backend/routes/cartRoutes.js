@@ -1,8 +1,8 @@
 import express from "express";
 
 import {
-  addToCart,
   getCart,
+  addToCart,
   updateCartItem,
   removeCartItem,
   clearCart,
@@ -10,14 +10,23 @@ import {
 
 const router = express.Router();
 
+router.get("/:cartId", getCart);
+
 router.post("/add", addToCart);
 
-router.get("/:userId", getCart);
+router.patch(
+  "/:cartId/item/:itemId",
+  updateCartItem
+);
 
-router.put("/:userId/item/:itemId", updateCartItem);
+router.delete(
+  "/:cartId/item/:itemId",
+  removeCartItem
+);
 
-router.delete("/:userId/item/:itemId", removeCartItem);
-
-router.delete("/:userId", clearCart);
+router.delete(
+  "/:cartId/clear",
+  clearCart
+);
 
 export default router;
