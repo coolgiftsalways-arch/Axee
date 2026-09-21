@@ -1550,3 +1550,102 @@
   background: #baff00;
   color: #000000;
 }
+
+/* =========================================================
+   PRODUCT QUANTITY COUNTER
+   Add this block at the end of BOTH:
+   frontend/src/styles/home.css
+   frontend/src/styles/shop.css
+========================================================= */
+
+.ax-quantity-area,
+.shop-quantity-area {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ax-quantity-label,
+.shop-quantity-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.ax-quantity-counter,
+.shop-quantity-counter {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.ax-quantity-btn,
+.shop-quantity-btn {
+  width: 36px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+}
+
+.ax-quantity-btn:hover:not(:disabled),
+.shop-quantity-btn:hover:not(:disabled) {
+  background: rgba(186, 255, 0, 0.1);
+  color: #baff00;
+}
+
+.ax-quantity-btn:disabled,
+.shop-quantity-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.ax-quantity-number,
+.shop-quantity-number {
+  min-width: 40px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  color: #baff00;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 600px) {
+
+  .ax-quantity-area,
+  .shop-quantity-area {
+    margin-top: 10px;
+  }
+
+  .ax-quantity-counter,
+  .shop-quantity-counter {
+    height: 34px;
+  }
+
+  .ax-quantity-btn,
+  .shop-quantity-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .ax-quantity-number,
+  .shop-quantity-number {
+    min-width: 34px;
+    height: 32px;
+  }
+}

@@ -49,6 +49,12 @@ import BestSellers from "./pages/BestSellers.jsx";
 import TrackOrder from "./pages/TrackOrder.jsx";
 
 /* =========================================================
+   PRODUCT DETAILS
+========================================================= */
+
+import ProductDetails from "./pages/ProductDetails.jsx";
+
+/* =========================================================
    GSAP
 ========================================================= */
 
@@ -151,6 +157,7 @@ function App() {
             .then(() => {
               console.log("🔊 AXIEE SOUND PLAYING");
             })
+
             .catch((error) => {
               console.warn("🔇 Browser blocked autoplay:", error);
             });
@@ -185,6 +192,7 @@ function App() {
         Home → Hoodies → Home
         Home → Best Sellers → Home
         Home → Track Order → Home
+        Home → Product → Home
 
         etc.
       */
@@ -325,6 +333,16 @@ function App() {
           />
 
           {/* =============================================
+              PRODUCT DETAILS
+
+              Example:
+              /product/68f123456789...
+              /product/track-2
+          ============================================= */}
+
+          <Route path="/product/:id" element={<ProductDetails />} />
+
+          {/* =============================================
               T-SHIRTS
           ============================================= */}
 
@@ -389,8 +407,14 @@ function App() {
 
               For now /shop opens Shirts.
 
-              Later replace this with:
-              <Shop />
+              Later we can change this to:
+
+              import Shop from "./pages/Shop.jsx";
+
+              <Route
+                path="/shop"
+                element={<Shop />}
+              />
           ============================================= */}
 
           <Route path="/shop" element={<Shirts />} />
@@ -411,7 +435,7 @@ function App() {
           T-Shirts → Home
           Hoodies → Home
           Best Sellers → Home
-          Track Order → Home
+          Product → Home
       ================================================= */}
 
       {isHomePage && !loadingComplete && !heroAlreadyPlayed && (
