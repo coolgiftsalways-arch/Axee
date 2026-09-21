@@ -38,6 +38,7 @@ import TrackPants from "./pages/TrackPants.jsx";
 import Shorts from "./pages/Shorts.jsx";
 import Jackets from "./pages/jackets.jsx";
 import CoOrdSets from "./pages/CoOrdSets.jsx";
+import Cart from "./pages/Cart";
 
 /* =========================================================
    GSAP
@@ -326,6 +327,7 @@ function App() {
 
           <Route path="/jeans" element={<Jeans />} />
           <Route path="/track-pants" element={<TrackPants />} />
+          <Route path="/cart" element={<Cart />} />
 
           {/* =================================
               SHIRTS
