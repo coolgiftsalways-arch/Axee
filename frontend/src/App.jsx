@@ -1,59 +1,56 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 import gsap from "gsap";
-
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 import LocomotiveScroll from "locomotive-scroll";
-
 import "locomotive-scroll/dist/locomotive-scroll.css";
 
 /* =========================================================
-   COMPONENTS
+   WEBSITE COMPONENTS
 ========================================================= */
 
 import Loader from "./components/Loader.jsx";
-
 import Navbar from "./components/Navbar.jsx";
-
 import Footer from "./components/Footer.jsx";
-
 import PageTransition from "./components/PageTransition.jsx";
 
 /* =========================================================
-   PAGES
+   WEBSITE PAGES
 ========================================================= */
 
 import Home from "./pages/Home.jsx";
-
 import Tshirts from "./pages/Tshirts.jsx";
-
 import Shirts from "./pages/Shirts.jsx";
-
 import Hoodies from "./pages/Hoodies.jsx";
-
 import Jeans from "./pages/Jeans.jsx";
-
 import TrackPants from "./pages/TrackPants.jsx";
-
 import Shorts from "./pages/Shorts.jsx";
-
 import Jackets from "./pages/jackets.jsx";
-
 import CoOrdSets from "./pages/CoOrdSets.jsx";
-import Cart from "./pages/Cart";
-
+import Cart from "./pages/Cart.jsx";
 import BestSellers from "./pages/BestSellers.jsx";
-
 import TrackOrder from "./pages/TrackOrder.jsx";
+import ProductDetails from "./pages/ProductDetails.jsx";
+import Checkout from "./pages/Checkout.jsx";
 
 /* =========================================================
-   PRODUCT DETAILS
+   ADMIN
 ========================================================= */
 
-import ProductDetails from "./pages/ProductDetails.jsx";
+import AdminLayout from "./Admin/AdminLayout.jsx";
+
+import Dashboard from "./Admin/Dashboard.jsx";
+import Orders from "./Admin/Orders.jsx";
+import Products from "./Admin/Products.jsx";
+import Categories from "./Admin/Categories.jsx";
+import Customers from "./Admin/Customers.jsx";
+import Coupons from "./Admin/Coupons.jsx";
+import Sliders from "./Admin/Sliders.jsx";
+import Banners from "./Admin/Banners.jsx";
+import Settings from "./Admin/Settings.jsx";
 
 /* =========================================================
    GSAP
@@ -66,51 +63,162 @@ gsap.registerPlugin(ScrollTrigger);
 ========================================================= */
 
 function App() {
+  const location = useLocation();
+
+  const pathname = location.pathname;
+
+  const pathnameLower = pathname.toLowerCase();
+
+  const isHomePage = pathname === "/";
+
+  const isAdminRoute =
+    pathnameLower === "/admin" || pathnameLower.startsWith("/admin/");
+
   /* =====================================================
-     APP STATE
+     WEBSITE STATE
   ===================================================== */
 
   const [loadingComplete, setLoadingComplete] = useState(false);
 
   const [heroComplete, setHeroComplete] = useState(false);
 
-  /*
-    false = hero has not played yet
-
-    Normal React route changes:
-    this stays true.
-
-    Browser refresh:
-    App reloads and goes back to false.
-  */
-
   const [heroAlreadyPlayed, setHeroAlreadyPlayed] = useState(false);
 
   const audioRef = useRef(null);
 
-  const location = useLocation();
-
-  const isHomePage = location.pathname === "/";
-
-  /* =====================================================
-     SHOULD HERO INTRO PLAY
-  ===================================================== */
+  // Keep access to the current smooth-scroll instance so route changes
+  // can force the next page to the real top.
+  const locomotiveRef = useRef(null);
 
   const shouldPlayHeroIntro = loadingComplete && !heroAlreadyPlayed;
 
   /* =====================================================
-     PRELOAD HERO AUDIO
+     SCROLL RESTORATION
+     ALWAYS OPEN A NEW ROUTE FROM THE TOP
   ===================================================== */
 
   useEffect(() => {
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+
+    return () => {
+      if ("scrollRestoration" in window.history) {
+        window.history.scrollRestoration = "auto";
+      }
+    };
+  }, []);
+
+  const forceScrollToTop = useCallback(() => {
+    // Clear GSAP's remembered scroll position.
+    try {
+      ScrollTrigger.clearScrollMemory("manual");
+    } catch (error) {
+      console.warn("ScrollTrigger scroll memory error:", error);
+    }
+
+    // Reset normal browser scroll.
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "auto",
+    });
+
+    // Reset Locomotive Scroll / Lenis as well.
+    const locomotive = locomotiveRef.current;
+
+    if (locomotive) {
+      try {
+        locomotive.scrollTo?.(0, {
+          duration: 0,
+          offset: 0,
+          disableLerp: true,
+          immediate: true,
+        });
+      } catch (error) {
+        console.warn("Locomotive scrollTo error:", error);
+      }
+
+      try {
+        locomotive.lenis?.scrollTo?.(0, {
+          immediate: true,
+          force: true,
+        });
+      } catch (error) {
+        console.warn("Lenis scrollTo error:", error);
+      }
+
+      try {
+        locomotive.lenisInstance?.scrollTo?.(0, {
+          immediate: true,
+          force: true,
+        });
+      } catch (error) {
+        console.warn("Lenis instance scrollTo error:", error);
+      }
+    }
+  }, []);
+
+  /* =====================================================
+     ROUTE CHANGE -> TOP
+  ===================================================== */
+
+  useEffect(() => {
+    let frameTwo = null;
+
+    forceScrollToTop();
+
+    // Run again after React paints the new page.
+    const frameOne = requestAnimationFrame(() => {
+      forceScrollToTop();
+
+      frameTwo = requestAnimationFrame(() => {
+        forceScrollToTop();
+      });
+    });
+
+    // PageTransition / images / layout can move the page after the first paint,
+    // so do one final hard reset shortly afterwards.
+    const timer = setTimeout(() => {
+      forceScrollToTop();
+
+      if (!isAdminRoute) {
+        ScrollTrigger.refresh();
+      }
+    }, 120);
+
+    return () => {
+      cancelAnimationFrame(frameOne);
+
+      if (frameTwo !== null) {
+        cancelAnimationFrame(frameTwo);
+      }
+
+      clearTimeout(timer);
+    };
+  }, [pathname, isAdminRoute, forceScrollToTop]);
+
+  /* =====================================================
+     HERO AUDIO
+     WEBSITE ONLY
+  ===================================================== */
+
+  useEffect(() => {
+    if (isAdminRoute) {
+      return;
+    }
+
     const audio = audioRef.current;
 
-    if (!audio) return;
+    if (!audio) {
+      return;
+    }
 
     audio.preload = "auto";
-
     audio.volume = 1;
-
     audio.muted = false;
 
     audio.load();
@@ -132,13 +240,17 @@ function App() {
 
       audio.removeEventListener("error", handleError);
     };
-  }, []);
+  }, [isAdminRoute]);
 
   /* =====================================================
      LOADER COMPLETE
   ===================================================== */
 
   const handleLoaderComplete = useCallback(() => {
+    if (isAdminRoute) {
+      return;
+    }
+
     const audio = audioRef.current;
 
     if (audio) {
@@ -160,7 +272,7 @@ function App() {
             })
 
             .catch((error) => {
-              console.warn("🔇 Browser blocked autoplay:", error);
+              console.warn("Browser blocked autoplay:", error);
             });
         }
       } catch (error) {
@@ -168,15 +280,8 @@ function App() {
       }
     }
 
-    /*
-        Loader finishes.
-
-        startAnimation becomes true
-        and Home intro begins.
-      */
-
     setLoadingComplete(true);
-  }, []);
+  }, [isAdminRoute]);
 
   /* =====================================================
      HERO COMPLETE
@@ -185,24 +290,50 @@ function App() {
   const handleHeroComplete = useCallback(() => {
     setHeroComplete(true);
 
-    /*
-        Prevent hero intro replay when:
-
-        Home → Shirts → Home
-        Home → T-Shirts → Home
-        Home → Hoodies → Home
-        Home → Best Sellers → Home
-        Home → Track Order → Home
-        Home → Product → Home
-
-        etc.
-      */
-
     setHeroAlreadyPlayed(true);
   }, []);
 
   /* =====================================================
+     ADMIN CLEANUP
+  ===================================================== */
+
+  useEffect(() => {
+    if (!isAdminRoute) {
+      return;
+    }
+
+    /* STOP WEBSITE AUDIO */
+
+    const audio = audioRef.current;
+
+    if (audio) {
+      audio.pause();
+
+      audio.currentTime = 0;
+    }
+
+    /* RESTORE NORMAL SCROLL */
+
+    document.documentElement.style.overflow = "";
+    document.body.style.overflow = "";
+
+    document.documentElement.style.height = "";
+    document.body.style.height = "";
+
+    /* SCROLL TOP */
+
+    forceScrollToTop();
+
+    /* REMOVE WEBSITE SCROLL TRIGGERS */
+
+    ScrollTrigger.getAll().forEach((trigger) => {
+      trigger.kill();
+    });
+  }, [isAdminRoute, forceScrollToTop]);
+
+  /* =====================================================
      LOCOMOTIVE SCROLL
+     WEBSITE ONLY
   ===================================================== */
 
   useEffect(() => {
@@ -210,9 +341,21 @@ function App() {
 
     let refreshTimer = null;
 
-    /* -----------------------------------------
-       LOCK SCROLL DURING FIRST HERO INTRO
-    ----------------------------------------- */
+    /* ===================================================
+       ADMIN
+    =================================================== */
+
+    if (isAdminRoute) {
+      document.documentElement.style.overflow = "";
+
+      document.body.style.overflow = "";
+
+      return;
+    }
+
+    /* ===================================================
+       HOME INTRO
+    =================================================== */
 
     if (isHomePage && !heroComplete) {
       document.documentElement.style.overflow = "hidden";
@@ -226,23 +369,33 @@ function App() {
       };
     }
 
-    /* -----------------------------------------
-       ENABLE SCROLL
-    ----------------------------------------- */
+    /* ===================================================
+       WEBSITE
+    =================================================== */
 
     document.documentElement.style.overflow = "";
 
     document.body.style.overflow = "";
 
-    locomotiveScroll = new LocomotiveScroll({
-      lenisOptions: {
-        lerp: 0.08,
+    try {
+      locomotiveScroll = new LocomotiveScroll({
+        lenisOptions: {
+          lerp: 0.08,
 
-        smoothWheel: true,
+          smoothWheel: true,
 
-        wheelMultiplier: 0.8,
-      },
-    });
+          wheelMultiplier: 0.8,
+        },
+      });
+
+      locomotiveRef.current = locomotiveScroll;
+
+      // Important: native window.scrollTo alone is not enough when
+      // smooth scrolling is active. Reset the smooth-scroll engine too.
+      forceScrollToTop();
+    } catch (error) {
+      console.warn("Locomotive Scroll error:", error);
+    }
 
     refreshTimer = setTimeout(() => {
       ScrollTrigger.refresh();
@@ -262,21 +415,21 @@ function App() {
       window.removeEventListener("resize", handleResize);
 
       locomotiveScroll?.destroy?.();
+
+      if (locomotiveRef.current === locomotiveScroll) {
+        locomotiveRef.current = null;
+      }
     };
-  }, [heroComplete, isHomePage, location.pathname]);
+  }, [heroComplete, isHomePage, isAdminRoute, pathname, forceScrollToTop]);
 
   /* =====================================================
-     SCROLL TO TOP ON ROUTE CHANGE
+     SCROLLTRIGGER REFRESH AFTER ROUTE CHANGE
   ===================================================== */
 
   useEffect(() => {
-    window.scrollTo({
-      top: 0,
-
-      left: 0,
-
-      behavior: "auto",
-    });
+    if (isAdminRoute) {
+      return;
+    }
 
     const timer = setTimeout(() => {
       ScrollTrigger.refresh();
@@ -285,41 +438,119 @@ function App() {
     return () => {
       clearTimeout(timer);
     };
-  }, [location.pathname]);
+  }, [pathname, isAdminRoute]);
 
   /* =====================================================
-     RETURN
+     ADMIN ROUTES
+  ===================================================== */
+
+  if (isAdminRoute) {
+    return (
+      <Routes>
+        <Route path="/admin" element={<AdminLayout />}>
+          {/* =============================
+              DASHBOARD
+          ============================== */}
+
+          <Route index element={<Dashboard />} />
+
+          <Route path="dashboard" element={<Dashboard />} />
+
+          {/* =============================
+              ORDERS
+          ============================== */}
+
+          <Route path="orders" element={<Orders />} />
+
+          {/* =============================
+              PRODUCTS
+          ============================== */}
+
+          <Route path="products" element={<Products />} />
+
+          {/* =============================
+              CATEGORIES
+          ============================== */}
+
+          <Route path="categories" element={<Categories />} />
+
+          {/* =============================
+              CUSTOMERS
+          ============================== */}
+
+          <Route path="customers" element={<Customers />} />
+
+          {/* =============================
+              COUPONS
+          ============================== */}
+
+          <Route path="coupons" element={<Coupons />} />
+
+          {/* =============================
+              SLIDERS
+          ============================== */}
+
+          <Route path="sliders" element={<Sliders />} />
+
+          {/* =============================
+              BANNERS
+          ============================== */}
+
+          <Route path="banners" element={<Banners />} />
+
+          {/* =============================
+              SETTINGS
+          ============================== */}
+
+          <Route path="settings" element={<Settings />} />
+
+          {/* =============================
+              WRONG ADMIN URL
+          ============================== */}
+
+          <Route path="*" element={<Navigate to="/admin" replace />} />
+        </Route>
+      </Routes>
+    );
+  }
+
+  /* =====================================================
+     NORMAL WEBSITE
   ===================================================== */
 
   return (
     <>
-      {/* =================================================
-          PAGE CHANGE ANIMATION
-
-          Does not show during initial Loader.
-
-          Only plays after route changes.
-      ================================================= */}
+      {/* ===============================================
+          PAGE TRANSITION
+      ================================================ */}
 
       <PageTransition />
 
-      {/* =================================================
+      {/* ===============================================
           HERO AUDIO
-      ================================================= */}
+      ================================================ */}
 
       <audio ref={audioRef} src="/audio/hero.mp3" preload="auto" playsInline />
 
-      {/* =================================================
+      {/* ===============================================
           WEBSITE
-      ================================================= */}
+      ================================================ */}
 
       <div className="app">
+        {/* =============================================
+            NAVBAR
+        ============================================== */}
+
         <Navbar />
 
+        {/* =============================================
+            WEBSITE ROUTES
+        ============================================== */}
+
         <Routes>
-          {/* =============================================
+          {/* =============================
               HOME
-          ============================================= */}
+          ============================== */}
 
           <Route
             path="/"
@@ -333,112 +564,106 @@ function App() {
             }
           />
 
-          {/* =============================================
+          {/* =============================
               PRODUCT DETAILS
-
-              Example:
-              /product/68f123456789...
-              /product/track-2
-          ============================================= */}
+          ============================== */}
 
           <Route path="/product/:id" element={<ProductDetails />} />
 
-          {/* =============================================
+          {/* =============================
               T-SHIRTS
-          ============================================= */}
+          ============================== */}
 
           <Route path="/tshirts" element={<Tshirts />} />
 
-          {/* =============================================
-              JEANS
-          ============================================= */}
-
-          <Route path="/jeans" element={<Jeans />} />
-
-          {/* =============================================
-              TRACK PANTS
-          ============================================= */}
-
-          <Route path="/track-pants" element={<TrackPants />} />
-          <Route path="/cart" element={<Cart />} />
-
-          {/* =============================================
+          {/* =============================
               SHIRTS
-          ============================================= */}
+          ============================== */}
 
           <Route path="/shirts" element={<Shirts />} />
 
-          {/* =============================================
+          {/* =============================
               HOODIES
-          ============================================= */}
+          ============================== */}
 
           <Route path="/hoodies" element={<Hoodies />} />
 
-          {/* =============================================
+          {/* =============================
+              JEANS
+          ============================== */}
+
+          <Route path="/jeans" element={<Jeans />} />
+
+          {/* =============================
+              TRACK PANTS
+          ============================== */}
+
+          <Route path="/track-pants" element={<TrackPants />} />
+
+          {/* =============================
               SHORTS
-          ============================================= */}
+          ============================== */}
 
           <Route path="/shorts" element={<Shorts />} />
 
-          {/* =============================================
+          {/* =============================
               JACKETS
-          ============================================= */}
+          ============================== */}
 
           <Route path="/jackets" element={<Jackets />} />
 
-          {/* =============================================
+          {/* =============================
               CO-ORD SETS
-          ============================================= */}
+          ============================== */}
 
           <Route path="/co-ord-sets" element={<CoOrdSets />} />
 
-          {/* =============================================
+          {/* =============================
               BEST SELLERS
-          ============================================= */}
+          ============================== */}
 
           <Route path="/best-sellers" element={<BestSellers />} />
 
-          {/* =============================================
+          {/* =============================
               TRACK ORDER
-          ============================================= */}
+          ============================== */}
 
           <Route path="/track-order" element={<TrackOrder />} />
 
-          {/* =============================================
-              TEMPORARY SHOP
+          {/* =============================
+              CART
+          ============================== */}
 
-              For now /shop opens Shirts.
+          <Route path="/cart" element={<Cart />} />
 
-              Later we can change this to:
+          {/* CHECKOUT */}
 
-              import Shop from "./pages/Shop.jsx";
+          <Route path="/checkout" element={<Checkout />} />
 
-              <Route
-                path="/shop"
-                element={<Shop />}
-              />
-          ============================================= */}
+          {/* =============================
+              SHOP
+          ============================== */}
 
           <Route path="/shop" element={<Shirts />} />
+
+          {/* =============================
+              INVALID WEBSITE URL
+          ============================== */}
+
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+
+        {/* =============================================
+            FOOTER
+        ============================================== */}
 
         <Footer />
       </div>
 
-      {/* =================================================
+      {/* ===============================================
           LOADER
-
-          ONLY:
-          website open / browser refresh
-          while on Home.
-
-          NOT:
-          Shirts → Home
-          T-Shirts → Home
-          Hoodies → Home
-          Best Sellers → Home
-          Product → Home
-      ================================================= */}
+          HOME ONLY
+      ================================================ */}
 
       {isHomePage && !loadingComplete && !heroAlreadyPlayed && (
         <Loader onComplete={handleLoaderComplete} />

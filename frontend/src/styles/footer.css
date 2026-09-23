@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=New+Rocker&display=swap");
+
 /* =========================================================
    GLOBAL SAFE BOX SIZING
 ========================================================= */
@@ -9,7 +11,7 @@
 }
 
 /* =========================================================
-   AXIEE FOOTER
+   UNBOUND FOOTER
 ========================================================= */
 
 .ax-footer {
@@ -218,72 +220,81 @@
 }
 
 .ax-footer-logo {
+     position: relative;
+
      width: fit-content;
 
      margin-bottom: 38px;
 
-     display: flex;
+     display: inline-flex;
      align-items: center;
 
-     gap: 9px;
-
-     color: #f5f4ee;
+     color: #f7f5ef;
 
      text-decoration: none;
+
+     white-space: nowrap;
+
+     font-family:
+          "New Rocker",
+          "Times New Roman",
+          serif;
+
+     font-size: 40px;
+
+     font-weight: 400;
+
+     line-height: 0.9;
+
+     letter-spacing: 0.025em;
+
+     text-transform: uppercase;
+
+     text-shadow:
+          0 0 1px rgba(255, 255, 255, 0.55),
+          0 0 20px rgba(203, 255, 39, 0.08);
+
+     transition:
+          opacity 0.3s ease,
+          transform 0.3s ease,
+          text-shadow 0.3s ease;
 }
 
-.ax-footer-logo span {
-     display: inline-block;
-
-     font-family: Arial, Helvetica, sans-serif;
-
-     font-size: 14px;
-     font-weight: 300;
-
-     line-height: 1;
-
-     letter-spacing: 0.18em;
-}
-
-/* custom A */
-
-.ax-footer-logo-a {
-     position: relative;
-
-     width: 18px;
-     height: 18px;
-}
-
-.ax-footer-logo-a::before,
-.ax-footer-logo-a::after {
+.ax-footer-logo::after {
      content: "";
 
      position: absolute;
 
-     top: 50%;
+     left: 50%;
+     bottom: -10px;
 
-     width: 17px;
+     width: 0;
      height: 1px;
 
-     background: #f5f4ee;
+     background: #cbff27;
+
+     transform: translateX(-50%);
+
+     box-shadow:
+          0 0 9px rgba(203, 255, 39, 0.7);
+
+     transition:
+          width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.ax-footer-logo-a::before {
-     left: 0;
+.ax-footer-logo:hover {
+     opacity: 0.95;
 
      transform:
-          translateY(-50%) rotate(-64deg);
+          translateY(-2px) scale(1.015);
 
-     transform-origin: left center;
+     text-shadow:
+          0 0 2px rgba(255, 255, 255, 0.72),
+          0 0 26px rgba(203, 255, 39, 0.16);
 }
 
-.ax-footer-logo-a::after {
-     right: 0;
-
-     transform:
-          translateY(-50%) rotate(64deg);
-
-     transform-origin: right center;
+.ax-footer-logo:hover::after {
+     width: 72%;
 }
 
 /* =========================================================
@@ -369,6 +380,21 @@
      background: rgba(203, 255, 39, 0.035);
 
      transform: translateY(-2px);
+}
+
+
+.ax-footer-socials a svg {
+     width: 15px;
+     height: 15px;
+
+     display: block;
+
+     transition:
+          transform 0.3s ease;
+}
+
+.ax-footer-socials a:hover svg {
+     transform: scale(1.12);
 }
 
 /* =========================================================
@@ -819,6 +845,8 @@
 
      .ax-footer-logo {
           margin-bottom: 30px;
+
+          font-size: 34px;
      }
 
      .ax-footer-brand h2 {
@@ -1008,6 +1036,13 @@
 ========================================================= */
 
 @media (max-width: 480px) {
+
+     .ax-footer-logo {
+          font-size: 30px;
+
+          letter-spacing: 0.02em;
+     }
+
      .ax-footer {
           padding:
                62px 19px 22px;

@@ -2606,80 +2606,52 @@ function CategoryPage({
         return;
       }
 
-      const isMongoProduct = /^[a-f\\d]{24}$/i.test(productId);
-      let backendCart = null;
-
       /*
-        MongoDB products:
-        use Nikita's backend cart API.
+        One cart system for every product.
+        The Cart page reads axiee-cart-id and loads the cart from /api/cart/:cartId,
+        so every ADD TO CART action must use the backend cart API.
       */
-      if (isMongoProduct) {
-        let cartId = localStorage.getItem("axiee-cart-id");
+      let cartId = localStorage.getItem("axiee-cart-id");
 
-        if (!cartId) {
-          cartId = crypto.randomUUID();
-          localStorage.setItem("axiee-cart-id", cartId);
-        }
-
-        const response = await fetch(`${API_BASE}/api/cart/add`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            cartId,
-            productId,
-            size,
-            quantity,
-          }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || "Unable to add to cart");
-        }
-
-        backendCart = data.cart;
-
-        console.log("✅ MongoDB cart:", backendCart);
+      if (!cartId) {
+        cartId = crypto.randomUUID();
+        localStorage.setItem("axiee-cart-id", cartId);
       }
 
-      /*
-        Local/static products:
-        keep Ahmed's localStorage cart support.
-      */
-      if (!isMongoProduct) {
-        const cart = JSON.parse(localStorage.getItem("axiee-cart")) || [];
+      const productImage =
+        product?.image || product?.mainImage || product?.images?.[0] || "";
 
-        const existingIndex = cart.findIndex(
-          (item) =>
-            String(item.id || item.productId) === productId &&
-            item.size === size,
-        );
+      const response = await fetch(`${API_BASE}/api/cart/add`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          cartId,
+          productId,
+          size,
+          quantity,
+          name: product?.name || "AXIEE Product",
+          price: Number(product?.price || 0),
+          image: productImage,
+          category: product?.category || category || "",
+        }),
+      });
 
-        if (existingIndex !== -1) {
-          cart[existingIndex].quantity =
-            Number(cart[existingIndex].quantity || 0) + quantity;
-        } else {
-          cart.push({
-            ...product,
-            id: productId,
-            productId,
-            size,
-            quantity,
-          });
-        }
+      const data = await response.json();
 
-        localStorage.setItem("axiee-cart", JSON.stringify(cart));
+      if (!response.ok) {
+        throw new Error(data.message || "Unable to add to cart");
       }
 
+      console.log("✅ CART SAVED:", data.cart);
+
       /*
-        Tell Navbar / Cart that something changed.
+        Tell Navbar / Cart that the backend cart changed.
       */
       window.dispatchEvent(
         new CustomEvent("axiee-cart-updated", {
-          detail: backendCart,
+          detail: data.cart,
         }),
       );
 
@@ -2687,7 +2659,7 @@ function CategoryPage({
         Premium visual confirmation.
       */
       setCartToast({
-        name: product.name,
+        name: product?.name || "AXIEE Product",
         size,
         quantity,
       });
@@ -2699,7 +2671,6 @@ function CategoryPage({
       }, 1400);
     } catch (error) {
       console.error("❌ Add to cart error:", error);
-
       alert(error.message || "Unable to add to cart");
     }
   };

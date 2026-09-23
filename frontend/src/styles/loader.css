@@ -1,7 +1,12 @@
+@import url("https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&display=swap");
+
+/* =================================
+   LOADER
+================================= */
+
 .axiee-loader {
      position: fixed;
      inset: 0;
-
      z-index: 99999;
 
      width: 100%;
@@ -13,7 +18,7 @@
 }
 
 /* =================================
-   NETFLIX STYLE DOOR
+   BLACK REVEAL PANELS
 ================================= */
 
 .loader-door-panel {
@@ -40,7 +45,7 @@
 }
 
 /* =================================
-   MAIN LOADER
+   MAIN
 ================================= */
 
 .loader-inner {
@@ -52,6 +57,7 @@
      height: 100%;
 
      display: flex;
+
      align-items: center;
      justify-content: center;
 
@@ -59,7 +65,7 @@
 }
 
 /* =================================
-   AXIEE
+   UNBOUND LOGO
 ================================= */
 
 .loader-logo {
@@ -70,55 +76,94 @@
 
      transform: translate(-50%, -50%);
 
+     width: 100%;
+
      display: flex;
+
      align-items: center;
      justify-content: center;
 
      white-space: nowrap;
 
-     perspective: 1200px;
+     perspective: 1400px;
 }
 
+/* =================================
+   GOTHIC LETTERS
+================================= */
+
 .loader-letter {
+     position: relative;
+
      display: inline-block;
 
-     color: #f2efe7;
+     color: #f8f7f1;
 
-     font-family: Georgia, "Times New Roman", serif;
+     /*
+    Similar gothic / blackletter font
+    to your UNBOUND banner
+  */
+     font-family: "UnifrakturCook", "Old English Text MT", serif;
 
-     font-size: clamp(80px, 13vw, 220px);
+     font-size: clamp(70px, 11vw, 190px);
 
-     font-weight: 400;
+     font-weight: 700;
 
-     line-height: 0.8;
+     line-height: 0.78;
 
-     letter-spacing: -0.09em;
+     letter-spacing: -0.035em;
 
      transform-origin: center center;
+
+     text-rendering: geometricPrecision;
+
+     -webkit-font-smoothing: antialiased;
 
      will-change:
           transform,
           opacity,
-          filter;
+          filter,
+          color,
+          text-shadow;
 }
 
 /* =================================
-   I
+   CENTER "O"
 ================================= */
 
-.loader-letter-i {
+.loader-letter-center {
      position: relative;
 
      z-index: 10;
 
-     color: #c7ff13;
-
      transform-origin: center center;
+}
 
-     will-change:
-          transform,
-          opacity,
-          text-shadow;
+/* =================================
+   OPTIONAL LIGHT BEHIND LOGO
+================================= */
+
+.loader-logo::before {
+     content: "";
+
+     position: absolute;
+
+     left: 50%;
+     top: 50%;
+
+     width: 45vw;
+     height: 18vw;
+
+     transform: translate(-50%, -50%);
+
+     background: radial-gradient(ellipse at center,
+               rgba(199, 255, 19, 0.045) 0%,
+               rgba(199, 255, 19, 0.015) 40%,
+               transparent 72%);
+
+     filter: blur(30px);
+
+     pointer-events: none;
 }
 
 /* =================================
@@ -140,12 +185,15 @@
           opacity;
 }
 
+/* =================================
+   PROGRESS
+================================= */
+
 .loader-progress {
      width: 100%;
-
      height: 1px;
 
-     background: rgba(255, 255, 255, 0.13);
+     background: rgba(255, 255, 255, 0.12);
 
      overflow: hidden;
 }
@@ -160,13 +208,14 @@
 
      box-shadow:
           0 0 8px rgba(199, 255, 19, 0.9),
-          0 0 25px rgba(199, 255, 19, 0.45);
+          0 0 25px rgba(199, 255, 19, 0.45),
+          0 0 55px rgba(199, 255, 19, 0.2);
 
      will-change: transform;
 }
 
 /* =================================
-   INFO
+   INFORMATION
 ================================= */
 
 .loader-information {
@@ -181,12 +230,22 @@
 .loader-information p {
      margin: 0;
 
-     color: #666;
+     color: #6c6c6c;
+
+     font-family: Arial, Helvetica, sans-serif;
 
      font-size: 8px;
 
-     letter-spacing: 0.28em;
+     font-weight: 500;
+
+     letter-spacing: 0.3em;
+
+     text-transform: uppercase;
 }
+
+/* =================================
+   PERCENTAGE
+================================= */
 
 .loader-percentage {
      display: flex;
@@ -194,25 +253,31 @@
      align-items: flex-start;
 
      color: #f2efe8;
+
+     transform-origin: right center;
 }
 
 .loader-percentage span {
-     font-family: Georgia, "Times New Roman", serif;
+     font-family: "UnifrakturCook", "Old English Text MT", serif;
 
-     font-size: clamp(36px, 4vw, 62px);
+     font-size: clamp(38px, 4vw, 62px);
 
      line-height: 0.85;
 
-     letter-spacing: -0.05em;
+     letter-spacing: -0.03em;
 }
 
 .loader-percentage small {
      margin-top: 2px;
-     margin-left: 5px;
+     margin-left: 6px;
 
      color: #c7ff13;
 
+     font-family: Arial, Helvetica, sans-serif;
+
      font-size: 9px;
+
+     font-weight: 700;
 }
 
 /* =================================
@@ -220,10 +285,14 @@
 ================================= */
 
 @media (max-width: 768px) {
-     .loader-letter {
-          font-size: 21vw;
+     .loader-logo {
+          width: 96%;
+     }
 
-          letter-spacing: -0.1em;
+     .loader-letter {
+          font-size: 15vw;
+
+          letter-spacing: -0.04em;
      }
 
      .loader-bottom {
@@ -234,14 +303,40 @@
      }
 
      .loader-information p {
-          max-width: 140px;
+          max-width: 150px;
 
           font-size: 7px;
 
           line-height: 1.7;
+
+          letter-spacing: 0.22em;
      }
 
      .loader-percentage span {
           font-size: 38px;
+     }
+}
+
+/* =================================
+   SMALL MOBILE
+================================= */
+
+@media (max-width: 480px) {
+     .loader-letter {
+          font-size: 15.5vw;
+     }
+
+     .loader-bottom {
+          bottom: 22px;
+     }
+
+     .loader-information p {
+          font-size: 6px;
+
+          max-width: 120px;
+     }
+
+     .loader-percentage span {
+          font-size: 34px;
      }
 }

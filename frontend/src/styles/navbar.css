@@ -1,5 +1,7 @@
+@import url("https://fonts.googleapis.com/css2?family=New+Rocker&display=swap");
+
 /* =====================================================
-   AXIEE NAVBAR
+   UNBOUND / AXIEE NAVBAR
 ===================================================== */
 
 .ax-navbar {
@@ -49,80 +51,88 @@
 }
 
 /* =====================================================
-   LOGO
+   UNBOUND LOGO
+   Gothic wordmark to match the hero artwork
 ===================================================== */
 
 .ax-navbar-logo {
      width: fit-content;
 
-     display: flex;
+     display: inline-flex;
      align-items: center;
 
-     gap: 10px;
-
-     color: #f6f5ef;
+     color: #f7f5ef;
 
      text-decoration: none;
+
+     white-space: nowrap;
 }
 
-.ax-navbar-logo span {
-     display: inline-block;
-
-     font-family:
-          Arial,
-          Helvetica,
-          sans-serif;
-
-     font-size: 16px;
-
-     font-weight: 300;
-
-     line-height: 1;
-
-     letter-spacing: 0.1em;
-}
-
-/* FUTURISTIC A */
-
-.ax-logo-a {
+.ax-unbound-logo {
      position: relative;
 
-     width: 19px;
-     height: 19px;
+     font-family:
+          "New Rocker",
+          "Times New Roman",
+          serif;
+
+     font-size: 31px;
+
+     font-weight: 400;
+
+     line-height: 0.9;
+
+     letter-spacing: 0.025em;
+
+     text-transform: uppercase;
+
+     transform: translateY(-1px);
+
+     text-shadow:
+          0 0 1px rgba(255, 255, 255, 0.55),
+          0 0 16px rgba(207, 255, 36, 0.05);
+
+     transition:
+          opacity 0.3s ease,
+          transform 0.3s ease,
+          text-shadow 0.3s ease;
 }
 
-.ax-logo-a::before,
-.ax-logo-a::after {
+.ax-unbound-logo::after {
      content: "";
 
      position: absolute;
 
-     top: 50%;
+     left: 50%;
+     bottom: -8px;
 
-     width: 18px;
-     height: 1.5px;
+     width: 0;
+     height: 1px;
 
-     background: #f6f5ef;
+     background: #cfff24;
+
+     transform: translateX(-50%);
+
+     box-shadow:
+          0 0 8px rgba(207, 255, 36, 0.65);
+
+     transition:
+          width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.ax-logo-a::before {
-     left: 0;
+.ax-unbound-logo:hover {
+     opacity: 0.94;
 
      transform:
-          translateY(-50%) rotate(-64deg);
+          translateY(-2px) scale(1.015);
 
-     transform-origin:
-          left center;
+     text-shadow:
+          0 0 2px rgba(255, 255, 255, 0.72),
+          0 0 22px rgba(207, 255, 36, 0.12);
 }
 
-.ax-logo-a::after {
-     right: 0;
-
-     transform:
-          translateY(-50%) rotate(64deg);
-
-     transform-origin:
-          right center;
+.ax-unbound-logo:hover::after {
+     width: 70%;
 }
 
 /* =====================================================
@@ -1912,23 +1922,10 @@
           height: 34px;
      }
 
-     .ax-navbar-logo {
-          gap: 9px;
-     }
+     .ax-unbound-logo {
+          font-size: 27px;
 
-     .ax-navbar-logo span {
-          font-size: 14px;
-     }
-
-     .ax-logo-a {
-          width: 17px;
-
-          height: 17px;
-     }
-
-     .ax-logo-a::before,
-     .ax-logo-a::after {
-          width: 16px;
+          letter-spacing: 0.02em;
      }
 }
 
@@ -1956,23 +1953,12 @@
           gap: 6px;
      }
 
-     .ax-navbar-logo {
-          gap: 7px;
-     }
+     .ax-unbound-logo {
+          font-size: 23px;
 
-     .ax-navbar-logo span {
-          font-size: 12px;
-     }
+          letter-spacing: 0.015em;
 
-     .ax-logo-a {
-          width: 15px;
-
-          height: 16px;
-     }
-
-     .ax-logo-a::before,
-     .ax-logo-a::after {
-          width: 14px;
+          transform: translateY(0);
      }
 
      .ax-mobile-search-button,
@@ -2436,5 +2422,15 @@
 
      .ax-navbar-actions {
           gap: 9px;
+     }
+}
+
+/* =====================================================
+   EXTRA SMALL MOBILE
+===================================================== */
+
+@media (max-width: 360px) {
+     .ax-unbound-logo {
+          font-size: 21px;
      }
 }

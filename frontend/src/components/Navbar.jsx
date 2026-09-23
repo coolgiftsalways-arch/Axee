@@ -161,103 +161,78 @@ function Navbar() {
    CART COUNT
 ========================================================= */
 
-const API_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-const updateCartCount = async () => {
-  try {
-    const cartId = localStorage.getItem("axiee-cart-id");
+  const updateCartCount = async () => {
+    try {
+      const cartId = localStorage.getItem("axiee-cart-id");
 
-    if (!cartId) {
-      setCartCount(0);
-      return;
-    }
+      if (!cartId) {
+        setCartCount(0);
+        return;
+      }
 
-    const response = await fetch(
-      `${API_URL}/api/cart/${cartId}`
-    );
+      const response = await fetch(`${API_URL}/api/cart/${cartId}`);
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(
-        data.message || "Failed to get cart"
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to get cart");
+      }
+
+      const items = data.cart?.items || [];
+
+      const totalQuantity = items.reduce(
+        (total, item) => total + Number(item.quantity || 1),
+        0,
       );
-    }
-
-    const items = data.cart?.items || [];
-
-    const totalQuantity = items.reduce(
-      (total, item) =>
-        total + Number(item.quantity || 1),
-      0
-    );
-
-    setCartCount(totalQuantity);
-  } catch (error) {
-    console.error(
-      "Navbar cart count error:",
-      error
-    );
-
-    setCartCount(0);
-  }
-};
-
-useEffect(() => {
-  updateCartCount();
-
-  const handleCartUpdate = (event) => {
-    // If updated cart was sent with the event,
-    // calculate instantly without another request.
-    const updatedCart = event?.detail;
-
-    if (updatedCart?.items) {
-      const totalQuantity =
-        updatedCart.items.reduce(
-          (total, item) =>
-            total + Number(item.quantity || 1),
-          0
-        );
 
       setCartCount(totalQuantity);
+    } catch (error) {
+      console.error("Navbar cart count error:", error);
 
-      return;
+      setCartCount(0);
     }
+  };
 
+  useEffect(() => {
     updateCartCount();
-  };
 
-  const handleStorage = (event) => {
-    if (
-      event.key === "axiee-cart-id"
-    ) {
+    const handleCartUpdate = (event) => {
+      // If updated cart was sent with the event,
+      // calculate instantly without another request.
+      const updatedCart = event?.detail;
+
+      if (updatedCart?.items) {
+        const totalQuantity = updatedCart.items.reduce(
+          (total, item) => total + Number(item.quantity || 1),
+          0,
+        );
+
+        setCartCount(totalQuantity);
+
+        return;
+      }
+
       updateCartCount();
-    }
-  };
+    };
 
-  window.addEventListener(
-    "axiee-cart-updated",
-    handleCartUpdate
-  );
+    const handleStorage = (event) => {
+      if (event.key === "axiee-cart-id") {
+        updateCartCount();
+      }
+    };
 
-  window.addEventListener(
-    "storage",
-    handleStorage
-  );
+    window.addEventListener("axiee-cart-updated", handleCartUpdate);
 
-  return () => {
-    window.removeEventListener(
-      "axiee-cart-updated",
-      handleCartUpdate
-    );
+    window.addEventListener("storage", handleStorage);
 
-    window.removeEventListener(
-      "storage",
-      handleStorage
-    );
-  };
-}, []);
+    return () => {
+      window.removeEventListener("axiee-cart-updated", handleCartUpdate);
+
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
 
   /* =========================================================
      BODY SCROLL
@@ -328,13 +303,12 @@ useEffect(() => {
       <header className="ax-navbar">
         {/* LOGO */}
 
-        <Link to="/" className="ax-navbar-logo" onClick={closeAll}>
-          <span className="ax-logo-a"></span>
-
-          <span>X</span>
-          <span>I</span>
-          <span>E</span>
-          <span>E</span>
+        <Link
+          to="/"
+          className="ax-navbar-logo ax-unbound-logo"
+          onClick={closeAll}
+        >
+          UNBOUND
         </Link>
 
         {/* =================================================
@@ -385,7 +359,7 @@ useEffect(() => {
                 <div className="ax-shop-mega-top">
                   <span>SHOP / COLLECTIONS</span>
 
-                  <span>AXIEE © 2026</span>
+                  <span>UNBOUND © 2026</span>
                 </div>
 
                 {/* TITLE */}
@@ -462,7 +436,7 @@ useEffect(() => {
                   <span>{activeShopItem.number}</span>
 
                   <span>
-                    AXIEE
+                    UNBOUND
                     <br />
                     COLLECTION
                   </span>
@@ -484,7 +458,7 @@ useEffect(() => {
                   </button>
                 </div>
 
-                <div className="ax-shop-image-word">AXIEE</div>
+                <div className="ax-shop-image-word">UNBOUND</div>
               </div>
             </div>
           </div>
@@ -582,13 +556,12 @@ useEffect(() => {
         {/* MOBILE HEADER */}
 
         <div className="ax-mobile-menu-header">
-          <Link to="/" className="ax-navbar-logo" onClick={closeAll}>
-            <span className="ax-logo-a"></span>
-
-            <span>X</span>
-            <span>I</span>
-            <span>E</span>
-            <span>E</span>
+          <Link
+            to="/"
+            className="ax-navbar-logo ax-unbound-logo"
+            onClick={closeAll}
+          >
+            UNBOUND
           </Link>
 
           <button

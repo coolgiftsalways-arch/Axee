@@ -1,0 +1,116 @@
+* {
+     box-sizing: border-box;
+}
+
+.admin-layout {
+     min-height: 100vh;
+     width: 100%;
+     display: flex;
+     background: #f7f8fa;
+     color: #111827;
+     font-family:
+          Inter,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+     transition:
+          background 0.3s ease,
+          color 0.3s ease;
+}
+
+.admin-main {
+     width: calc(100% - 245px);
+     margin-left: 245px;
+     min-height: 100vh;
+     transition: 0.3s ease;
+}
+
+.admin-content {
+     width: 100%;
+     min-height: calc(100vh - 70px);
+     padding: 30px;
+}
+
+.admin-sidebar-overlay {
+     display: none;
+}
+
+.admin-dark-mode {
+     background: #0d0f12;
+     color: #f5f5f5;
+}
+
+.admin-dark-mode .admin-content {
+     background: #0d0f12;
+}
+
+.admin-dark-mode .admin-card,
+.admin-dark-mode .dashboard-card,
+.admin-dark-mode .dashboard-stat-card {
+     background: #15181d;
+     border-color: #282c33;
+}
+
+.admin-dark-mode input,
+.admin-dark-mode select,
+.admin-dark-mode textarea {
+     background: #111419;
+     color: #ffffff;
+     border-color: #30343c;
+}
+
+.admin-dark-mode .admin-table th {
+     background: #191c21;
+     color: #aaaeb7;
+}
+
+.admin-dark-mode .admin-table td {
+     border-color: #292d34;
+}
+
+.admin-dark-mode .admin-table tbody tr:hover {
+     background: #191c21;
+}
+
+.admin-dark-mode .dashboard-heading-row p,
+.admin-dark-mode .admin-page-header p,
+.admin-dark-mode .dashboard-card-heading p,
+.admin-dark-mode .dashboard-stat-content p,
+.admin-dark-mode .dashboard-product-item span {
+     color: #949aa6;
+}
+
+.admin-dark-mode .admin-secondary-button,
+.admin-dark-mode .dashboard-date-button,
+.admin-dark-mode .admin-action-button {
+     background: #171a20;
+     border-color: #30343c;
+     color: #ffffff;
+}
+
+@media (max-width: 1024px) {
+     .admin-main {
+          width: 100%;
+          margin-left: 0;
+     }
+
+     .admin-content {
+          padding: 24px;
+     }
+
+     .admin-sidebar-overlay {
+          position: fixed;
+          display: block;
+          inset: 0;
+          z-index: 998;
+          border: 0;
+          background: rgba(0, 0, 0, 0.48);
+     }
+}
+
+@media (max-width: 640px) {
+     .admin-content {
+          padding: 18px 14px;
+     }
+}
