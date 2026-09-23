@@ -1,450 +1,599 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 
-import { Routes, Route, useLocation } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 
+import Lenis from "lenis";
 import gsap from "gsap";
-
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-import LocomotiveScroll from "locomotive-scroll";
-
-import "locomotive-scroll/dist/locomotive-scroll.css";
 
 /* =========================================================
    COMPONENTS
 ========================================================= */
 
-import Loader from "./components/Loader.jsx";
-
-import Navbar from "./components/Navbar.jsx";
-
-import Footer from "./components/Footer.jsx";
-
-import PageTransition from "./components/PageTransition.jsx";
-
-/* =========================================================
-   PAGES
-========================================================= */
-
-import Home from "./pages/Home.jsx";
-
-import Tshirts from "./pages/Tshirts.jsx";
-
-import Shirts from "./pages/Shirts.jsx";
-
-import Hoodies from "./pages/Hoodies.jsx";
-
-import Jeans from "./pages/Jeans.jsx";
-
-import TrackPants from "./pages/TrackPants.jsx";
-
-import Shorts from "./pages/Shorts.jsx";
-
-import Jackets from "./pages/jackets.jsx";
-
-import CoOrdSets from "./pages/CoOrdSets.jsx";
-import Cart from "./pages/Cart";
-
-import BestSellers from "./pages/BestSellers.jsx";
-
-import TrackOrder from "./pages/TrackOrder.jsx";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+import PageTransition from "./components/PageTransition";
+import ScrollToTop from "./components/ScrollToTop";
+import Payment from "./components/Payment";
+import CustomCursor from "./components/CustomCursor";
 
 /* =========================================================
-   PRODUCT DETAILS
+   PUBLIC PAGES
 ========================================================= */
 
-import ProductDetails from "./pages/ProductDetails.jsx";
+import Home from "./pages/Home";
+import About from "./pages/About";
+import Gallery from "./pages/Gallery";
+import HallOfFame from "./pages/Halloffam";
+import Artists from "./pages/Artists";
+import Enter from "./pages/Enter";
+import Upload from "./pages/Upload";
+import TOP from "./pages/TOP";
+import Upcoming from "./pages/Upcomeing";
+import BookArtist from "./pages/BookArtist";
+import ClientLogin from "./pages/ClientLogin";
+import Sponsors from "./pages/Sponsors";
+
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import DataDeletion from "./pages/DataDeletion";
+import Terms from "./pages/Terms";
 
 /* =========================================================
-   GSAP
+   ADMIN PAGES
 ========================================================= */
 
-gsap.registerPlugin(ScrollTrigger);
+import Dashboard from "./admin/Dashboard";
+import Clients from "./admin/Clients";
+import AdminStalls from "./admin/AdminStalls";
+import AdminArtists from "./admin/Adminartists";
+import AdminLogin from "./admin/Login";
+import ArtistBookings from "./admin/ArtistBookings";
+
+// import WhatsAppCampaigns from "./admin/WhatsAppCampaigns";
+
+/* =========================================================
+   STYLES
+========================================================= */
+
+import "./Style/SmoothScroll.css";
+import "./Style/BarbaTransitions.css";
+import "./Style/PageTransition.css";
+
+/* =========================================================
+   LAYOUT
+========================================================= */
+
+function Layout() {
+  const location = useLocation();
+
+  /* =======================================================
+     HIDE PUBLIC WEBSITE UI ON ADMIN PAGES
+  ======================================================= */
+
+  const isAdminPage =
+    location.pathname === "/dashboard" ||
+    location.pathname.startsWith("/admin");
+
+  return (
+    <>
+      {/* ===================================================
+          AWWWARDS CUSTOM CURSOR
+
+          Only show on public website.
+          Admin dashboard keeps normal cursor.
+      =================================================== */}
+
+      {!isAdminPage && <CustomCursor />}
+
+      <div
+        className="
+          min-h-screen
+          bg-[#08080a]
+          text-white
+          flex
+          flex-col
+          justify-between
+          selection:bg-[#a855f7]
+          selection:text-white
+        "
+      >
+        {/* ===================================================
+            PUBLIC NAVBAR
+        =================================================== */}
+
+        {!isAdminPage && <Navbar />}
+
+        {/* ===================================================
+            ROUTES
+        =================================================== */}
+
+        <div className="flex-grow w-full">
+          <Routes location={location} key={location.pathname}>
+            {/* =================================================
+                HOME
+            ================================================= */}
+
+            <Route
+              path="/"
+              element={
+                <PageTransition>
+                  <Home />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                TERMS
+            ================================================= */}
+
+            <Route
+              path="/terms"
+              element={
+                <PageTransition>
+                  <Terms />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                ABOUT
+            ================================================= */}
+
+            <Route
+              path="/about"
+              element={
+                <PageTransition>
+                  <About />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                GALLERY
+            ================================================= */}
+
+            <Route
+              path="/gallery"
+              element={
+                <PageTransition>
+                  <Gallery />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                SERVICES
+            ================================================= */}
+
+            <Route
+              path="/services"
+              element={
+                <PageTransition>
+                  <Gallery />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                HALL OF FAME
+            ================================================= */}
+
+            <Route
+              path="/hall-of-fame"
+              element={
+                <PageTransition>
+                  <HallOfFame />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                ARTISTS
+            ================================================= */}
+
+            <Route
+              path="/artists"
+              element={
+                <PageTransition>
+                  <Artists />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                ARTIST CLAIM / UPDATE
+            ================================================= */}
+
+            <Route
+              path="/Enter"
+              element={
+                <PageTransition>
+                  <Enter />
+                </PageTransition>
+              }
+            />
+
+            <Route
+              path="/enter"
+              element={
+                <PageTransition>
+                  <Enter />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                TOP
+            ================================================= */}
+
+            <Route
+              path="/top"
+              element={
+                <PageTransition>
+                  <TOP />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                UPCOMING EVENTS
+            ================================================= */}
+
+            <Route
+              path="/upcoming"
+              element={
+                <PageTransition>
+                  <Upcoming />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                STALL BOOKING
+            ================================================= */}
+
+            <Route
+              path="/stall-booking"
+              element={
+                <PageTransition>
+                  <ClientLogin />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                CONTACT
+            ================================================= */}
+
+            <Route
+              path="/contact"
+              element={
+                <PageTransition>
+                  <About />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                COMPETITION
+            ================================================= */}
+
+            <Route
+              path="/competition"
+              element={
+                <PageTransition>
+                  <Upload />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                OLD UPLOAD ROUTES
+            ================================================= */}
+
+            <Route
+              path="/Upload"
+              element={
+                <PageTransition>
+                  <Upload />
+                </PageTransition>
+              }
+            />
+
+            <Route
+              path="/upload"
+              element={
+                <PageTransition>
+                  <Upload />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                PAYMENT
+            ================================================= */}
+
+            <Route
+              path="/payment"
+              element={
+                <PageTransition>
+                  <Payment />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                BOOK ARTIST
+            ================================================= */}
+
+            <Route
+              path="/book-artist"
+              element={
+                <PageTransition>
+                  <BookArtist />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                PRIVACY POLICY
+            ================================================= */}
+
+            <Route
+              path="/privacy-policy"
+              element={
+                <PageTransition>
+                  <PrivacyPolicy />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                DATA DELETION
+            ================================================= */}
+
+            <Route
+              path="/data-deletion"
+              element={
+                <PageTransition>
+                  <DataDeletion />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                SPONSORS
+            ================================================= */}
+
+            <Route
+              path="/sponsors"
+              element={
+                <PageTransition>
+                  <Sponsors />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                ADMIN ROOT
+
+                /admin
+                  ↓
+                /admin/dashboard
+            ================================================= */}
+
+            <Route
+              path="/admin"
+              element={<Navigate to="/admin/dashboard" replace />}
+            />
+
+            {/* =================================================
+                ADMIN LOGIN
+            ================================================= */}
+
+            <Route path="/admin/login" element={<AdminLogin />} />
+
+            {/* =================================================
+                OLD DASHBOARD URL
+            ================================================= */}
+
+            <Route
+              path="/dashboard"
+              element={<Navigate to="/admin/dashboard" replace />}
+            />
+
+            {/* =================================================
+                ADMIN DASHBOARD
+            ================================================= */}
+
+            <Route
+              path="/admin/dashboard"
+              element={
+                <PageTransition>
+                  <Dashboard />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                ADMIN CLIENTS
+            ================================================= */}
+
+            <Route
+              path="/admin/clients"
+              element={
+                <PageTransition>
+                  <Clients />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                ADMIN STALLS
+            ================================================= */}
+
+            <Route
+              path="/admin/stalls"
+              element={
+                <PageTransition>
+                  <AdminStalls />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                ADMIN ARTISTS
+            ================================================= */}
+
+            <Route
+              path="/admin/artists"
+              element={
+                <PageTransition>
+                  <AdminArtists />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                ADMIN ARTIST BOOKINGS
+            ================================================= */}
+
+            <Route
+              path="/admin/artist-bookings"
+              element={
+                <PageTransition>
+                  <ArtistBookings />
+                </PageTransition>
+              }
+            />
+
+            {/* =================================================
+                WHATSAPP ADMIN
+
+                Keep disabled until page is ready.
+            ================================================= */}
+
+            {/*
+            <Route
+              path="/admin/whatsapp-campaigns"
+              element={<WhatsAppCampaigns />}
+            />
+            */}
+
+            {/* =================================================
+                404
+            ================================================= */}
+
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </div>
+
+        {/* ===================================================
+            PUBLIC FOOTER
+        =================================================== */}
+
+        {!isAdminPage && <Footer />}
+      </div>
+    </>
+  );
+}
+
+/* =========================================================
+   404 PAGE
+========================================================= */
+
+function NotFound() {
+  return (
+    <div
+      className="
+        min-h-[75vh]
+        bg-[#08080a]
+        flex
+        flex-col
+        items-center
+        justify-center
+        text-center
+        px-5
+      "
+    >
+      <p
+        className="
+          text-purple-500
+          font-black
+          text-sm
+          tracking-[0.3em]
+          mb-4
+        "
+      >
+        404
+      </p>
+
+      <h1
+        className="
+          text-4xl
+          sm:text-6xl
+          font-black
+          uppercase
+          tracking-tighter
+        "
+      >
+        PAGE NOT FOUND
+      </h1>
+
+      <p className="text-gray-500 mt-4">This page does not exist.</p>
+    </div>
+  );
+}
 
 /* =========================================================
    APP
 ========================================================= */
 
-function App() {
-  /* =====================================================
-     APP STATE
-  ===================================================== */
-
-  const [loadingComplete, setLoadingComplete] = useState(false);
-
-  const [heroComplete, setHeroComplete] = useState(false);
-
-  /*
-    false = hero has not played yet
-
-    Normal React route changes:
-    this stays true.
-
-    Browser refresh:
-    App reloads and goes back to false.
-  */
-
-  const [heroAlreadyPlayed, setHeroAlreadyPlayed] = useState(false);
-
-  const audioRef = useRef(null);
-
-  const location = useLocation();
-
-  const isHomePage = location.pathname === "/";
-
-  /* =====================================================
-     SHOULD HERO INTRO PLAY
-  ===================================================== */
-
-  const shouldPlayHeroIntro = loadingComplete && !heroAlreadyPlayed;
-
-  /* =====================================================
-     PRELOAD HERO AUDIO
-  ===================================================== */
-
+export default function App() {
   useEffect(() => {
-    const audio = audioRef.current;
+    /* =====================================================
+       LENIS SMOOTH SCROLL
+    ===================================================== */
 
-    if (!audio) return;
+    const lenis = new Lenis({
+      duration: 1.2,
 
-    audio.preload = "auto";
-
-    audio.volume = 1;
-
-    audio.muted = false;
-
-    audio.load();
-
-    const handleReady = () => {
-      console.log("✅ hero.mp3 ready");
-    };
-
-    const handleError = () => {
-      console.error("❌ Could not load /audio/hero.mp3");
-    };
-
-    audio.addEventListener("canplaythrough", handleReady);
-
-    audio.addEventListener("error", handleError);
-
-    return () => {
-      audio.removeEventListener("canplaythrough", handleReady);
-
-      audio.removeEventListener("error", handleError);
-    };
-  }, []);
-
-  /* =====================================================
-     LOADER COMPLETE
-  ===================================================== */
-
-  const handleLoaderComplete = useCallback(() => {
-    const audio = audioRef.current;
-
-    if (audio) {
-      try {
-        audio.pause();
-
-        audio.currentTime = 0;
-
-        audio.volume = 1;
-
-        audio.muted = false;
-
-        const playPromise = audio.play();
-
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              console.log("🔊 AXIEE SOUND PLAYING");
-            })
-
-            .catch((error) => {
-              console.warn("🔇 Browser blocked autoplay:", error);
-            });
-        }
-      } catch (error) {
-        console.error("Audio error:", error);
-      }
-    }
-
-    /*
-        Loader finishes.
-
-        startAnimation becomes true
-        and Home intro begins.
-      */
-
-    setLoadingComplete(true);
-  }, []);
-
-  /* =====================================================
-     HERO COMPLETE
-  ===================================================== */
-
-  const handleHeroComplete = useCallback(() => {
-    setHeroComplete(true);
-
-    /*
-        Prevent hero intro replay when:
-
-        Home → Shirts → Home
-        Home → T-Shirts → Home
-        Home → Hoodies → Home
-        Home → Best Sellers → Home
-        Home → Track Order → Home
-        Home → Product → Home
-
-        etc.
-      */
-
-    setHeroAlreadyPlayed(true);
-  }, []);
-
-  /* =====================================================
-     LOCOMOTIVE SCROLL
-  ===================================================== */
-
-  useEffect(() => {
-    let locomotiveScroll = null;
-
-    let refreshTimer = null;
-
-    /* -----------------------------------------
-       LOCK SCROLL DURING FIRST HERO INTRO
-    ----------------------------------------- */
-
-    if (isHomePage && !heroComplete) {
-      document.documentElement.style.overflow = "hidden";
-
-      document.body.style.overflow = "hidden";
-
-      return () => {
-        document.documentElement.style.overflow = "";
-
-        document.body.style.overflow = "";
-      };
-    }
-
-    /* -----------------------------------------
-       ENABLE SCROLL
-    ----------------------------------------- */
-
-    document.documentElement.style.overflow = "";
-
-    document.body.style.overflow = "";
-
-    locomotiveScroll = new LocomotiveScroll({
-      lenisOptions: {
-        lerp: 0.08,
-
-        smoothWheel: true,
-
-        wheelMultiplier: 0.8,
-      },
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     });
 
-    refreshTimer = setTimeout(() => {
-      ScrollTrigger.refresh();
-    }, 250);
+    /* =====================================================
+       GSAP + LENIS
+    ===================================================== */
 
-    const handleResize = () => {
-      ScrollTrigger.refresh();
+    const raf = (time) => {
+      lenis.raf(time * 1000);
     };
 
-    window.addEventListener("resize", handleResize);
+    gsap.ticker.add(raf);
+
+    gsap.ticker.lagSmoothing(0);
+
+    /* =====================================================
+       CLEANUP
+    ===================================================== */
 
     return () => {
-      if (refreshTimer) {
-        clearTimeout(refreshTimer);
-      }
+      gsap.ticker.remove(raf);
 
-      window.removeEventListener("resize", handleResize);
-
-      locomotiveScroll?.destroy?.();
+      lenis.destroy();
     };
-  }, [heroComplete, isHomePage, location.pathname]);
-
-  /* =====================================================
-     SCROLL TO TOP ON ROUTE CHANGE
-  ===================================================== */
-
-  useEffect(() => {
-    window.scrollTo({
-      top: 0,
-
-      left: 0,
-
-      behavior: "auto",
-    });
-
-    const timer = setTimeout(() => {
-      ScrollTrigger.refresh();
-    }, 180);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [location.pathname]);
-
-  /* =====================================================
-     RETURN
-  ===================================================== */
+  }, []);
 
   return (
-    <>
-      {/* =================================================
-          PAGE CHANGE ANIMATION
+    <Router>
+      <ScrollToTop />
 
-          Does not show during initial Loader.
-
-          Only plays after route changes.
-      ================================================= */}
-
-      <PageTransition />
-
-      {/* =================================================
-          HERO AUDIO
-      ================================================= */}
-
-      <audio ref={audioRef} src="/audio/hero.mp3" preload="auto" playsInline />
-
-      {/* =================================================
-          WEBSITE
-      ================================================= */}
-
-      <div className="app">
-        <Navbar />
-
-        <Routes>
-          {/* =============================================
-              HOME
-          ============================================= */}
-
-          <Route
-            path="/"
-            element={
-              <Home
-                startAnimation={shouldPlayHeroIntro}
-                heroComplete={heroComplete}
-                heroAlreadyPlayed={heroAlreadyPlayed}
-                onHeroComplete={handleHeroComplete}
-              />
-            }
-          />
-
-          {/* =============================================
-              PRODUCT DETAILS
-
-              Example:
-              /product/68f123456789...
-              /product/track-2
-          ============================================= */}
-
-          <Route path="/product/:id" element={<ProductDetails />} />
-
-          {/* =============================================
-              T-SHIRTS
-          ============================================= */}
-
-          <Route path="/tshirts" element={<Tshirts />} />
-
-          {/* =============================================
-              JEANS
-          ============================================= */}
-
-          <Route path="/jeans" element={<Jeans />} />
-
-          {/* =============================================
-              TRACK PANTS
-          ============================================= */}
-
-          <Route path="/track-pants" element={<TrackPants />} />
-          <Route path="/cart" element={<Cart />} />
-
-          {/* =============================================
-              SHIRTS
-          ============================================= */}
-
-          <Route path="/shirts" element={<Shirts />} />
-
-          {/* =============================================
-              HOODIES
-          ============================================= */}
-
-          <Route path="/hoodies" element={<Hoodies />} />
-
-          {/* =============================================
-              SHORTS
-          ============================================= */}
-
-          <Route path="/shorts" element={<Shorts />} />
-
-          {/* =============================================
-              JACKETS
-          ============================================= */}
-
-          <Route path="/jackets" element={<Jackets />} />
-
-          {/* =============================================
-              CO-ORD SETS
-          ============================================= */}
-
-          <Route path="/co-ord-sets" element={<CoOrdSets />} />
-
-          {/* =============================================
-              BEST SELLERS
-          ============================================= */}
-
-          <Route path="/best-sellers" element={<BestSellers />} />
-
-          {/* =============================================
-              TRACK ORDER
-          ============================================= */}
-
-          <Route path="/track-order" element={<TrackOrder />} />
-
-          {/* =============================================
-              TEMPORARY SHOP
-
-              For now /shop opens Shirts.
-
-              Later we can change this to:
-
-              import Shop from "./pages/Shop.jsx";
-
-              <Route
-                path="/shop"
-                element={<Shop />}
-              />
-          ============================================= */}
-
-          <Route path="/shop" element={<Shirts />} />
-        </Routes>
-
-        <Footer />
-      </div>
-
-      {/* =================================================
-          LOADER
-
-          ONLY:
-          website open / browser refresh
-          while on Home.
-
-          NOT:
-          Shirts → Home
-          T-Shirts → Home
-          Hoodies → Home
-          Best Sellers → Home
-          Product → Home
-      ================================================= */}
-
-      {isHomePage && !loadingComplete && !heroAlreadyPlayed && (
-        <Loader onComplete={handleLoaderComplete} />
-      )}
-    </>
+      <Layout />
+    </Router>
   );
 }
-
-export default App;
