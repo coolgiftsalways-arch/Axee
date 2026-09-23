@@ -28,42 +28,28 @@ import "../styles/productDetails.css";
 ========================================================= */
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
-/* =========================================================
-   IMAGE URL
-========================================================= */
 
-const getImageUrl = (image) => {
-  if (!image) return "";
+const resolveImageUrl = (value) => {
+  if (!value || typeof value !== "string") return "";
 
-  const value = String(image);
-
-  // Already complete URL
   if (
     value.startsWith("http://") ||
-    value.startsWith("https://")
+    value.startsWith("https://") ||
+    value.startsWith("data:") ||
+    value.startsWith("blob:")
   ) {
     return value;
   }
 
-  // Current GridFS route
-  if (
-    value.startsWith("/api/catalog/images/")
-  ) {
+  // Backend-served API/GridFS images need the backend origin.
+  if (value.startsWith("/api/")) {
     return `${API_BASE}${value}`;
   }
 
-  // Old GridFS route
-  if (value.startsWith("/api/images/")) {
-    const imageId = value.replace(
-      "/api/images/",
-      ""
-    );
-
-    return `${API_BASE}/api/catalog/images/${imageId}`;
-  }
-
+  // Vite public assets such as /products/... should stay on the frontend.
   return value;
 };
+
 /* =========================================================
    CHECK MONGODB ID
 ========================================================= */
@@ -106,25 +92,14 @@ const normalizeProduct = (product) => {
       })
     : [];
 
-  const normalizedImages =
-    Array.isArray(product.images) && product.images.length > 0
-      ? product.images.map(getImageUrl).filter(Boolean)
-      : Array.isArray(product.imageFiles) && product.imageFiles.length > 0
-        ? product.imageFiles
-            .map((file) =>
-              getImageUrl(
-                file?.url ||
-                  (file?.fileId
-                    ? `/api/catalog/images/${file.fileId}`
-                    : ""),
-              ),
-            )
-            .filter(Boolean)
-        : product.image
-          ? [getImageUrl(product.image)]
-          : product.mainImage
-            ? [getImageUrl(product.mainImage)]
-            : [];
+  const rawImages =
+    product.images?.length > 0
+      ? product.images
+      : product.image
+        ? [product.image]
+        : [];
+
+  const normalizedImages = rawImages.map(resolveImageUrl).filter(Boolean);
 
   const calculatedStock = normalizedSizes.reduce(
     (total, item) => total + Number(item.stock || 0),
@@ -136,9 +111,7 @@ const normalizeProduct = (product) => {
 
     id: product._id || product.id,
 
-    image: normalizedImages[0] || "",
-
-    mainImage: normalizedImages[0] || "",
+    image: normalizedImages[0] || resolveImageUrl(product.image),
 
     images: normalizedImages,
 

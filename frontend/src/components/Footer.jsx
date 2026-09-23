@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-
 import { ArrowRight, Plus, Minus } from "lucide-react";
-
+import { FaWhatsapp, FaInstagram, FaEnvelope } from "react-icons/fa";
 import "../styles/footer.css";
 
 function Footer() {
@@ -24,14 +23,9 @@ function Footer() {
       <div className="ax-footer-inner">
         <div className="ax-footer-main">
           {/* BRAND */}
-
           <div className="ax-footer-brand">
             <a href="#home" className="ax-footer-logo">
-              <span className="ax-footer-logo-a"></span>
-              <span>X</span>
-              <span>I</span>
-              <span>E</span>
-              <span>E</span>
+              UNBOUND
             </a>
 
             <h2>
@@ -50,37 +44,38 @@ function Footer() {
               who see beyond.
             </p>
 
-            {/* SOCIALS - NO LUCIDE ICONS */}
-
+            {/* SOCIAL LINKS */}
             <div className="ax-footer-socials">
-              <a href="#" aria-label="Instagram">
-                IG
+              <a
+                href="https://wa.me/91XXXXXXXXXX"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="WhatsApp"
+                title="WhatsApp"
+              >
+                <FaWhatsapp />
               </a>
 
-              <a href="#" aria-label="X">
-                X
+              <a
+                href="https://instagram.com/yourusername"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Instagram"
+                title="Instagram"
+              >
+                <FaInstagram />
               </a>
 
-              <a href="#" aria-label="YouTube">
-                YT
-              </a>
-
-              <a href="#" aria-label="Pinterest">
-                P
-              </a>
-
-              <a href="#" aria-label="Spotify">
-                SP
+              <a href="mailto:your@email.com" aria-label="Email" title="Email">
+                <FaEnvelope />
               </a>
             </div>
           </div>
 
           {/* DESKTOP LINKS */}
-
           <div className="ax-footer-links-desktop">
             <div className="ax-footer-column">
               <h3>SHOP</h3>
-
               <a href="#shop">All Products</a>
               <a href="#shop">T-Shirts</a>
               <a href="#shop">Hoodies</a>
@@ -93,7 +88,6 @@ function Footer() {
 
             <div className="ax-footer-column">
               <h3>COMPANY</h3>
-
               <a href="#about">About Us</a>
               <a href="#about">Our Story</a>
               <a href="#about">Sustainability</a>
@@ -104,7 +98,6 @@ function Footer() {
 
             <div className="ax-footer-column">
               <h3>HELP</h3>
-
               <a href="#faq">FAQ</a>
               <a href="#shipping">Shipping Info</a>
               <a href="#returns">Returns & Exchange</a>
@@ -115,7 +108,6 @@ function Footer() {
           </div>
 
           {/* NEWSLETTER */}
-
           <div className="ax-footer-newsletter">
             <span className="ax-footer-small-title">STAY IN THE LOOP</span>
 
@@ -131,28 +123,16 @@ function Footer() {
               early access and special offers.
             </p>
 
-            <form
-              className="ax-footer-email"
-              onSubmit={(event) => event.preventDefault()}
-            >
-              <input type="email" placeholder="Enter your email" />
-
-              <button type="submit" aria-label="Subscribe">
-                <ArrowRight size={19} />
-              </button>
-            </form>
+            
           </div>
         </div>
 
         {/* MOBILE ACCORDIONS */}
-
         <div className="ax-footer-mobile-links">
           {/* SHOP */}
-
           <div className="ax-footer-accordion">
             <button type="button" onClick={() => toggleSection("shop")}>
               <span>SHOP</span>
-
               {openSection === "shop" ? (
                 <Minus size={17} />
               ) : (
@@ -177,11 +157,9 @@ function Footer() {
           </div>
 
           {/* COMPANY */}
-
           <div className="ax-footer-accordion">
             <button type="button" onClick={() => toggleSection("company")}>
               <span>COMPANY</span>
-
               {openSection === "company" ? (
                 <Minus size={17} />
               ) : (
@@ -204,11 +182,9 @@ function Footer() {
           </div>
 
           {/* HELP */}
-
           <div className="ax-footer-accordion">
             <button type="button" onClick={() => toggleSection("help")}>
               <span>HELP</span>
-
               {openSection === "help" ? (
                 <Minus size={17} />
               ) : (
@@ -232,12 +208,11 @@ function Footer() {
         </div>
 
         {/* BOTTOM */}
-
         <div className="ax-footer-bottom">
           <div className="ax-footer-tagline">WEAR THE UNKNOWN</div>
 
           <div className="ax-footer-bottom-row">
-            <p>© 2026 AXIEE. ALL RIGHTS RESERVED.</p>
+            <p>© 2026 UNBOUND. ALL RIGHTS RESERVED.</p>
 
             <div className="ax-footer-payments">
               <span>VISA</span>

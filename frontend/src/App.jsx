@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   BrowserRouter as Router,
@@ -8,61 +8,62 @@ import {
   useLocation,
 } from "react-router-dom";
 
-import Lenis from "lenis";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+import LocomotiveScroll from "locomotive-scroll";
+import "locomotive-scroll/dist/locomotive-scroll.css";
+
+gsap.registerPlugin(ScrollTrigger);
 
 /* =========================================================
-   COMPONENTS
+   WEBSITE COMPONENTS
 ========================================================= */
 
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
-import PageTransition from "./components/PageTransition";
-import ScrollToTop from "./components/ScrollToTop";
-import Payment from "./components/Payment";
-import CustomCursor from "./components/CustomCursor";
+import Loader from "./components/Loader.jsx";
+import Navbar from "./components/Navbar.jsx";
+import Footer from "./components/Footer.jsx";
 
 /* =========================================================
-   PUBLIC PAGES
+   WEBSITE PAGES
 ========================================================= */
 
-import Home from "./pages/Home";
-import About from "./pages/About";
-import Gallery from "./pages/Gallery";
-import HallOfFame from "./pages/Halloffam";
-import Artists from "./pages/Artists";
-import Enter from "./pages/Enter";
-import Upload from "./pages/Upload";
-import TOP from "./pages/TOP";
-import Upcoming from "./pages/Upcomeing";
-import BookArtist from "./pages/BookArtist";
-import ClientLogin from "./pages/ClientLogin";
-import Sponsors from "./pages/Sponsors";
-
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import DataDeletion from "./pages/DataDeletion";
-import Terms from "./pages/Terms";
+import Home from "./pages/Home.jsx";
+import Tshirts from "./pages/Tshirts.jsx";
+import Shirts from "./pages/Shirts.jsx";
+import Hoodies from "./pages/Hoodies.jsx";
+import Jeans from "./pages/Jeans.jsx";
+import TrackPants from "./pages/TrackPants.jsx";
+import Shorts from "./pages/Shorts.jsx";
+import Jackets from "./pages/jackets.jsx";
+import CoOrdSets from "./pages/CoOrdSets.jsx";
+import Cart from "./pages/Cart.jsx";
+import BestSellers from "./pages/BestSellers.jsx";
+import TrackOrder from "./pages/TrackOrder.jsx";
+import ProductDetails from "./pages/ProductDetails.jsx";
+import Checkout from "./pages/Checkout.jsx";
 
 /* =========================================================
-   ADMIN PAGES
+   ADMIN
 ========================================================= */
 
-import Dashboard from "./admin/Dashboard";
-import Clients from "./admin/Clients";
-import AdminStalls from "./admin/AdminStalls";
-import AdminArtists from "./admin/Adminartists";
-import AdminLogin from "./admin/Login";
-import ArtistBookings from "./admin/ArtistBookings";
+import AdminLayout from "./Admin/AdminLayout.jsx";
 
-// import WhatsAppCampaigns from "./admin/WhatsAppCampaigns";
+import Dashboard from "./Admin/Dashboard.jsx";
+import Orders from "./Admin/Orders.jsx";
+import Products from "./Admin/Products.jsx";
+import Categories from "./Admin/Categories.jsx";
+import Customers from "./Admin/Customers.jsx";
+import Coupons from "./Admin/Coupons.jsx";
+import Sliders from "./Admin/Sliders.jsx";
+import Banners from "./Admin/Banners.jsx";
+import Settings from "./Admin/Settings.jsx";
 
 /* =========================================================
    STYLES
 ========================================================= */
 
-import "./Style/SmoothScroll.css";
-import "./Style/BarbaTransitions.css";
-import "./Style/PageTransition.css";
+import "./styles/pageTransition.css";
 
 /* =========================================================
    LAYOUT
@@ -71,482 +72,512 @@ import "./Style/PageTransition.css";
 function Layout() {
   const location = useLocation();
 
-  /* =======================================================
-     HIDE PUBLIC WEBSITE UI ON ADMIN PAGES
-  ======================================================= */
+  const pathname = location.pathname;
 
-  const isAdminPage =
-    location.pathname === "/dashboard" ||
-    location.pathname.startsWith("/admin");
+  const pathnameLower = pathname.toLowerCase();
+
+  const isHomePage = pathname === "/";
+
+  const isAdminRoute =
+    pathnameLower === "/admin" || pathnameLower.startsWith("/admin/");
+
+  /* =====================================================
+     WEBSITE STATE
+  ===================================================== */
+
+  const [loadingComplete, setLoadingComplete] = useState(false);
+
+  const [heroComplete, setHeroComplete] = useState(false);
+
+  const [heroAlreadyPlayed, setHeroAlreadyPlayed] = useState(false);
+
+  const audioRef = useRef(null);
+
+  // Keep access to the current smooth-scroll instance so route changes
+  // can force the next page to the real top.
+  const locomotiveRef = useRef(null);
+
+  const shouldPlayHeroIntro = loadingComplete && !heroAlreadyPlayed;
+
+  /* =====================================================
+     SCROLL RESTORATION
+     ALWAYS OPEN A NEW ROUTE FROM THE TOP
+  ===================================================== */
+
+  useEffect(() => {
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+
+    return () => {
+      if ("scrollRestoration" in window.history) {
+        window.history.scrollRestoration = "auto";
+      }
+    };
+  }, []);
+
+  const forceScrollToTop = useCallback(() => {
+    // Clear GSAP's remembered scroll position.
+    try {
+      ScrollTrigger.clearScrollMemory("manual");
+    } catch (error) {
+      console.warn("ScrollTrigger scroll memory error:", error);
+    }
+
+    // Reset normal browser scroll.
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "auto",
+    });
+
+    // Reset Locomotive Scroll / Lenis as well.
+    const locomotive = locomotiveRef.current;
+
+    if (locomotive) {
+      try {
+        locomotive.scrollTo?.(0, {
+          duration: 0,
+          offset: 0,
+          disableLerp: true,
+          immediate: true,
+        });
+      } catch (error) {
+        console.warn("Locomotive scrollTo error:", error);
+      }
+
+      try {
+        locomotive.lenis?.scrollTo?.(0, {
+          immediate: true,
+          force: true,
+        });
+      } catch (error) {
+        console.warn("Lenis scrollTo error:", error);
+      }
+
+      try {
+        locomotive.lenisInstance?.scrollTo?.(0, {
+          immediate: true,
+          force: true,
+        });
+      } catch (error) {
+        console.warn("Lenis instance scrollTo error:", error);
+      }
+    }
+  }, []);
+
+  /* =====================================================
+     ROUTE CHANGE -> TOP
+  ===================================================== */
+
+  useEffect(() => {
+    let frameTwo = null;
+
+    forceScrollToTop();
+
+    // Run again after React paints the new page.
+    const frameOne = requestAnimationFrame(() => {
+      forceScrollToTop();
+
+      frameTwo = requestAnimationFrame(() => {
+        forceScrollToTop();
+      });
+    });
+
+    // PageTransition / images / layout can move the page after the first paint,
+    // so do one final hard reset shortly afterwards.
+    const timer = setTimeout(() => {
+      forceScrollToTop();
+
+      if (!isAdminRoute) {
+        ScrollTrigger.refresh();
+      }
+    }, 120);
+
+    return () => {
+      cancelAnimationFrame(frameOne);
+
+      if (frameTwo !== null) {
+        cancelAnimationFrame(frameTwo);
+      }
+
+      clearTimeout(timer);
+    };
+  }, [pathname, isAdminRoute, forceScrollToTop]);
+
+  /* =====================================================
+     HERO AUDIO
+     WEBSITE ONLY
+  ===================================================== */
+
+  useEffect(() => {
+    if (isAdminRoute) {
+      return;
+    }
+
+    const audio = audioRef.current;
+
+    if (!audio) {
+      return;
+    }
+
+    audio.preload = "auto";
+    audio.volume = 1;
+    audio.muted = false;
+
+    audio.load();
+
+    const handleReady = () => {
+      console.log("✅ hero.mp3 ready");
+    };
+
+    const handleError = () => {
+      console.error("❌ Could not load /audio/hero.mp3");
+    };
+
+    audio.addEventListener("canplaythrough", handleReady);
+
+    audio.addEventListener("error", handleError);
+
+    return () => {
+      audio.removeEventListener("canplaythrough", handleReady);
+
+      audio.removeEventListener("error", handleError);
+    };
+  }, [isAdminRoute]);
+
+  /* =====================================================
+     LOADER COMPLETE
+  ===================================================== */
+
+  const handleLoaderComplete = useCallback(() => {
+    if (isAdminRoute) {
+      return;
+    }
+
+    const audio = audioRef.current;
+
+    if (audio) {
+      try {
+        audio.pause();
+
+        audio.currentTime = 0;
+
+        audio.volume = 1;
+
+        audio.muted = false;
+
+        const playPromise = audio.play();
+
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              console.log("🔊 AXIEE SOUND PLAYING");
+            })
+
+            .catch((error) => {
+              console.warn("Browser blocked autoplay:", error);
+            });
+        }
+      } catch (error) {
+        console.error("Audio error:", error);
+      }
+    }
+
+    setLoadingComplete(true);
+  }, [isAdminRoute]);
+
+  /* =====================================================
+     HERO COMPLETE
+  ===================================================== */
+
+  const handleHeroComplete = useCallback(() => {
+    setHeroComplete(true);
+
+    setHeroAlreadyPlayed(true);
+  }, []);
+
+  /* =====================================================
+     ADMIN CLEANUP
+  ===================================================== */
+
+  useEffect(() => {
+    if (!isAdminRoute) {
+      return;
+    }
+
+    /* STOP WEBSITE AUDIO */
+
+    const audio = audioRef.current;
+
+    if (audio) {
+      audio.pause();
+
+      audio.currentTime = 0;
+    }
+
+    /* RESTORE NORMAL SCROLL */
+
+    document.documentElement.style.overflow = "";
+    document.body.style.overflow = "";
+
+    document.documentElement.style.height = "";
+    document.body.style.height = "";
+
+    /* SCROLL TOP */
+
+    forceScrollToTop();
+
+    /* REMOVE WEBSITE SCROLL TRIGGERS */
+
+    ScrollTrigger.getAll().forEach((trigger) => {
+      trigger.kill();
+    });
+  }, [isAdminRoute, forceScrollToTop]);
+
+  /* =====================================================
+     LOCOMOTIVE SCROLL
+     WEBSITE ONLY
+  ===================================================== */
+
+  useEffect(() => {
+    let locomotiveScroll = null;
+
+    let refreshTimer = null;
+
+    /* ===================================================
+       ADMIN
+    =================================================== */
+
+    if (isAdminRoute) {
+      document.documentElement.style.overflow = "";
+
+      document.body.style.overflow = "";
+
+      return;
+    }
+
+    /* ===================================================
+       HOME INTRO
+    =================================================== */
+
+    if (isHomePage && !heroComplete) {
+      document.documentElement.style.overflow = "hidden";
+
+      document.body.style.overflow = "hidden";
+
+      return () => {
+        document.documentElement.style.overflow = "";
+
+        document.body.style.overflow = "";
+      };
+    }
+
+    /* ===================================================
+       WEBSITE
+    =================================================== */
+
+    document.documentElement.style.overflow = "";
+
+    document.body.style.overflow = "";
+
+    try {
+      locomotiveScroll = new LocomotiveScroll({
+        lenisOptions: {
+          lerp: 0.08,
+
+          smoothWheel: true,
+
+          wheelMultiplier: 0.8,
+        },
+      });
+
+      locomotiveRef.current = locomotiveScroll;
+
+      // Important: native window.scrollTo alone is not enough when
+      // smooth scrolling is active. Reset the smooth-scroll engine too.
+      forceScrollToTop();
+    } catch (error) {
+      console.warn("Locomotive Scroll error:", error);
+    }
+
+    refreshTimer = setTimeout(() => {
+      ScrollTrigger.refresh();
+    }, 250);
+
+    const handleResize = () => {
+      ScrollTrigger.refresh();
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+      }
+
+      window.removeEventListener("resize", handleResize);
+
+      locomotiveScroll?.destroy?.();
+
+      if (locomotiveRef.current === locomotiveScroll) {
+        locomotiveRef.current = null;
+      }
+    };
+  }, [heroComplete, isHomePage, isAdminRoute, pathname, forceScrollToTop]);
+
+  /* =====================================================
+     SCROLLTRIGGER REFRESH AFTER ROUTE CHANGE
+  ===================================================== */
+
+  useEffect(() => {
+    if (isAdminRoute) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      ScrollTrigger.refresh();
+    }, 180);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [pathname, isAdminRoute]);
+
+  /* =====================================================
+     ADMIN ROUTES
+  ===================================================== */
+
+  if (isAdminRoute) {
+    return (
+      <Routes>
+        <Route path="/admin" element={<AdminLayout />}>
+          {/* =============================
+              DASHBOARD
+          ============================== */}
+
+          <Route index element={<Dashboard />} />
+
+          <Route path="dashboard" element={<Dashboard />} />
+
+          {/* =============================
+              ORDERS
+          ============================== */}
+
+          <Route path="orders" element={<Orders />} />
+
+          {/* =============================
+              PRODUCTS
+          ============================== */}
+
+          <Route path="products" element={<Products />} />
+
+          {/* =============================
+              CATEGORIES
+          ============================== */}
+
+          <Route path="categories" element={<Categories />} />
+
+          {/* =============================
+              CUSTOMERS
+          ============================== */}
+
+          <Route path="customers" element={<Customers />} />
+
+          {/* =============================
+              COUPONS
+          ============================== */}
+
+          <Route path="coupons" element={<Coupons />} />
+
+          {/* =============================
+              SLIDERS
+          ============================== */}
+
+          <Route path="sliders" element={<Sliders />} />
+
+          {/* =============================
+              BANNERS
+          ============================== */}
+
+          <Route path="banners" element={<Banners />} />
+
+          {/* =============================
+              SETTINGS
+          ============================== */}
+
+          <Route path="settings" element={<Settings />} />
+
+          {/* =============================
+              WRONG ADMIN URL
+          ============================== */}
+
+          <Route path="*" element={<Navigate to="/admin" replace />} />
+        </Route>
+      </Routes>
+    );
+  }
+
+  /* =====================================================
+     NORMAL WEBSITE
+  ===================================================== */
 
   return (
     <>
-      {/* ===================================================
-          AWWWARDS CUSTOM CURSOR
-
-          Only show on public website.
-          Admin dashboard keeps normal cursor.
-      =================================================== */}
-
-      {!isAdminPage && <CustomCursor />}
-
-      <div
-        className="
-          min-h-screen
-          bg-[#08080a]
-          text-white
-          flex
-          flex-col
-          justify-between
-          selection:bg-[#a855f7]
-          selection:text-white
-        "
-      >
-        {/* ===================================================
-            PUBLIC NAVBAR
-        =================================================== */}
-
-        {!isAdminPage && <Navbar />}
-
-        {/* ===================================================
-            ROUTES
-        =================================================== */}
-
-        <div className="flex-grow w-full">
-          <Routes location={location} key={location.pathname}>
-            {/* =================================================
-                HOME
-            ================================================= */}
-
-            <Route
-              path="/"
-              element={
-                <PageTransition>
-                  <Home />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                TERMS
-            ================================================= */}
-
-            <Route
-              path="/terms"
-              element={
-                <PageTransition>
-                  <Terms />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                ABOUT
-            ================================================= */}
-
-            <Route
-              path="/about"
-              element={
-                <PageTransition>
-                  <About />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                GALLERY
-            ================================================= */}
-
-            <Route
-              path="/gallery"
-              element={
-                <PageTransition>
-                  <Gallery />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                SERVICES
-            ================================================= */}
-
-            <Route
-              path="/services"
-              element={
-                <PageTransition>
-                  <Gallery />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                HALL OF FAME
-            ================================================= */}
-
-            <Route
-              path="/hall-of-fame"
-              element={
-                <PageTransition>
-                  <HallOfFame />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                ARTISTS
-            ================================================= */}
-
-            <Route
-              path="/artists"
-              element={
-                <PageTransition>
-                  <Artists />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                ARTIST CLAIM / UPDATE
-            ================================================= */}
-
-            <Route
-              path="/Enter"
-              element={
-                <PageTransition>
-                  <Enter />
-                </PageTransition>
-              }
-            />
-
-            <Route
-              path="/enter"
-              element={
-                <PageTransition>
-                  <Enter />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                TOP
-            ================================================= */}
-
-            <Route
-              path="/top"
-              element={
-                <PageTransition>
-                  <TOP />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                UPCOMING EVENTS
-            ================================================= */}
-
-            <Route
-              path="/upcoming"
-              element={
-                <PageTransition>
-                  <Upcoming />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                STALL BOOKING
-            ================================================= */}
-
-            <Route
-              path="/stall-booking"
-              element={
-                <PageTransition>
-                  <ClientLogin />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                CONTACT
-            ================================================= */}
-
-            <Route
-              path="/contact"
-              element={
-                <PageTransition>
-                  <About />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                COMPETITION
-            ================================================= */}
-
-            <Route
-              path="/competition"
-              element={
-                <PageTransition>
-                  <Upload />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                OLD UPLOAD ROUTES
-            ================================================= */}
-
-            <Route
-              path="/Upload"
-              element={
-                <PageTransition>
-                  <Upload />
-                </PageTransition>
-              }
-            />
-
-            <Route
-              path="/upload"
-              element={
-                <PageTransition>
-                  <Upload />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                PAYMENT
-            ================================================= */}
-
-            <Route
-              path="/payment"
-              element={
-                <PageTransition>
-                  <Payment />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                BOOK ARTIST
-            ================================================= */}
-
-            <Route
-              path="/book-artist"
-              element={
-                <PageTransition>
-                  <BookArtist />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                PRIVACY POLICY
-            ================================================= */}
-
-            <Route
-              path="/privacy-policy"
-              element={
-                <PageTransition>
-                  <PrivacyPolicy />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                DATA DELETION
-            ================================================= */}
-
-            <Route
-              path="/data-deletion"
-              element={
-                <PageTransition>
-                  <DataDeletion />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                SPONSORS
-            ================================================= */}
-
-            <Route
-              path="/sponsors"
-              element={
-                <PageTransition>
-                  <Sponsors />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                ADMIN ROOT
-
-                /admin
-                  ↓
-                /admin/dashboard
-            ================================================= */}
-
-            <Route
-              path="/admin"
-              element={<Navigate to="/admin/dashboard" replace />}
-            />
-
-            {/* =================================================
-                ADMIN LOGIN
-            ================================================= */}
-
-            <Route path="/admin/login" element={<AdminLogin />} />
-
-            {/* =================================================
-                OLD DASHBOARD URL
-            ================================================= */}
-
-            <Route
-              path="/dashboard"
-              element={<Navigate to="/admin/dashboard" replace />}
-            />
-
-            {/* =================================================
-                ADMIN DASHBOARD
-            ================================================= */}
-
-            <Route
-              path="/admin/dashboard"
-              element={
-                <PageTransition>
-                  <Dashboard />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                ADMIN CLIENTS
-            ================================================= */}
-
-            <Route
-              path="/admin/clients"
-              element={
-                <PageTransition>
-                  <Clients />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                ADMIN STALLS
-            ================================================= */}
-
-            <Route
-              path="/admin/stalls"
-              element={
-                <PageTransition>
-                  <AdminStalls />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                ADMIN ARTISTS
-            ================================================= */}
-
-            <Route
-              path="/admin/artists"
-              element={
-                <PageTransition>
-                  <AdminArtists />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                ADMIN ARTIST BOOKINGS
-            ================================================= */}
-
-            <Route
-              path="/admin/artist-bookings"
-              element={
-                <PageTransition>
-                  <ArtistBookings />
-                </PageTransition>
-              }
-            />
-
-            {/* =================================================
-                WHATSAPP ADMIN
-
-                Keep disabled until page is ready.
-            ================================================= */}
-
-            {/*
-            <Route
-              path="/admin/whatsapp-campaigns"
-              element={<WhatsAppCampaigns />}
-            />
-            */}
-
-            {/* =================================================
-                404
-            ================================================= */}
-
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </div>
-
-        {/* ===================================================
-            PUBLIC FOOTER
-        =================================================== */}
-
-        {!isAdminPage && <Footer />}
+      <audio
+        ref={audioRef}
+        src="/audio/hero.mp3"
+        preload="auto"
+        style={{ display: "none" }}
+      />
+
+      <div className="app">
+        <Navbar />
+
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <Home
+                startAnimation={shouldPlayHeroIntro}
+                heroComplete={heroComplete}
+                heroAlreadyPlayed={heroAlreadyPlayed}
+                onHeroComplete={handleHeroComplete}
+              />
+            }
+          />
+
+          <Route path="/product/:id" element={<ProductDetails />} />
+
+          <Route path="/tshirts" element={<Tshirts />} />
+          <Route path="/t-shirts" element={<Tshirts />} />
+          <Route path="/shirts" element={<Shirts />} />
+          <Route path="/hoodies" element={<Hoodies />} />
+          <Route path="/jeans" element={<Jeans />} />
+          <Route path="/track-pants" element={<TrackPants />} />
+          <Route path="/shorts" element={<Shorts />} />
+          <Route path="/jackets" element={<Jackets />} />
+          <Route path="/co-ord-sets" element={<CoOrdSets />} />
+          <Route path="/best-sellers" element={<BestSellers />} />
+          <Route path="/track-order" element={<TrackOrder />} />
+          <Route path="/cart" element={<Cart />} />
+          <Route path="/checkout" element={<Checkout />} />
+
+          <Route path="/shop" element={<Shirts />} />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+
+        <Footer />
       </div>
+
+      {isHomePage && !loadingComplete && !heroAlreadyPlayed && (
+        <Loader onComplete={handleLoaderComplete} />
+      )}
     </>
-  );
-}
-
-/* =========================================================
-   404 PAGE
-========================================================= */
-
-function NotFound() {
-  return (
-    <div
-      className="
-        min-h-[75vh]
-        bg-[#08080a]
-        flex
-        flex-col
-        items-center
-        justify-center
-        text-center
-        px-5
-      "
-    >
-      <p
-        className="
-          text-purple-500
-          font-black
-          text-sm
-          tracking-[0.3em]
-          mb-4
-        "
-      >
-        404
-      </p>
-
-      <h1
-        className="
-          text-4xl
-          sm:text-6xl
-          font-black
-          uppercase
-          tracking-tighter
-        "
-      >
-        PAGE NOT FOUND
-      </h1>
-
-      <p className="text-gray-500 mt-4">This page does not exist.</p>
-    </div>
   );
 }
 
@@ -555,44 +586,8 @@ function NotFound() {
 ========================================================= */
 
 export default function App() {
-  useEffect(() => {
-    /* =====================================================
-       LENIS SMOOTH SCROLL
-    ===================================================== */
-
-    const lenis = new Lenis({
-      duration: 1.2,
-
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-    });
-
-    /* =====================================================
-       GSAP + LENIS
-    ===================================================== */
-
-    const raf = (time) => {
-      lenis.raf(time * 1000);
-    };
-
-    gsap.ticker.add(raf);
-
-    gsap.ticker.lagSmoothing(0);
-
-    /* =====================================================
-       CLEANUP
-    ===================================================== */
-
-    return () => {
-      gsap.ticker.remove(raf);
-
-      lenis.destroy();
-    };
-  }, []);
-
   return (
     <Router>
-      <ScrollToTop />
-
       <Layout />
     </Router>
   );
