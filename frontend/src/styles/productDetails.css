@@ -1932,3 +1932,329 @@
           gap: 5px;
      }
 }
+
+/* =========================================================
+   PRODUCT DETAILS — COMPACT PREMIUM GALLERY
+========================================================= */
+
+.pd-main {
+  width: 100%;
+
+  display: grid;
+  grid-template-columns: minmax(0, 58%) minmax(380px, 42%);
+
+  min-height: auto;
+  align-items: start;
+}
+
+/* =========================================================
+   LEFT GALLERY
+========================================================= */
+
+.pd-gallery {
+  display: grid;
+
+  grid-template-columns: 82px minmax(0, 1fr);
+
+  gap: 14px;
+
+  padding: 24px 28px 40px 30px;
+
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   THUMBNAILS
+========================================================= */
+
+.pd-thumbnails {
+  display: flex;
+  flex-direction: column;
+
+  gap: 10px;
+
+  width: 82px;
+}
+
+.pd-thumbnail {
+  position: relative;
+
+  width: 82px;
+  height: 105px;
+
+  padding: 0;
+
+  overflow: hidden;
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+
+  background: #ededeb;
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.pd-thumbnail:hover {
+  transform: translateX(2px);
+
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.pd-thumbnail.active {
+  border-color: #b6ff00;
+}
+
+.pd-thumbnail img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+
+  display: block;
+}
+
+.pd-thumbnail span {
+  position: absolute;
+
+  right: 5px;
+  bottom: 4px;
+
+  font-size: 7px;
+  font-weight: 600;
+
+  color: #111;
+}
+
+/* =========================================================
+   MAIN IMAGE BOX
+========================================================= */
+
+.pd-main-image-box {
+  position: relative;
+
+  width: 100%;
+
+  height: min(620px, 72vh);
+
+  overflow: hidden;
+
+  background: #ededeb;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* =========================================================
+   MAIN IMAGE
+========================================================= */
+
+.pd-main-image {
+  width: 100%;
+  height: 100%;
+
+  object-fit: contain;
+
+  object-position: center;
+
+  display: block;
+}
+
+/* =========================================================
+   RIGHT PRODUCT INFO
+========================================================= */
+
+.pd-info {
+  min-height: min(620px, 72vh);
+
+  padding: 45px 42px;
+
+  box-sizing: border-box;
+
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* =========================================================
+   IMAGE COUNTER
+========================================================= */
+
+.pd-image-number {
+  position: absolute;
+
+  left: 18px;
+  bottom: 18px;
+
+  padding: 8px 11px;
+
+  background: rgba(0, 0, 0, 0.72);
+
+  backdrop-filter: blur(10px);
+
+  color: #fff;
+
+  font-size: 9px;
+
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* =========================================================
+   IMAGE NAVIGATION
+========================================================= */
+
+.pd-image-navigation {
+  position: absolute;
+
+  right: 18px;
+  bottom: 18px;
+
+  display: flex;
+
+  gap: 6px;
+}
+
+.pd-image-navigation button {
+  width: 40px;
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(255, 255, 255, 0.15);
+
+  background: rgba(0, 0, 0, 0.75);
+
+  color: white;
+
+  cursor: pointer;
+
+  backdrop-filter: blur(10px);
+
+  transition:
+    background 0.25s ease,
+    color 0.25s ease;
+}
+
+.pd-image-navigation button:hover {
+  background: #b6ff00;
+
+  color: #000;
+}
+
+/* =========================================================
+   LARGE DESKTOP
+========================================================= */
+
+@media (min-width: 1500px) {
+  .pd-main {
+    grid-template-columns: minmax(0, 60%) minmax(420px, 40%);
+  }
+
+  .pd-main-image-box {
+    height: 640px;
+  }
+
+  .pd-info {
+    min-height: 640px;
+  }
+}
+
+/* =========================================================
+   TABLET
+========================================================= */
+
+@media (max-width: 1100px) {
+  .pd-main {
+    grid-template-columns: 1fr;
+  }
+
+  .pd-gallery {
+    grid-template-columns: 75px minmax(0, 1fr);
+
+    padding: 20px;
+  }
+
+  .pd-thumbnails {
+    width: 75px;
+  }
+
+  .pd-thumbnail {
+    width: 75px;
+    height: 95px;
+  }
+
+  .pd-main-image-box {
+    height: 560px;
+  }
+
+  .pd-info {
+    min-height: auto;
+
+    border-left: none;
+
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 700px) {
+  .pd-gallery {
+    display: flex;
+
+    flex-direction: column-reverse;
+
+    padding: 12px;
+  }
+
+  .pd-main-image-box {
+    width: 100%;
+
+    height: 470px;
+  }
+
+  .pd-main-image {
+    object-fit: contain;
+  }
+
+  .pd-thumbnails {
+    width: 100%;
+
+    display: grid;
+
+    grid-template-columns: repeat(4, 1fr);
+
+    gap: 7px;
+  }
+
+  .pd-thumbnail {
+    width: 100%;
+
+    height: 90px;
+  }
+
+  .pd-info {
+    padding: 32px 18px;
+  }
+}
+
+/* =========================================================
+   SMALL MOBILE
+========================================================= */
+
+@media (max-width: 480px) {
+  .pd-main-image-box {
+    height: 390px;
+  }
+
+  .pd-thumbnail {
+    height: 75px;
+  }
+}

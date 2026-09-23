@@ -28,7 +28,42 @@ import "../styles/productDetails.css";
 ========================================================= */
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+/* =========================================================
+   IMAGE URL
+========================================================= */
 
+const getImageUrl = (image) => {
+  if (!image) return "";
+
+  const value = String(image);
+
+  // Already complete URL
+  if (
+    value.startsWith("http://") ||
+    value.startsWith("https://")
+  ) {
+    return value;
+  }
+
+  // Current GridFS route
+  if (
+    value.startsWith("/api/catalog/images/")
+  ) {
+    return `${API_BASE}${value}`;
+  }
+
+  // Old GridFS route
+  if (value.startsWith("/api/images/")) {
+    const imageId = value.replace(
+      "/api/images/",
+      ""
+    );
+
+    return `${API_BASE}/api/catalog/images/${imageId}`;
+  }
+
+  return value;
+};
 /* =========================================================
    CHECK MONGODB ID
 ========================================================= */
@@ -72,11 +107,24 @@ const normalizeProduct = (product) => {
     : [];
 
   const normalizedImages =
-    product.images?.length > 0
-      ? product.images
-      : product.image
-        ? [product.image]
-        : [];
+    Array.isArray(product.images) && product.images.length > 0
+      ? product.images.map(getImageUrl).filter(Boolean)
+      : Array.isArray(product.imageFiles) && product.imageFiles.length > 0
+        ? product.imageFiles
+            .map((file) =>
+              getImageUrl(
+                file?.url ||
+                  (file?.fileId
+                    ? `/api/catalog/images/${file.fileId}`
+                    : ""),
+              ),
+            )
+            .filter(Boolean)
+        : product.image
+          ? [getImageUrl(product.image)]
+          : product.mainImage
+            ? [getImageUrl(product.mainImage)]
+            : [];
 
   const calculatedStock = normalizedSizes.reduce(
     (total, item) => total + Number(item.stock || 0),
@@ -88,7 +136,13 @@ const normalizeProduct = (product) => {
 
     id: product._id || product.id,
 
+    image: normalizedImages[0] || "",
+
+    mainImage: normalizedImages[0] || "",
+
     images: normalizedImages,
+
+    price: Number(product.price || 0),
 
     sizes: normalizedSizes,
 
@@ -175,7 +229,9 @@ function ProductDetails() {
         ===================================================== */
 
         if (isMongoId(id)) {
-          const response = await fetch(`${API_BASE}/api/products/${id}`);
+          const response = await fetch(
+  `${API_BASE}/api/catalog/products/${id}`
+);
 
           if (!response.ok) {
             throw new Error("Product not found.");
@@ -191,7 +247,7 @@ function ProductDetails() {
 
           try {
             const relatedResponse = await fetch(
-              `${API_BASE}/api/products/${id}/related`,
+              `${API_BASE}/api/catalog/products/${id}/related`,
             );
 
             if (relatedResponse.ok) {
@@ -436,10 +492,10 @@ function ProductDetails() {
   };
 
   /* =========================================================
-     ADD TO CART
+     ADD TO CART - MONGODB CART
   ========================================================= */
 
-  const addToCart = () => {
+  const addToCart = async () => {
     if (product.sizes?.length > 0 && !selectedSize) {
       setCartMessage("PLEASE SELECT A SIZE");
 
@@ -453,29 +509,42 @@ function ProductDetails() {
     }
 
     try {
-      const savedCart = localStorage.getItem("axiee-cart");
+      let cartId = localStorage.getItem("axiee-cart-id");
 
-      const currentCart = savedCart ? JSON.parse(savedCart) : [];
+      if (!cartId) {
+        cartId = crypto.randomUUID();
 
-      const item = createCartItem();
-
-      const existingIndex = currentCart.findIndex(
-        (cartItem) =>
-          String(cartItem.productId || cartItem.id) ===
-            String(item.productId) &&
-          String(cartItem.size || "") === String(item.size || ""),
-      );
-
-      if (existingIndex !== -1) {
-        currentCart[existingIndex].quantity =
-          Number(currentCart[existingIndex].quantity || 1) + quantity;
-      } else {
-        currentCart.push(item);
+        localStorage.setItem("axiee-cart-id", cartId);
       }
 
-      localStorage.setItem("axiee-cart", JSON.stringify(currentCart));
+      const productId = product._id || product.id;
 
-      window.dispatchEvent(new Event("axiee-cart-updated"));
+      const response = await fetch(`${API_BASE}/api/cart/add`, {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+          cartId,
+          productId,
+          size: selectedSize,
+          quantity,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Could not add to cart");
+      }
+
+      window.dispatchEvent(
+        new CustomEvent("axiee-cart-updated", {
+          detail: data.cart,
+        }),
+      );
 
       setCartMessage("ADDED TO CART");
 
