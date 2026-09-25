@@ -203,8 +203,15 @@ const normalizeProduct = (product) => {
         }
 
         return {
-          size: item.size,
-          stock: Number(item.stock || 0),
+          size: item.size || item.label || item.name || "",
+          stock: Number(
+            item.stock ??
+              item.quantity ??
+              item.qty ??
+              item.inventory ??
+              item.available ??
+              0,
+          ),
         };
       })
     : [];
@@ -239,7 +246,11 @@ const normalizeProduct = (product) => {
     totalStock:
       product.totalStock !== undefined
         ? Number(product.totalStock)
-        : calculatedStock,
+        : product.stock !== undefined
+          ? Number(product.stock)
+          : product.quantity !== undefined
+            ? Number(product.quantity)
+            : calculatedStock,
 
     colors: Array.isArray(product.colors)
       ? product.colors
@@ -623,23 +634,40 @@ function ProductDetails() {
   ========================================================= */
 
   const buyNow = () => {
+    if (!product) {
+      setCartMessage("PRODUCT IS NOT READY");
+      return;
+    }
+
     if (product.sizes?.length > 0 && !selectedSize) {
       setCartMessage("PLEASE SELECT A SIZE");
-
       return;
     }
 
     if (!hasStock) {
       setCartMessage("THIS SIZE IS OUT OF STOCK");
-
       return;
     }
 
     const item = createCartItem();
 
+    /*
+      Save a fallback copy in localStorage so refresh on the checkout
+      page still keeps the Buy Now product.
+    */
     localStorage.setItem("axiee-buy-now", JSON.stringify(item));
 
-    navigate("/checkout");
+    /*
+      Also pass the item directly through React Router state.
+      This makes the Buy Now click immediate and avoids relying only
+      on localStorage.
+    */
+    navigate("/checkout", {
+      state: {
+        checkoutMode: "buyNow",
+        buyNowItem: item,
+      },
+    });
   };
 
   /* =========================================================

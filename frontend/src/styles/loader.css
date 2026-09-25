@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=New+Rocker&display=swap");
 
 /* =================================
    LOADER
@@ -57,7 +57,6 @@
      height: 100%;
 
      display: flex;
-
      align-items: center;
      justify-content: center;
 
@@ -89,7 +88,7 @@
 }
 
 /* =================================
-   GOTHIC LETTERS
+   SAME FONT AS NAVBAR LOGO
 ================================= */
 
 .loader-letter {
@@ -97,27 +96,36 @@
 
      display: inline-block;
 
-     color: #f8f7f1;
+     color: #f7f5ef;
 
-     /*
-    Similar gothic / blackletter font
-    to your UNBOUND banner
-  */
-     font-family: "UnifrakturCook", "Old English Text MT", serif;
+     font-family:
+          "New Rocker",
+          "Times New Roman",
+          serif;
 
      font-size: clamp(70px, 11vw, 190px);
 
-     font-weight: 700;
+     /*
+    Navbar uses font-weight 400.
+    Same here for exact visual style.
+  */
+     font-weight: 400;
 
-     line-height: 0.78;
+     line-height: 0.9;
 
-     letter-spacing: -0.035em;
+     letter-spacing: 0.025em;
+
+     text-transform: uppercase;
 
      transform-origin: center center;
 
      text-rendering: geometricPrecision;
 
      -webkit-font-smoothing: antialiased;
+
+     text-shadow:
+          0 0 1px rgba(255, 255, 255, 0.55),
+          0 0 16px rgba(207, 255, 36, 0.05);
 
      will-change:
           transform,
@@ -128,7 +136,7 @@
 }
 
 /* =================================
-   CENTER "O"
+   CENTER O
 ================================= */
 
 .loader-letter-center {
@@ -140,7 +148,7 @@
 }
 
 /* =================================
-   OPTIONAL LIGHT BEHIND LOGO
+   LIGHT BEHIND LOGO
 ================================= */
 
 .loader-logo::before {
@@ -156,9 +164,10 @@
 
      transform: translate(-50%, -50%);
 
-     background: radial-gradient(ellipse at center,
-               rgba(199, 255, 19, 0.045) 0%,
-               rgba(199, 255, 19, 0.015) 40%,
+     background:
+          radial-gradient(ellipse at center,
+               rgba(207, 255, 36, 0.045) 0%,
+               rgba(207, 255, 36, 0.015) 40%,
                transparent 72%);
 
      filter: blur(30px);
@@ -167,7 +176,7 @@
 }
 
 /* =================================
-   BOTTOM
+   BOTTOM AREA
 ================================= */
 
 .loader-bottom {
@@ -186,14 +195,16 @@
 }
 
 /* =================================
-   PROGRESS
+   PROGRESS LINE
 ================================= */
 
 .loader-progress {
      width: 100%;
+
      height: 1px;
 
-     background: rgba(255, 255, 255, 0.12);
+     background:
+          rgba(255, 255, 255, 0.12);
 
      overflow: hidden;
 }
@@ -204,12 +215,12 @@
      width: 100%;
      height: 100%;
 
-     background: #c7ff13;
+     background: #cfff24;
 
      box-shadow:
-          0 0 8px rgba(199, 255, 19, 0.9),
-          0 0 25px rgba(199, 255, 19, 0.45),
-          0 0 55px rgba(199, 255, 19, 0.2);
+          0 0 8px rgba(207, 255, 36, 0.9),
+          0 0 25px rgba(207, 255, 36, 0.45),
+          0 0 55px rgba(207, 255, 36, 0.2);
 
      will-change: transform;
 }
@@ -227,20 +238,35 @@
      align-items: flex-start;
 }
 
+/* =================================
+   LOADING TEXT
+   SAME FONT AS UNBOUND
+================================= */
+
 .loader-information p {
      margin: 0;
 
-     color: #6c6c6c;
+     color: rgba(247, 245, 239, 0.52);
 
-     font-family: Arial, Helvetica, sans-serif;
+     font-family:
+          "New Rocker",
+          "Times New Roman",
+          serif;
 
-     font-size: 8px;
+     font-size: 11px;
 
-     font-weight: 500;
+     font-weight: 400;
 
-     letter-spacing: 0.3em;
+     line-height: 1.2;
+
+     letter-spacing: 0.12em;
 
      text-transform: uppercase;
+
+     text-shadow:
+          0 0 1px rgba(255, 255, 255, 0.25);
+
+     -webkit-font-smoothing: antialiased;
 }
 
 /* =================================
@@ -252,32 +278,49 @@
 
      align-items: flex-start;
 
-     color: #f2efe8;
+     color: #f7f5ef;
 
      transform-origin: right center;
 }
 
 .loader-percentage span {
-     font-family: "UnifrakturCook", "Old English Text MT", serif;
+     font-family:
+          "New Rocker",
+          "Times New Roman",
+          serif;
 
      font-size: clamp(38px, 4vw, 62px);
 
-     line-height: 0.85;
+     font-weight: 400;
 
-     letter-spacing: -0.03em;
+     line-height: 0.9;
+
+     letter-spacing: 0.025em;
+
+     text-shadow:
+          0 0 1px rgba(255, 255, 255, 0.4),
+          0 0 16px rgba(207, 255, 36, 0.04);
 }
 
 .loader-percentage small {
      margin-top: 2px;
      margin-left: 6px;
 
-     color: #c7ff13;
+     color: #cfff24;
 
-     font-family: Arial, Helvetica, sans-serif;
+     font-family:
+          "New Rocker",
+          "Times New Roman",
+          serif;
 
-     font-size: 9px;
+     font-size: 11px;
 
-     font-weight: 700;
+     font-weight: 400;
+
+     line-height: 1;
+
+     text-shadow:
+          0 0 10px rgba(207, 255, 36, 0.55);
 }
 
 /* =================================
@@ -292,7 +335,7 @@
      .loader-letter {
           font-size: 15vw;
 
-          letter-spacing: -0.04em;
+          letter-spacing: 0.02em;
      }
 
      .loader-bottom {
@@ -303,17 +346,21 @@
      }
 
      .loader-information p {
-          max-width: 150px;
+          max-width: 180px;
 
-          font-size: 7px;
+          font-size: 9px;
 
-          line-height: 1.7;
+          line-height: 1.5;
 
-          letter-spacing: 0.22em;
+          letter-spacing: 0.1em;
      }
 
      .loader-percentage span {
           font-size: 38px;
+     }
+
+     .loader-percentage small {
+          font-size: 9px;
      }
 }
 
@@ -324,6 +371,8 @@
 @media (max-width: 480px) {
      .loader-letter {
           font-size: 15.5vw;
+
+          letter-spacing: 0.015em;
      }
 
      .loader-bottom {
@@ -331,12 +380,42 @@
      }
 
      .loader-information p {
-          font-size: 6px;
+          max-width: 145px;
 
-          max-width: 120px;
+          font-size: 8px;
+
+          line-height: 1.45;
+
+          letter-spacing: 0.08em;
      }
 
      .loader-percentage span {
           font-size: 34px;
+     }
+
+     .loader-percentage small {
+          font-size: 8px;
+
+          margin-left: 4px;
+     }
+}
+
+/* =================================
+   VERY SMALL MOBILE
+================================= */
+
+@media (max-width: 360px) {
+     .loader-letter {
+          font-size: 15vw;
+     }
+
+     .loader-information p {
+          max-width: 125px;
+
+          font-size: 7px;
+     }
+
+     .loader-percentage span {
+          font-size: 30px;
      }
 }

@@ -31,24 +31,71 @@ function Cart() {
   const getImageUrl = (image) => {
     if (!image) return "";
 
-    if (image.startsWith("http://") || image.startsWith("https://")) {
-      return image;
+    // Support either a plain string or a common image object shape.
+    let rawImage = image;
+
+    if (Array.isArray(rawImage)) {
+      rawImage = rawImage[0];
     }
 
-    if (image.startsWith("/api/images/")) {
-      const imageId = image.replace("/api/images/", "");
-      return `${API_URL}/api/catalog/images/${imageId}`;
+    if (rawImage && typeof rawImage === "object") {
+      rawImage =
+        rawImage.url || rawImage.src || rawImage.path || rawImage.image || "";
     }
 
-    if (image.startsWith("/api/catalog/images/")) {
-      return `${API_URL}${image}`;
+    if (!rawImage) return "";
+
+    const imagePath = String(rawImage).trim().replace(/\\\\/g, "/");
+    const apiBase = String(API_URL).replace(/\/+$/, "");
+
+    // Already complete URLs / browser-safe sources.
+    if (
+      imagePath.startsWith("http://") ||
+      imagePath.startsWith("https://") ||
+      imagePath.startsWith("data:") ||
+      imagePath.startsWith("blob:")
+    ) {
+      return imagePath;
     }
 
-    if (image.startsWith("/api/")) {
-      return `${API_URL}${image}`;
+    // Old GridFS route -> current catalog image route.
+    if (
+      imagePath.startsWith("/api/images/") ||
+      imagePath.startsWith("api/images/")
+    ) {
+      const imageId = imagePath
+        .replace(/^\/?api\/images\//, "")
+        .replace(/^\/+/, "");
+
+      return `${apiBase}/api/catalog/images/${imageId}`;
     }
 
-    return image;
+    // Current GridFS/catalog route.
+    if (
+      imagePath.startsWith("/api/catalog/images/") ||
+      imagePath.startsWith("api/catalog/images/")
+    ) {
+      return `${apiBase}/${imagePath.replace(/^\/+/, "")}`;
+    }
+
+    // Any other backend API image route.
+    if (imagePath.startsWith("/api/") || imagePath.startsWith("api/")) {
+      return `${apiBase}/${imagePath.replace(/^\/+/, "")}`;
+    }
+
+    // Uploaded product images are served by the backend, not Vite.
+    if (imagePath.startsWith("/uploads/") || imagePath.startsWith("uploads/")) {
+      return `${apiBase}/${imagePath.replace(/^\/+/, "")}`;
+    }
+
+    // Keep frontend public assets working.
+    if (imagePath.startsWith("/assets/") || imagePath.startsWith("/images/")) {
+      return imagePath;
+    }
+
+    // Product image paths stored as plain relative paths should also
+    // be requested from the backend.
+    return `${apiBase}/${imagePath.replace(/^\/+/, "")}`;
   };
 
   const fetchCart = async ({ silent = false } = {}) => {
@@ -331,10 +378,7 @@ function Cart() {
             build the bag.
           </p>
 
-          <Link to="/shop">
-            SHOP COLLECTION
-            <ArrowUpRight size={17} />
-          </Link>
+        
         </section>
       </main>
     );
@@ -422,7 +466,38 @@ function Cart() {
                   className="cart-item-image"
                 >
                   {item.image ? (
-                    <img src={getImageUrl(item.image)} alt={item.name} />
+                    <>
+                      <img
+                        src={getImageUrl(item.image)}
+                        alt={item.name}
+                        loading="lazy"
+                        onError={(event) => {
+                          console.error(
+                            "❌ Product image failed:",
+                            item.image,
+                            "Resolved URL:",
+                            getImageUrl(item.image),
+                          );
+
+                          event.currentTarget.style.display = "none";
+                          const fallback =
+                            event.currentTarget.nextElementSibling;
+
+                          if (
+                            fallback?.classList?.contains("cart-image-fallback")
+                          ) {
+                            fallback.style.display = "grid";
+                          }
+                        }}
+                      />
+
+                      <div
+                        className="cart-image-empty cart-image-fallback"
+                        style={{ display: "none" }}
+                      >
+                        AXIEE
+                      </div>
+                    </>
                   ) : (
                     <div className="cart-image-empty">AXIEE</div>
                   )}

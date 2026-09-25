@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import {
   ArrowLeft,
@@ -260,12 +260,17 @@ const getItemQuantity = (item) => {
 
 function Checkout() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [form, setForm] = useState(initialForm);
 
   const [paymentMethod, setPaymentMethod] = useState("upi");
 
   const [cart, setCart] = useState(null);
+
+  // "buyNow" = user came directly from a product's BUY NOW button.
+  // "cart" = normal bag -> checkout flow.
+  const [checkoutMode, setCheckoutMode] = useState("cart");
 
   const [loadingCart, setLoadingCart] = useState(true);
 
@@ -286,27 +291,96 @@ function Checkout() {
   const submitLockRef = useRef(false);
 
   /* =======================================================
-     LOAD CART
+     LOAD CHECKOUT ITEMS
+
+     BUY NOW:
+       ProductDetails stores one product in:
+       localStorage["axiee-buy-now"]
+
+       Checkout must use ONLY that product.
+
+     NORMAL CHECKOUT:
+       If there is no Buy Now product, load the normal cart
+       from the backend using axiee-cart-id.
   ======================================================= */
 
   useEffect(() => {
-    const loadCart = async () => {
-      const cartId = localStorage.getItem("axiee-cart-id");
+    let cancelled = false;
 
-      if (!cartId) {
-        setCart({
-          items: [],
-        });
-
-        setLoadingCart(false);
-
-        return;
-      }
-
+    const loadCheckoutItems = async () => {
       try {
         setLoadingCart(true);
-
         setCartError("");
+
+        /* ===============================================
+           1. CHECK BUY NOW FIRST
+        =============================================== */
+
+        const stateBuyNowItem =
+          location.state?.checkoutMode === "buyNow"
+            ? location.state?.buyNowItem
+            : null;
+
+        let buyNowItem = stateBuyNowItem || null;
+
+        if (!buyNowItem) {
+          const buyNowRaw = localStorage.getItem("axiee-buy-now");
+
+          if (buyNowRaw) {
+            try {
+              buyNowItem = JSON.parse(buyNowRaw);
+            } catch (parseError) {
+              console.error("Invalid Buy Now item:", parseError);
+              localStorage.removeItem("axiee-buy-now");
+            }
+          }
+        }
+
+        if (
+          buyNowItem &&
+          typeof buyNowItem === "object" &&
+          (buyNowItem.productId || buyNowItem.id || buyNowItem._id)
+        ) {
+          /*
+            Keep the fallback current in case the customer refreshes
+            while already on checkout.
+          */
+          localStorage.setItem("axiee-buy-now", JSON.stringify(buyNowItem));
+
+          if (!cancelled) {
+            setCheckoutMode("buyNow");
+
+            setCart({
+              cartId: null,
+              items: [buyNowItem],
+            });
+          }
+
+          return;
+        }
+
+        // Invalid saved data should not block normal cart checkout.
+        localStorage.removeItem("axiee-buy-now");
+
+        /* ===============================================
+           2. NORMAL CART CHECKOUT
+        =============================================== */
+
+        if (!cancelled) {
+          setCheckoutMode("cart");
+        }
+
+        const cartId = localStorage.getItem("axiee-cart-id");
+
+        if (!cartId) {
+          if (!cancelled) {
+            setCart({
+              items: [],
+            });
+          }
+
+          return;
+        }
 
         const response = await fetch(`${API_URL}/api/cart/${cartId}`, {
           cache: "no-store",
@@ -318,23 +392,33 @@ function Checkout() {
           throw new Error(data?.message || "Could not load your bag.");
         }
 
-        setCart(
-          data?.cart ||
-            data || {
-              items: [],
-            },
-        );
+        if (!cancelled) {
+          setCart(
+            data?.cart ||
+              data || {
+                items: [],
+              },
+          );
+        }
       } catch (error) {
         console.error("Checkout cart error:", error);
 
-        setCartError(error.message || "Could not load your bag.");
+        if (!cancelled) {
+          setCartError(error.message || "Could not load your bag.");
+        }
       } finally {
-        setLoadingCart(false);
+        if (!cancelled) {
+          setLoadingCart(false);
+        }
       }
     };
 
-    loadCart();
-  }, []);
+    loadCheckoutItems();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [location.state]);
 
   /* =======================================================
      ITEMS
@@ -489,7 +573,12 @@ function Checkout() {
       =============================================== */
 
     const checkoutPayload = {
-      cartId: localStorage.getItem("axiee-cart-id"),
+      // Buy Now can be checked out independently from the user's saved bag.
+      // For normal checkout we keep sending the actual cart id.
+      cartId:
+        checkoutMode === "buyNow"
+          ? null
+          : localStorage.getItem("axiee-cart-id"),
 
       customer: {
         firstName: form.firstName.trim(),
@@ -553,73 +642,78 @@ function Checkout() {
 
       const completedOrder = data?.order || null;
 
-      const cartId = localStorage.getItem("axiee-cart-id");
-
       /* =============================================
-             1. CLEAR BACKEND CART
+         BUY NOW SUCCESS
+
+         Only remove the temporary Buy Now item.
+         Do NOT clear the user's normal shopping bag.
+      ============================================= */
+
+      if (checkoutMode === "buyNow") {
+        localStorage.removeItem("axiee-buy-now");
+      } else {
+        /* =============================================
+           NORMAL CART SUCCESS
+
+           Clear backend cart and remove local cart id.
         ============================================= */
 
-      if (cartId) {
-        try {
-          const clearResponse = await fetch(
-            `${API_URL}/api/cart/${cartId}/clear`,
-            {
-              method: "DELETE",
+        const cartId = localStorage.getItem("axiee-cart-id");
 
-              headers: {
-                Accept: "application/json",
+        if (cartId) {
+          try {
+            const clearResponse = await fetch(
+              `${API_URL}/api/cart/${cartId}/clear`,
+              {
+                method: "DELETE",
+
+                headers: {
+                  Accept: "application/json",
+                },
               },
-            },
-          );
-
-          if (!clearResponse.ok) {
-            let clearData = null;
-
-            try {
-              clearData = await clearResponse.json();
-            } catch {
-              clearData = null;
-            }
-
-            console.error(
-              "Backend cart clear failed:",
-              clearData?.message || clearResponse.status,
             );
+
+            if (!clearResponse.ok) {
+              let clearData = null;
+
+              try {
+                clearData = await clearResponse.json();
+              } catch {
+                clearData = null;
+              }
+
+              console.error(
+                "Backend cart clear failed:",
+                clearData?.message || clearResponse.status,
+              );
+            }
+          } catch (clearError) {
+            console.error("Backend cart clear error:", clearError);
           }
-        } catch (clearError) {
-          console.error("Backend cart clear error:", clearError);
         }
+
+        localStorage.removeItem("axiee-cart-id");
+
+        window.dispatchEvent(
+          new CustomEvent("axiee-cart-updated", {
+            detail: {
+              items: [],
+            },
+          }),
+        );
       }
 
       /* =============================================
-             2. REMOVE OLD CART ID
-        ============================================= */
-
-      localStorage.removeItem("axiee-cart-id");
-
-      /* =============================================
-             3. CLEAR CHECKOUT CART
-        ============================================= */
+         CLEAR CURRENT CHECKOUT DISPLAY
+      ============================================= */
 
       setCart({
         items: [],
       });
 
       /* =============================================
-             4. TELL NAVBAR BAG = 0
-        ============================================= */
-
-      window.dispatchEvent(
-        new CustomEvent("axiee-cart-updated", {
-          detail: {
-            items: [],
-          },
-        }),
-      );
-
-      /* =============================================
-             5. SUCCESS PAGE
-        ============================================= */
+         SUCCESS PAGE
+      ============================================= */
 
       setOrderResult(completedOrder);
 
@@ -731,10 +825,21 @@ function Checkout() {
           <button
             type="button"
             className="ax-checkout-back"
-            onClick={() => navigate("/cart")}
+            onClick={() => {
+              if (checkoutMode === "buyNow") {
+                // We are leaving the Buy Now checkout without ordering.
+                // Remove the temporary item so it cannot affect a later
+                // normal cart checkout.
+                localStorage.removeItem("axiee-buy-now");
+                navigate(-1);
+                return;
+              }
+
+              navigate("/cart");
+            }}
           >
             <ArrowLeft size={16} />
-            BACK TO BAG
+            {checkoutMode === "buyNow" ? "BACK TO PRODUCT" : "BACK TO BAG"}
           </button>
 
           <div className="ax-checkout-title-wrap">

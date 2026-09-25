@@ -2408,6 +2408,13 @@ function CategoryPage({
 
   const [addedProductId, setAddedProductId] = useState("");
 
+  /*
+    Tracks product + size combinations that were successfully saved
+    to the backend cart from this page. After an item has been added,
+    the + / - controls will keep that backend cart item in sync.
+  */
+  const cartSyncedItemsRef = useRef(new Set());
+
   // If a category page passes products from MongoDB, use those.
   // Otherwise keep using the existing local products data for other categories.
   const usingExternalProducts = Array.isArray(externalProducts);
@@ -2429,7 +2436,14 @@ function CategoryPage({
   ======================================================= */
 
   const quickSearchOptions = {
-    "T-SHIRTS": ["WHITE", "BLACK", "RED", "OVERSIZED", "GRAPHIC"],
+    "T-SHIRTS": [
+      "ALL",
+      "HALF SLEEVE",
+      "FULL SLEEVE",
+      "OVERSIZED",
+      "GRAPHIC",
+      "SWEATSHIRT",
+    ],
 
     SHIRTS: ["WHITE", "BLACK", "BLUE", "OVERSIZED", "FORMAL"],
 
@@ -2450,7 +2464,7 @@ function CategoryPage({
 
   const getSearchPlaceholder = () => {
     if (category === "T-SHIRTS") {
-      return "SEARCH WHITE T-SHIRT, BLACK T-SHIRT, OVERSIZED...";
+      return "SEARCH HALF SLEEVE, FULL SLEEVE, OVERSIZED, GRAPHIC...";
     }
 
     if (category === "SHIRTS") {
@@ -2495,22 +2509,112 @@ function CategoryPage({
     if (searchValue) {
       const searchWords = searchValue.split(/\s+/);
 
+      const tshirtSearchAliases =
+        category === "T-SHIRTS"
+          ? {
+              "half sleeve": [
+                "half sleeve",
+                "half-sleeve",
+                "short sleeve",
+                "short-sleeve",
+              ],
+              "full sleeve": [
+                "full sleeve",
+                "full-sleeve",
+                "long sleeve",
+                "long-sleeve",
+              ],
+              oversized: ["oversized", "oversize"],
+              graphic: ["graphic", "printed", "print"],
+              sweatshirt: ["sweatshirt", "sweat shirt"],
+            }
+          : {};
+
+      const activeAliases = tshirtSearchAliases[searchValue];
+
       result = result.filter((product) => {
         const searchableText = [
           product.name,
           product.category,
+          product.subcategory,
+          product.subCategory,
+          product.productType,
+          product.type,
+          product.sleeve,
+          product.sleeveType,
           product.color,
           product.fit,
           product.style,
           product.tag,
           product.description,
 
-          ...(product.colors || []),
-          ...(product.keywords || []),
+          ...(Array.isArray(product.colors) ? product.colors : []),
+          ...(Array.isArray(product.keywords) ? product.keywords : []),
         ]
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
+
+        /*
+         * T-SHIRT QUICK FILTERS
+         *
+         * Imported MongoDB products may not have a `sleeve` field yet.
+         * Since this page already receives only T-shirts, treat a regular
+         * T-shirt as HALF SLEEVE by default unless the product explicitly
+         * says it is full/long sleeve or a sweatshirt.
+         */
+        if (category === "T-SHIRTS") {
+          const hasAny = (values) =>
+            values.some((value) => searchableText.includes(value));
+
+          const isFullSleeve = hasAny([
+            "full sleeve",
+            "full-sleeve",
+            "long sleeve",
+            "long-sleeve",
+            "fullsleeve",
+            "longsleeve",
+          ]);
+
+          const isSweatshirt = hasAny([
+            "sweatshirt",
+            "sweat shirt",
+            "sweat-shirt",
+          ]);
+
+          if (searchValue === "half sleeve") {
+            // Most imported tee records don't have sleeve metadata.
+            // If it is a T-shirt and isn't explicitly full sleeve/sweatshirt,
+            // show it under HALF SLEEVE.
+            return !isFullSleeve && !isSweatshirt;
+          }
+
+          if (searchValue === "full sleeve") {
+            return isFullSleeve;
+          }
+
+          if (searchValue === "sweatshirt") {
+            return isSweatshirt;
+          }
+
+          if (searchValue === "oversized") {
+            return hasAny(["oversized", "oversize"]);
+          }
+
+          if (searchValue === "graphic") {
+            return hasAny([
+              "graphic",
+              "printed",
+              "print",
+              "printed tee",
+              "graphic tee",
+            ]);
+          }
+        }
+
+        if (activeAliases) {
+          return activeAliases.some((alias) => searchableText.includes(alias));
+        }
 
         return searchWords.every((word) => searchableText.includes(word));
       });
@@ -2569,16 +2673,160 @@ function CategoryPage({
   // Every card starts at quantity 0.
   const getQuantity = (productId) => quantities[productId] ?? 0;
 
-  const changeQuantity = (productId, amount) => {
-    setQuantities((previous) => {
-      const currentQuantity = previous[productId] ?? 0;
-      const nextQuantity = Math.min(10, Math.max(0, currentQuantity + amount));
+  const normalizeCartSize = (value = "") => String(value).trim().toLowerCase();
 
-      return {
-        ...previous,
-        [productId]: nextQuantity,
-      };
+  const makeCartSyncKey = (productId, size) =>
+    `${String(productId)}::${normalizeCartSize(size)}`;
+
+  const findMatchingCartItem = (cart, productId, size) => {
+    const items = Array.isArray(cart?.items) ? cart.items : [];
+
+    return items.find(
+      (item) =>
+        String(
+          item?.productId || item?.product?._id || item?.product?.id || "",
+        ) === String(productId) &&
+        normalizeCartSize(item?.size) === normalizeCartSize(size),
+    );
+  };
+
+  /*
+    If this product/size has already been added from this page,
+    keep the real MongoDB cart quantity in sync with the card controls.
+
+    2 -> 1 = PATCH cart item
+    1 -> 0 = DELETE cart item completely
+  */
+  const syncBackendCartQuantity = async (productId, size, nextQuantity) => {
+    const cartId = localStorage.getItem("axiee-cart-id");
+
+    if (!cartId || !size) {
+      return null;
+    }
+
+    const getResponse = await fetch(`${API_BASE}/api/cart/${cartId}`, {
+      cache: "no-store",
     });
+
+    const getData = await getResponse.json();
+
+    if (!getResponse.ok) {
+      throw new Error(getData?.message || "Could not load cart.");
+    }
+
+    const currentCart = getData?.cart || getData || { items: [] };
+
+    const cartItem = findMatchingCartItem(currentCart, productId, size);
+
+    if (!cartItem?._id) {
+      return null;
+    }
+
+    const itemId = String(cartItem._id);
+
+    const response =
+      nextQuantity <= 0
+        ? await fetch(`${API_BASE}/api/cart/${cartId}/item/${itemId}`, {
+            method: "DELETE",
+            headers: {
+              Accept: "application/json",
+            },
+          })
+        : await fetch(`${API_BASE}/api/cart/${cartId}/item/${itemId}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({
+              quantity: nextQuantity,
+            }),
+          });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.message ||
+          (nextQuantity <= 0
+            ? "Could not remove item from cart."
+            : "Could not update cart quantity."),
+      );
+    }
+
+    const updatedCart = data?.cart || data || { items: [] };
+
+    window.dispatchEvent(
+      new CustomEvent("axiee-cart-updated", {
+        detail: updatedCart,
+      }),
+    );
+
+    return updatedCart;
+  };
+
+  const changeQuantity = async (productId, amount) => {
+    const currentQuantity = getQuantity(productId);
+
+    const nextQuantity = Math.min(10, Math.max(0, currentQuantity + amount));
+
+    if (nextQuantity === currentQuantity) {
+      return;
+    }
+
+    setQuantities((previous) => ({
+      ...previous,
+      [productId]: nextQuantity,
+    }));
+
+    const size = selectedSizes[productId];
+
+    if (!size) {
+      return;
+    }
+
+    const syncKey = makeCartSyncKey(productId, size);
+
+    /*
+      Before ADD TO CART has been pressed, + / - are only a selector.
+      After ADD TO CART succeeds, + / - update the real cart.
+    */
+    if (!cartSyncedItemsRef.current.has(syncKey)) {
+      return;
+    }
+
+    try {
+      const updatedCart = await syncBackendCartQuantity(
+        productId,
+        size,
+        nextQuantity,
+      );
+
+      if (nextQuantity <= 0) {
+        cartSyncedItemsRef.current.delete(syncKey);
+
+        setAddedProductId((current) => (current === productId ? "" : current));
+      } else if (!updatedCart) {
+        /*
+          The item disappeared from the backend cart somehow.
+          Stop treating this selector as cart-synced.
+        */
+        cartSyncedItemsRef.current.delete(syncKey);
+      }
+    } catch (error) {
+      console.error("❌ Cart quantity sync error:", error);
+
+      /*
+        Roll the visible selector back if the backend update failed,
+        so UI and cart do not show different quantities.
+      */
+      setQuantities((previous) => ({
+        ...previous,
+        [productId]: currentQuantity,
+      }));
+
+      alert(error.message || "Unable to update cart quantity.");
+    }
   };
 
   /* =======================================================
@@ -2646,12 +2894,35 @@ function CategoryPage({
 
       console.log("✅ CART SAVED:", data.cart);
 
+      const savedCart = data?.cart || {
+        items: [],
+      };
+
+      const savedItem = findMatchingCartItem(savedCart, productId, size);
+
+      /*
+        This product + size is now a real backend cart item.
+        From this point the + / - controls will PATCH / DELETE it.
+      */
+      if (savedItem?._id) {
+        const syncKey = makeCartSyncKey(productId, size);
+
+        cartSyncedItemsRef.current.add(syncKey);
+
+        const savedQuantity = Number(savedItem.quantity || quantity);
+
+        setQuantities((previous) => ({
+          ...previous,
+          [productId]: savedQuantity,
+        }));
+      }
+
       /*
         Tell Navbar / Cart that the backend cart changed.
       */
       window.dispatchEvent(
         new CustomEvent("axiee-cart-updated", {
-          detail: data.cart,
+          detail: savedCart,
         }),
       );
 
@@ -2681,36 +2952,19 @@ function CategoryPage({
 
   const buyNow = (product) => {
     const productId = getProductId(product);
-    const sizes = getProductSizes(product);
-    const size = selectedSizes[productId];
-    const quantity = getQuantity(productId);
 
-    if (sizes.length === 0) {
-      alert("Sizes are not configured for this product yet.");
+    if (!productId) {
+      alert("Product ID is missing.");
       return;
     }
 
-    if (!size) {
-      alert("Please select a size first.");
+    /*
+      Category/listing BUY NOW must first open Product Details.
+      The final BUY NOW from ProductDetails handles checkout.
+    */
+    localStorage.removeItem("axiee-buy-now");
 
-      return;
-    }
-
-    if (quantity <= 0) {
-      alert("Please select quantity first.");
-      return;
-    }
-
-    const checkoutProduct = {
-      ...product,
-      id: productId,
-      size,
-      quantity,
-    };
-
-    localStorage.setItem("axiee-buy-now", JSON.stringify(checkoutProduct));
-
-    navigate("/checkout");
+    navigate(`/product/${productId}`);
   };
 
   /* =======================================================
@@ -2836,18 +3090,23 @@ function CategoryPage({
           <div className="category-quick-search">
             <span className="category-quick-title">QUICK SEARCH</span>
 
-            {quickSearch.map((option) => (
-              <button
-                type="button"
-                key={option}
-                className={
-                  search.toLowerCase() === option.toLowerCase() ? "active" : ""
-                }
-                onClick={() => setSearch(option.toLowerCase())}
-              >
-                {option}
-              </button>
-            ))}
+            {quickSearch.map((option) => {
+              const isAll = option === "ALL";
+              const isActive = isAll
+                ? search.trim() === ""
+                : search.trim().toLowerCase() === option.toLowerCase();
+
+              return (
+                <button
+                  type="button"
+                  key={option}
+                  className={isActive ? "active" : ""}
+                  onClick={() => setSearch(isAll ? "" : option.toLowerCase())}
+                >
+                  {option}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -2886,7 +3145,7 @@ function CategoryPage({
                 FOR "{search}"
               </h3>
 
-              <p>TRY ANOTHER COLOUR, STYLE OR PRODUCT NAME</p>
+              <p>TRY ANOTHER STYLE OR PRODUCT NAME</p>
 
               <button type="button" onClick={() => setSearch("")}>
                 CLEAR SEARCH
@@ -3042,7 +3301,6 @@ function CategoryPage({
                         type="button"
                         className="shop-buy-now"
                         onClick={() => buyNow(product)}
-                        disabled={getQuantity(productId) <= 0}
                       >
                         BUY NOW
                       </button>
