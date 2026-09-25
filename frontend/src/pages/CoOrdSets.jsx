@@ -1,21 +1,28 @@
-// frontend/src/pages/CoOrdSets.jsx
-
 import React from "react";
 import CategoryPage from "../components/CategoryPage";
-import "../styles/coordsets.css";
+import useCategoryProducts from "../hooks/useCategoryProducts";
 
 function CoOrdSets() {
+  const {
+    products,
+    loading,
+    error,
+  } = useCategoryProducts("coordsets");
+
   return (
     <CategoryPage
       category="CO-ORD SETS"
       title="CO-ORD SETS"
-      subtitle="SYNCED FORM"
+      subtitle="MATCHED SYSTEM"
       visualType="coordsets"
+      products={products}
+      loading={loading}
+      error={error}
       description={
         <>
-          MATCHED STRUCTURES.
+          MATCHED FORMS.
           <br />
-          DESIGNED AS ONE SYSTEM.
+          BUILT AS ONE SYSTEM.
         </>
       }
     />
