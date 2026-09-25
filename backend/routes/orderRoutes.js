@@ -87,11 +87,16 @@ const makeOrderNumber = () => {
 
 /* =========================================================
    CREATE ORDER
+
    POST /api/orders
 ========================================================= */
 
 router.post("/", async (req, res) => {
   try {
+    /* =====================================================
+       DATABASE CHECK
+    ===================================================== */
+
     if (mongoose.connection.readyState !== 1) {
       return res.status(503).json({
         success: false,
@@ -109,9 +114,9 @@ router.post("/", async (req, res) => {
       items = [],
     } = req.body;
 
-    /* ================================
+    /* =====================================================
        CUSTOMER VALIDATION
-    ================================= */
+    ===================================================== */
 
     if (
       !customer?.firstName?.trim() ||
@@ -126,9 +131,9 @@ router.post("/", async (req, res) => {
       });
     }
 
-    /* ================================
+    /* =====================================================
        ADDRESS VALIDATION
-    ================================= */
+    ===================================================== */
 
     if (
       !shippingAddress?.address?.trim() ||
@@ -143,9 +148,9 @@ router.post("/", async (req, res) => {
       });
     }
 
-    /* ================================
+    /* =====================================================
        CART VALIDATION
-    ================================= */
+    ===================================================== */
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
@@ -155,9 +160,9 @@ router.post("/", async (req, res) => {
       });
     }
 
-    /* ================================
+    /* =====================================================
        PAYMENT VALIDATION
-    ================================= */
+    ===================================================== */
 
     if (!["upi", "card", "cod"].includes(paymentMethod)) {
       return res.status(400).json({
@@ -167,9 +172,9 @@ router.post("/", async (req, res) => {
       });
     }
 
-    /* ================================
+    /* =====================================================
        NORMALIZE PRODUCTS
-    ================================= */
+    ===================================================== */
 
     const normalizedItems = items.map((item) => {
       const price = getItemPrice(item);
@@ -195,6 +200,10 @@ router.post("/", async (req, res) => {
       };
     });
 
+    /* =====================================================
+       PRICE VALIDATION
+    ===================================================== */
+
     const invalidPrice = normalizedItems.some(
       (item) => !Number.isFinite(item.price) || item.price < 0,
     );
@@ -207,13 +216,31 @@ router.post("/", async (req, res) => {
       });
     }
 
-    /* ================================
+    /* =====================================================
+       PRODUCT ID VALIDATION
+
+       Product ID is important because Best Sellers
+       groups sales using this value.
+    ===================================================== */
+
+    const invalidProduct = normalizedItems.some(
+      (item) => !String(item.productId || "").trim(),
+    );
+
+    if (invalidProduct) {
+      return res.status(400).json({
+        success: false,
+
+        message: "One or more products are missing product ID.",
+      });
+    }
+
+    /* =====================================================
        CALCULATE TOTAL
-    ================================= */
+    ===================================================== */
 
     const subtotal = normalizedItems.reduce(
-      (total, item) => total + item.lineTotal,
-
+      (total, item) => total + Number(item.lineTotal || 0),
       0,
     );
 
@@ -221,22 +248,21 @@ router.post("/", async (req, res) => {
 
     const total = subtotal + shipping;
 
-    /* ================================
+    /* =====================================================
        PAYMENT RULE
 
-       COD = FULL PAYMENT ON DELIVERY
+       COD:
+       Order placed immediately.
 
-       NO 10% ADVANCE
-
-       UPI / CARD =
-       ONLINE PAYMENT REQUIRED
-    ================================= */
+       UPI/CARD:
+       Payment is required before confirmation.
+    ===================================================== */
 
     const paymentRequired = paymentMethod !== "cod";
 
-    /* ================================
+    /* =====================================================
        SAVE ORDER
-    ================================= */
+    ===================================================== */
 
     const order = await Order.create({
       orderNumber: makeOrderNumber(),
@@ -284,19 +310,15 @@ router.post("/", async (req, res) => {
       notes: String(notes || "").trim(),
     });
 
-    /* ================================
-       EMAIL
+    /* =====================================================
+       ORDER EMAIL
 
        COD:
-       order is placed immediately,
-       so send email immediately.
+       Send immediately.
 
-       UPI/CARD:
-       DO NOT SEND YET.
-
-       Later we will send only after
-       Razorpay confirms payment.
-    ================================= */
+       UPI / CARD:
+       Send after successful payment confirmation.
+    ===================================================== */
 
     let emailStatus = {
       attempted: false,
@@ -320,9 +342,9 @@ router.post("/", async (req, res) => {
       }
     }
 
-    /* ================================
+    /* =====================================================
        RESPONSE
-    ================================= */
+    ===================================================== */
 
     return res.status(201).json({
       success: true,
@@ -378,6 +400,7 @@ router.post("/", async (req, res) => {
 
 /* =========================================================
    GET ALL ORDERS
+
    GET /api/orders
 ========================================================= */
 
@@ -408,7 +431,250 @@ router.get("/", async (req, res) => {
 });
 
 /* =========================================================
+   REAL BEST SELLERS
+
+   GET /api/orders/best-sellers
+   GET /api/orders/best-sellers?limit=8
+
+   This reads REAL customer orders.
+
+   It counts:
+   placed
+   confirmed
+   processing
+   shipped
+   delivered
+
+   It does NOT count:
+   pending_payment
+   cancelled
+========================================================= */
+
+router.get(
+  "/best-sellers",
+
+  async (req, res) => {
+    try {
+      /* ===================================================
+         DATABASE CHECK
+      =================================================== */
+
+      if (mongoose.connection.readyState !== 1) {
+        return res.status(503).json({
+          success: false,
+
+          message: "Database is not connected.",
+        });
+      }
+
+      /* ===================================================
+         LIMIT
+      =================================================== */
+
+      const requestedLimit = Number(req.query.limit || 8);
+
+      const limit = Number.isFinite(requestedLimit)
+        ? Math.min(50, Math.max(1, Math.floor(requestedLimit)))
+        : 8;
+
+      /* ===================================================
+         AGGREGATION
+      =================================================== */
+
+      const bestSellers = await Order.aggregate([
+        /* ===============================================
+             COUNT ONLY REAL / ACTIVE ORDERS
+          =============================================== */
+
+        {
+          $match: {
+            orderStatus: {
+              $in: [
+                "placed",
+                "confirmed",
+                "processing",
+                "shipped",
+                "delivered",
+              ],
+            },
+          },
+        },
+
+        /* ===============================================
+             NEWEST ORDER FIRST
+
+             This means $first below uses the newest
+             saved product name/image/price.
+          =============================================== */
+
+        {
+          $sort: {
+            createdAt: -1,
+          },
+        },
+
+        /* ===============================================
+             EACH PRODUCT BECOMES ITS OWN DOCUMENT
+          =============================================== */
+
+        {
+          $unwind: "$items",
+        },
+
+        /* ===============================================
+             PRODUCT MUST HAVE PRODUCT ID
+          =============================================== */
+
+        {
+          $match: {
+            "items.productId": {
+              $exists: true,
+              $nin: ["", null],
+            },
+          },
+        },
+
+        /* ===============================================
+             GROUP SAME PRODUCT
+
+             Example:
+
+             jean-1 quantity 2
+             jean-1 quantity 1
+             jean-1 quantity 4
+
+             totalSold = 7
+          =============================================== */
+
+        {
+          $group: {
+            _id: "$items.productId",
+
+            totalSold: {
+              $sum: "$items.quantity",
+            },
+
+            totalRevenue: {
+              $sum: "$items.lineTotal",
+            },
+
+            name: {
+              $first: "$items.name",
+            },
+
+            image: {
+              $first: "$items.image",
+            },
+
+            price: {
+              $first: "$items.price",
+            },
+
+            lastSoldAt: {
+              $first: "$createdAt",
+            },
+
+            orderIds: {
+              $addToSet: "$_id",
+            },
+          },
+        },
+
+        /* ===============================================
+             COUNT UNIQUE ORDERS
+          =============================================== */
+
+        {
+          $addFields: {
+            orderCount: {
+              $size: "$orderIds",
+            },
+          },
+        },
+
+        /* ===============================================
+             HIGHEST SOLD FIRST
+          =============================================== */
+
+        {
+          $sort: {
+            totalSold: -1,
+
+            totalRevenue: -1,
+
+            lastSoldAt: -1,
+          },
+        },
+
+        /* ===============================================
+             LIMIT
+          =============================================== */
+
+        {
+          $limit: limit,
+        },
+
+        /* ===============================================
+             CLEAN RESPONSE
+          =============================================== */
+
+        {
+          $project: {
+            _id: 0,
+
+            productId: "$_id",
+
+            name: 1,
+
+            image: 1,
+
+            price: 1,
+
+            totalSold: 1,
+
+            totalRevenue: 1,
+
+            orderCount: 1,
+
+            lastSoldAt: 1,
+          },
+        },
+      ]);
+
+      /* ===================================================
+         ADD RANK
+      =================================================== */
+
+      const rankedBestSellers = bestSellers.map((product, index) => ({
+        rank: index + 1,
+
+        ...product,
+      }));
+
+      return res.status(200).json({
+        success: true,
+
+        count: rankedBestSellers.length,
+
+        bestSellers: rankedBestSellers,
+      });
+    } catch (error) {
+      console.error("❌ Best sellers error:", error);
+
+      return res.status(500).json({
+        success: false,
+
+        message: "Failed to load best sellers.",
+
+        error: error.message,
+      });
+    }
+  },
+);
+
+/* =========================================================
    TRACK ORDER
+
    GET /api/orders/track/:orderNumber
 ========================================================= */
 
@@ -435,6 +701,8 @@ router.get(
         order,
       });
     } catch (error) {
+      console.error("❌ Track order error:", error);
+
       return res.status(500).json({
         success: false,
 
@@ -448,7 +716,16 @@ router.get(
 
 /* =========================================================
    GET SINGLE ORDER
+
    GET /api/orders/:id
+
+   IMPORTANT:
+   Keep this BELOW:
+   /best-sellers
+   /track/:orderNumber
+
+   Otherwise Express can think:
+   "best-sellers" = order ID
 ========================================================= */
 
 router.get(
@@ -480,6 +757,8 @@ router.get(
         order,
       });
     } catch (error) {
+      console.error("❌ Get single order error:", error);
+
       return res.status(500).json({
         success: false,
 
@@ -493,6 +772,7 @@ router.get(
 
 /* =========================================================
    UPDATE ORDER STATUS
+
    PATCH /api/orders/:id/status
 ========================================================= */
 
@@ -513,6 +793,22 @@ router.patch(
 
       const { orderStatus } = req.body;
 
+      /* ===================================================
+         VALIDATE ID
+      =================================================== */
+
+      if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return res.status(400).json({
+          success: false,
+
+          message: "Invalid order ID.",
+        });
+      }
+
+      /* ===================================================
+         VALIDATE STATUS
+      =================================================== */
+
       if (!allowedStatuses.includes(orderStatus)) {
         return res.status(400).json({
           success: false,
@@ -520,6 +816,10 @@ router.patch(
           message: "Invalid order status.",
         });
       }
+
+      /* ===================================================
+         UPDATE
+      =================================================== */
 
       const order = await Order.findByIdAndUpdate(
         req.params.id,
@@ -530,6 +830,7 @@ router.patch(
 
         {
           new: true,
+
           runValidators: true,
         },
       );
@@ -545,9 +846,13 @@ router.patch(
       return res.status(200).json({
         success: true,
 
+        message: "Order status updated.",
+
         order,
       });
     } catch (error) {
+      console.error("❌ Update order status error:", error);
+
       return res.status(500).json({
         success: false,
 
@@ -558,5 +863,9 @@ router.patch(
     }
   },
 );
+
+/* =========================================================
+   EXPORT
+========================================================= */
 
 export default router;

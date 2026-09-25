@@ -27,10 +27,14 @@ dotenv.config();
 ========================================================= */
 
 console.log("");
+
 console.log("================================");
 console.log("📧 SMTP CONFIG CHECK");
+
 console.log("SMTP HOST:", process.env.SMTP_HOST || "NOT SET");
+
 console.log("SMTP PORT:", process.env.SMTP_PORT || "NOT SET");
+
 console.log("SMTP USER:", process.env.SMTP_USER || "NOT SET");
 
 console.log("SMTP PASSWORD LOADED:", Boolean(process.env.SMTP_PASS));
@@ -62,7 +66,7 @@ app.use(
   cors({
     origin(origin, callback) {
       /*
-       * Allow Postman/backend calls
+       * Allow Postman / backend calls
        * where no Origin is supplied.
        */
 
@@ -72,7 +76,11 @@ app.use(
 
       /*
        * Allow localhost Vite ports:
-       * 5173, 5174, 5178, etc.
+       *
+       * http://localhost:5173
+       * http://localhost:5174
+       * http://localhost:5178
+       * etc.
        */
 
       const localhostPattern = /^http:\/\/localhost:\d+$/;
@@ -84,7 +92,7 @@ app.use(
       }
 
       /*
-       * Allow production website.
+       * Production website
        */
 
       const allowedOrigins = [
@@ -131,7 +139,7 @@ app.use(
 ========================================================= */
 
 app.get("/", (req, res) => {
-  res.status(200).json({
+  return res.status(200).json({
     success: true,
 
     message: "UNBOUND API is running",
@@ -142,13 +150,57 @@ app.get("/", (req, res) => {
    ROUTES
 ========================================================= */
 
+/*
+ * Products
+ *
+ * Example:
+ * /api/products
+ */
+
 app.use("/api/products", productRoutes);
+
+/*
+ * Cart
+ *
+ * Example:
+ * /api/cart
+ */
 
 app.use("/api/cart", cartRoutes);
 
+/*
+ * Catalog
+ *
+ * Example:
+ * /api/catalog/products
+ */
+
 app.use("/api/catalog", catalogRoutes);
 
+/*
+ * Categories
+ *
+ * Example:
+ * /api/categories
+ */
+
 app.use("/api/categories", categoryRoutes);
+
+/*
+ * Orders
+ *
+ * POST:
+ * /api/orders
+ *
+ * All orders:
+ * /api/orders
+ *
+ * Best sellers:
+ * /api/orders/best-sellers?limit=8
+ *
+ * Track:
+ * /api/orders/track/ORDER_NUMBER
+ */
 
 app.use("/api/orders", orderRoutes);
 
@@ -157,10 +209,12 @@ app.use("/api/orders", orderRoutes);
 ========================================================= */
 
 app.use((req, res) => {
-  res.status(404).json({
+  return res.status(404).json({
     success: false,
 
     message: "API route not found",
+
+    path: req.originalUrl,
   });
 });
 
@@ -173,7 +227,7 @@ app.use((error, req, res, next) => {
 
   console.error(error);
 
-  res.status(error.status || 500).json({
+  return res.status(error.status || 500).json({
     success: false,
 
     message: error.message || "Internal server error",
@@ -197,6 +251,11 @@ async function fixCartIndexes() {
       indexes.map((index) => index.name),
     );
 
+    /*
+     * Remove an old userId index
+     * if it still exists.
+     */
+
     const oldUserIndex = indexes.find((index) => index.name === "userId_1");
 
     if (oldUserIndex) {
@@ -206,6 +265,10 @@ async function fixCartIndexes() {
 
       console.log("✅ Old userId_1 index removed");
     }
+
+    /*
+     * Sync indexes from current Cart model.
+     */
 
     await Cart.syncIndexes();
 
@@ -234,26 +297,27 @@ const PORT = process.env.PORT || 5000;
 
 async function startServer() {
   try {
-    /* =========================
+    /* =====================================================
        CONNECT MONGODB
-    ========================= */
+    ===================================================== */
 
     await connectDB();
 
     console.log("✅ MongoDB connected");
 
-    /* =========================
+    /* =====================================================
        FIX CART INDEX
-    ========================= */
+    ===================================================== */
 
     await fixCartIndexes();
 
-    /* =========================
+    /* =====================================================
        START EXPRESS
-    ========================= */
+    ===================================================== */
 
     app.listen(PORT, () => {
       console.log("");
+
       console.log("================================");
 
       console.log(`✅ UNBOUND Server running on port ${PORT}`);
@@ -269,6 +333,10 @@ async function startServer() {
       console.log(`✅ Categories: http://localhost:${PORT}/api/categories`);
 
       console.log(`✅ Orders: http://localhost:${PORT}/api/orders`);
+
+      console.log(
+        `✅ Best Sellers: http://localhost:${PORT}/api/orders/best-sellers?limit=8`,
+      );
 
       console.log("================================");
 
