@@ -22,6 +22,27 @@ import Cart from "./models/Cart.js";
 dotenv.config();
 
 /* =========================================================
+   SMTP DEBUG CHECK
+   DOES NOT PRINT PASSWORD
+========================================================= */
+
+console.log("");
+console.log("================================");
+console.log("📧 SMTP CONFIG CHECK");
+console.log("SMTP HOST:", process.env.SMTP_HOST || "NOT SET");
+console.log("SMTP PORT:", process.env.SMTP_PORT || "NOT SET");
+console.log("SMTP USER:", process.env.SMTP_USER || "NOT SET");
+
+console.log("SMTP PASSWORD LOADED:", Boolean(process.env.SMTP_PASS));
+
+console.log("SMTP PASSWORD LENGTH:", process.env.SMTP_PASS?.length || 0);
+
+console.log("ADMIN ORDER EMAIL:", process.env.ADMIN_ORDER_EMAIL || "NOT SET");
+
+console.log("================================");
+console.log("");
+
+/* =========================================================
    DNS
 ========================================================= */
 
@@ -40,44 +61,51 @@ const app = express();
 app.use(
   cors({
     origin(origin, callback) {
-      // Allow Postman/backend calls without Origin.
+      /*
+       * Allow Postman/backend calls
+       * where no Origin is supplied.
+       */
+
       if (!origin) {
         return callback(null, true);
       }
 
-      // Allow localhost Vite ports such as 5173, 5174, 5178, etc.
+      /*
+       * Allow localhost Vite ports:
+       * 5173, 5174, 5178, etc.
+       */
+
       const localhostPattern = /^http:\/\/localhost:\d+$/;
+
       const localhostIpPattern = /^http:\/\/127\.0\.0\.1:\d+$/;
 
-      if (
-        localhostPattern.test(origin) ||
-        localhostIpPattern.test(origin)
-      ) {
+      if (localhostPattern.test(origin) || localhostIpPattern.test(origin)) {
+        return callback(null, true);
+      }
+
+      /*
+       * Allow production website.
+       */
+
+      const allowedOrigins = [
+        "https://unboundclothing.in",
+        "https://www.unboundclothing.in",
+      ];
+
+      if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
       console.log("❌ CORS blocked:", origin);
 
-      return callback(
-        new Error(`CORS blocked origin: ${origin}`),
-      );
+      return callback(new Error(`CORS blocked origin: ${origin}`));
     },
 
     credentials: true,
 
-    methods: [
-      "GET",
-      "POST",
-      "PUT",
-      "PATCH",
-      "DELETE",
-      "OPTIONS",
-    ],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-    ],
+    allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
 
@@ -105,7 +133,8 @@ app.use(
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
-    message: "AXIEE API is running",
+
+    message: "UNBOUND API is running",
   });
 });
 
@@ -130,6 +159,7 @@ app.use("/api/orders", orderRoutes);
 app.use((req, res) => {
   res.status(404).json({
     success: false,
+
     message: "API route not found",
   });
 });
@@ -140,13 +170,13 @@ app.use((req, res) => {
 
 app.use((error, req, res, next) => {
   console.error("❌ SERVER ERROR:");
+
   console.error(error);
 
   res.status(error.status || 500).json({
     success: false,
-    message:
-      error.message ||
-      "Internal server error",
+
+    message: error.message || "Internal server error",
   });
 });
 
@@ -156,62 +186,37 @@ app.use((error, req, res, next) => {
 
 async function fixCartIndexes() {
   try {
-    console.log(
-      "🔍 Checking cart indexes...",
-    );
+    console.log("🔍 Checking cart indexes...");
 
-    const collection =
-      mongoose.connection.db.collection(
-        "carts",
-      );
+    const collection = mongoose.connection.db.collection("carts");
 
-    const indexes =
-      await collection
-        .indexes()
-        .catch(() => []);
+    const indexes = await collection.indexes().catch(() => []);
 
     console.log(
       "📦 Current cart indexes:",
-      indexes.map(
-        (index) => index.name,
-      ),
+      indexes.map((index) => index.name),
     );
 
-    const oldUserIndex =
-      indexes.find(
-        (index) =>
-          index.name === "userId_1",
-      );
+    const oldUserIndex = indexes.find((index) => index.name === "userId_1");
 
     if (oldUserIndex) {
-      console.log(
-        "🗑 Removing old userId_1 index...",
-      );
+      console.log("🗑 Removing old userId_1 index...");
 
-      await collection.dropIndex(
-        "userId_1",
-      );
+      await collection.dropIndex("userId_1");
 
-      console.log(
-        "✅ Old userId_1 index removed",
-      );
+      console.log("✅ Old userId_1 index removed");
     }
 
     await Cart.syncIndexes();
 
-    const updatedIndexes =
-      await collection.indexes();
+    const updatedIndexes = await collection.indexes();
 
     console.log(
       "✅ Cart indexes:",
-      updatedIndexes.map(
-        (index) => index.name,
-      ),
+      updatedIndexes.map((index) => index.name),
     );
   } catch (error) {
-    console.error(
-      "❌ Cart index fix error:",
-    );
+    console.error("❌ Cart index fix error:");
 
     console.error(error);
   }
@@ -221,8 +226,7 @@ async function fixCartIndexes() {
    PORT
 ========================================================= */
 
-const PORT =
-  process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000;
 
 /* =========================================================
    START SERVER
@@ -236,9 +240,7 @@ async function startServer() {
 
     await connectDB();
 
-    console.log(
-      "✅ MongoDB connected",
-    );
+    console.log("✅ MongoDB connected");
 
     /* =========================
        FIX CART INDEX
@@ -252,48 +254,28 @@ async function startServer() {
 
     app.listen(PORT, () => {
       console.log("");
-      console.log(
-        "================================",
-      );
+      console.log("================================");
 
-      console.log(
-        `✅ AXIEE Server running on port ${PORT}`,
-      );
+      console.log(`✅ UNBOUND Server running on port ${PORT}`);
 
-      console.log(
-        `✅ API: http://localhost:${PORT}`,
-      );
+      console.log(`✅ API: http://localhost:${PORT}`);
 
-      console.log(
-        `✅ Products: http://localhost:${PORT}/api/products`,
-      );
+      console.log(`✅ Products: http://localhost:${PORT}/api/products`);
 
-      console.log(
-        `✅ Cart: http://localhost:${PORT}/api/cart`,
-      );
+      console.log(`✅ Cart: http://localhost:${PORT}/api/cart`);
 
-      console.log(
-        `✅ Catalog: http://localhost:${PORT}/api/catalog`,
-      );
+      console.log(`✅ Catalog: http://localhost:${PORT}/api/catalog`);
 
-      console.log(
-        `✅ Categories: http://localhost:${PORT}/api/categories`,
-      );
+      console.log(`✅ Categories: http://localhost:${PORT}/api/categories`);
 
-      console.log(
-        `✅ Orders: http://localhost:${PORT}/api/orders`,
-      );
+      console.log(`✅ Orders: http://localhost:${PORT}/api/orders`);
 
-      console.log(
-        "================================",
-      );
+      console.log("================================");
 
       console.log("");
     });
   } catch (error) {
-    console.error(
-      "❌ Server startup error:",
-    );
+    console.error("❌ Server startup error:");
 
     console.error(error);
 

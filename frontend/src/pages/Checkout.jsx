@@ -1,5 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+
 import { useNavigate } from "react-router-dom";
+
 import {
   ArrowLeft,
   ArrowRight,
@@ -17,7 +19,17 @@ import {
 
 import "../styles/checkout.css";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+/* =========================================================
+   API
+========================================================= */
+
+const API_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000"
+).replace(/\/$/, "");
+
+/* =========================================================
+   INITIAL FORM
+========================================================= */
 
 const initialForm = {
   firstName: "",
@@ -33,26 +45,45 @@ const initialForm = {
   notes: "",
 };
 
+/* =========================================================
+   PAYMENT OPTIONS
+========================================================= */
+
 const paymentOptions = [
   {
     id: "upi",
+
     title: "UPI / Online Payment",
+
     subtitle: "Pay securely with UPI, cards or supported wallets.",
+
     icon: Smartphone,
   },
+
   {
     id: "card",
+
     title: "Credit / Debit Card",
+
     subtitle: "Visa, Mastercard, RuPay and more.",
+
     icon: CreditCard,
   },
+
   {
     id: "cod",
+
     title: "Cash on Delivery",
+
     subtitle: "Pay when your order reaches you.",
+
     icon: IndianRupee,
   },
 ];
+
+/* =========================================================
+   INDIAN STATES
+========================================================= */
 
 const indianStates = [
   "Andhra Pradesh",
@@ -93,32 +124,46 @@ const indianStates = [
   "Puducherry",
 ];
 
+/* =========================================================
+   MONEY
+========================================================= */
+
 const money = (value) => {
   const number = Number(value || 0);
 
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
+
     currency: "INR",
+
     maximumFractionDigits: 0,
   }).format(Number.isFinite(number) ? number : 0);
 };
+
+/* =========================================================
+   PRODUCT NAME
+========================================================= */
 
 const getItemName = (item) =>
   item?.product?.name ||
   item?.productId?.name ||
   item?.name ||
   "UNBOUND Product";
-const resolveImageUrl = (value) => {
-  if (!value) return "";
 
-  // Image object
+/* =========================================================
+   IMAGE URL
+========================================================= */
+
+const resolveImageUrl = (value) => {
+  if (!value) {
+    return "";
+  }
+
   if (typeof value === "object") {
-    // Normal URL object
     if (value.url) {
       return resolveImageUrl(value.url);
     }
 
-    // GridFS file
     const fileId = value.fileId || value._id || value.id;
 
     if (fileId) {
@@ -130,9 +175,10 @@ const resolveImageUrl = (value) => {
 
   const image = String(value).trim();
 
-  if (!image) return "";
+  if (!image) {
+    return "";
+  }
 
-  // Already complete URL
   if (
     image.startsWith("http://") ||
     image.startsWith("https://") ||
@@ -142,31 +188,32 @@ const resolveImageUrl = (value) => {
     return image;
   }
 
-  // Old backend image route
-  if (image.startsWith("/api/images/")) {
-    return `${API_URL}${image.replace(
-      "/api/images/",
-      "/api/catalog/images/",
-    )}`;
+  if (/^[a-fA-F0-9]{24}$/.test(image)) {
+    return `${API_URL}/api/catalog/images/${image}`;
   }
 
-  // Backend API image
+  if (image.startsWith("/api/images/")) {
+    return `${API_URL}${image.replace("/api/images/", "/api/catalog/images/")}`;
+  }
+
   if (image.startsWith("/api/")) {
     return `${API_URL}${image}`;
   }
 
-  // Backend uploads
   if (image.startsWith("/uploads/")) {
     return `${API_URL}${image}`;
   }
 
-  // Relative backend uploads
   if (image.startsWith("uploads/")) {
     return `${API_URL}/${image}`;
   }
 
   return image;
 };
+
+/* =========================================================
+   PRODUCT IMAGE
+========================================================= */
 
 const getItemImage = (item) => {
   const product = item?.product || item?.productId || {};
@@ -183,6 +230,10 @@ const getItemImage = (item) => {
   return resolveImageUrl(image);
 };
 
+/* =========================================================
+   PRICE
+========================================================= */
+
 const getItemPrice = (item) =>
   Number(
     item?.price ??
@@ -193,45 +244,89 @@ const getItemPrice = (item) =>
       0,
   );
 
-const getItemQuantity = (item) => Number(item?.quantity || 1);
+/* =========================================================
+   QUANTITY
+========================================================= */
+
+const getItemQuantity = (item) => {
+  const quantity = Number(item?.quantity || 1);
+
+  return Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
+};
+
+/* =========================================================
+   CHECKOUT
+========================================================= */
 
 function Checkout() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState(initialForm);
+
   const [paymentMethod, setPaymentMethod] = useState("upi");
+
   const [cart, setCart] = useState(null);
+
   const [loadingCart, setLoadingCart] = useState(true);
+
   const [cartError, setCartError] = useState("");
+
   const [formErrors, setFormErrors] = useState({});
+
   const [placingOrder, setPlacingOrder] = useState(false);
+
   const [orderComplete, setOrderComplete] = useState(false);
+
   const [orderResult, setOrderResult] = useState(null);
+
+  /* =======================================================
+     DOUBLE CLICK LOCK
+  ======================================================= */
+
+  const submitLockRef = useRef(false);
+
+  /* =======================================================
+     LOAD CART
+  ======================================================= */
 
   useEffect(() => {
     const loadCart = async () => {
       const cartId = localStorage.getItem("axiee-cart-id");
 
       if (!cartId) {
-        setCart({ items: [] });
+        setCart({
+          items: [],
+        });
+
         setLoadingCart(false);
+
         return;
       }
 
       try {
         setLoadingCart(true);
+
         setCartError("");
 
-        const response = await fetch(`${API_URL}/api/cart/${cartId}`);
+        const response = await fetch(`${API_URL}/api/cart/${cartId}`, {
+          cache: "no-store",
+        });
+
         const data = await response.json();
 
         if (!response.ok) {
           throw new Error(data?.message || "Could not load your bag.");
         }
 
-        setCart(data?.cart || data || { items: [] });
+        setCart(
+          data?.cart ||
+            data || {
+              items: [],
+            },
+        );
       } catch (error) {
         console.error("Checkout cart error:", error);
+
         setCartError(error.message || "Could not load your bag.");
       } finally {
         setLoadingCart(false);
@@ -241,29 +336,38 @@ function Checkout() {
     loadCart();
   }, []);
 
+  /* =======================================================
+     ITEMS
+  ======================================================= */
+
   const items = useMemo(() => cart?.items || [], [cart]);
+
+  /* =======================================================
+     SUBTOTAL
+  ======================================================= */
 
   const subtotal = useMemo(
     () =>
       items.reduce(
         (total, item) => total + getItemPrice(item) * getItemQuantity(item),
+
         0,
       ),
+
     [items],
   );
 
-  const shipping = subtotal > 0 ? 0 : 0;
+  /* =======================================================
+     TOTAL
+  ======================================================= */
+
+  const shipping = 0;
+
   const total = subtotal + shipping;
 
-  // COD RULE:
-  // Below ₹2,000  -> normal Cash on Delivery.
-  // ₹2,000+       -> customer must pay 10% online in advance.
-  // Remaining 90% -> collected as Cash on Delivery.
-  const codAdvanceRequired = paymentMethod === "cod" && total >= 2000;
-  const codAdvanceAmount = codAdvanceRequired ? Math.ceil(total * 0.1) : 0;
-  const codBalanceAmount = codAdvanceRequired
-    ? total - codAdvanceAmount
-    : total;
+  /* =======================================================
+     INPUT CHANGE
+  ======================================================= */
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -280,21 +384,31 @@ function Checkout() {
 
     setForm((current) => ({
       ...current,
+
       [name]: nextValue,
     }));
 
     setFormErrors((current) => ({
       ...current,
+
       [name]: "",
     }));
   };
 
+  /* =======================================================
+     VALIDATION
+  ======================================================= */
+
   const validate = () => {
     const nextErrors = {};
 
-    if (!form.firstName.trim())
+    if (!form.firstName.trim()) {
       nextErrors.firstName = "First name is required.";
-    if (!form.lastName.trim()) nextErrors.lastName = "Last name is required.";
+    }
+
+    if (!form.lastName.trim()) {
+      nextErrors.lastName = "Last name is required.";
+    }
 
     if (!form.email.trim()) {
       nextErrors.email = "Email is required.";
@@ -306,9 +420,17 @@ function Checkout() {
       nextErrors.phone = "Enter a valid 10-digit Indian mobile number.";
     }
 
-    if (!form.address.trim()) nextErrors.address = "Address is required.";
-    if (!form.city.trim()) nextErrors.city = "City is required.";
-    if (!form.state) nextErrors.state = "Select your state.";
+    if (!form.address.trim()) {
+      nextErrors.address = "Address is required.";
+    }
+
+    if (!form.city.trim()) {
+      nextErrors.city = "City is required.";
+    }
+
+    if (!form.state) {
+      nextErrors.state = "Select your state.";
+    }
 
     if (!/^\d{6}$/.test(form.pincode)) {
       nextErrors.pincode = "Enter a valid 6-digit PIN code.";
@@ -319,282 +441,292 @@ function Checkout() {
     return Object.keys(nextErrors).length === 0;
   };
 
- const handleSubmit = async (event) => {
-  event.preventDefault();
+  /* =======================================================
+     PLACE ORDER
+  ======================================================= */
 
-  if (!validate()) {
-    const firstError =
-      document.querySelector(
-        ".ax-checkout-field.is-error",
-      );
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
-    firstError?.scrollIntoView({
-      behavior: "smooth",
-      block: "center",
-    });
+    /* VALIDATE */
 
-    return;
-  }
+    if (!validate()) {
+      const firstError = document.querySelector(".ax-checkout-field.is-error");
 
-  if (!items.length) {
-    setCartError(
-      "Your bag is empty. Add a product before checkout.",
-    );
+      firstError?.scrollIntoView({
+        behavior: "smooth",
 
-    return;
-  }
+        block: "center",
+      });
 
-  const checkoutPayload = {
-    cartId:
-      localStorage.getItem(
-        "axiee-cart-id",
-      ),
+      return;
+    }
 
-    customer: {
-      firstName:
-        form.firstName.trim(),
+    /* EMPTY BAG */
 
-      lastName:
-        form.lastName.trim(),
+    if (!items.length) {
+      setCartError("Your bag is empty. Add a product before checkout.");
 
-      email:
-        form.email.trim(),
+      return;
+    }
 
-      phone:
-        form.phone,
-    },
+    /* STOP DOUBLE ORDER */
 
-    shippingAddress: {
-      address:
-        form.address.trim(),
+    if (submitLockRef.current || placingOrder) {
+      console.log("Duplicate checkout click blocked.");
 
-      apartment:
-        form.apartment.trim(),
+      return;
+    }
 
-      city:
-        form.city.trim(),
+    submitLockRef.current = true;
 
-      state:
-        form.state,
-
-      pincode:
-        form.pincode,
-
-      country:
-        form.country,
-    },
-
-    notes:
-      form.notes.trim(),
-
-    paymentMethod,
-
-    items,
-  };
-
-  try {
     setPlacingOrder(true);
 
     setCartError("");
 
-    console.log(
-      "Sending order:",
-      checkoutPayload,
-    );
+    /* ===============================================
+           PAYLOAD
+      =============================================== */
 
-    const response =
-      await fetch(
-        `${API_URL}/api/orders`,
-        {
-          method: "POST",
+    const checkoutPayload = {
+      cartId: localStorage.getItem("axiee-cart-id"),
 
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
+      customer: {
+        firstName: form.firstName.trim(),
 
-          body: JSON.stringify(
-            checkoutPayload,
-          ),
+        lastName: form.lastName.trim(),
+
+        email: form.email.trim().toLowerCase(),
+
+        phone: form.phone.trim(),
+      },
+
+      shippingAddress: {
+        address: form.address.trim(),
+
+        apartment: form.apartment.trim(),
+
+        city: form.city.trim(),
+
+        state: form.state,
+
+        pincode: form.pincode,
+
+        country: form.country,
+      },
+
+      notes: form.notes.trim(),
+
+      paymentMethod,
+
+      items,
+    };
+
+    try {
+      console.log("Sending order:", checkoutPayload);
+
+      /* =============================================
+             CREATE ORDER
+        ============================================= */
+
+      const response = await fetch(`${API_URL}/api/orders`, {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
 
-    const data =
-      await response.json();
+        body: JSON.stringify(checkoutPayload),
+      });
 
-    console.log(
-      "Order response:",
-      data,
-    );
+      const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(
-        data?.message ||
-          "Could not create your order.",
-      );
-    }
+      console.log("Order response:", data);
 
-    setOrderResult(
-      data?.order || null,
-    );
+      if (!response.ok) {
+        throw new Error(data?.message || "Could not create your order.");
+      }
 
-    setOrderComplete(true);
+      /* =============================================
+             ORDER SUCCESS
+        ============================================= */
 
-    /*
-      NORMAL COD BELOW ₹2000
+      const completedOrder = data?.order || null;
 
-      Payment is not required,
-      therefore order is fully placed.
-    */
+      const cartId = localStorage.getItem("axiee-cart-id");
 
-    if (!data?.paymentRequired) {
-      localStorage.removeItem(
-        "axiee-cart-id",
-      );
+      /* =============================================
+             1. CLEAR BACKEND CART
+        ============================================= */
+
+      if (cartId) {
+        try {
+          const clearResponse = await fetch(
+            `${API_URL}/api/cart/${cartId}/clear`,
+            {
+              method: "DELETE",
+
+              headers: {
+                Accept: "application/json",
+              },
+            },
+          );
+
+          if (!clearResponse.ok) {
+            let clearData = null;
+
+            try {
+              clearData = await clearResponse.json();
+            } catch {
+              clearData = null;
+            }
+
+            console.error(
+              "Backend cart clear failed:",
+              clearData?.message || clearResponse.status,
+            );
+          }
+        } catch (clearError) {
+          console.error("Backend cart clear error:", clearError);
+        }
+      }
+
+      /* =============================================
+             2. REMOVE OLD CART ID
+        ============================================= */
+
+      localStorage.removeItem("axiee-cart-id");
+
+      /* =============================================
+             3. CLEAR CHECKOUT CART
+        ============================================= */
 
       setCart({
         items: [],
       });
+
+      /* =============================================
+             4. TELL NAVBAR BAG = 0
+        ============================================= */
+
+      window.dispatchEvent(
+        new CustomEvent("axiee-cart-updated", {
+          detail: {
+            items: [],
+          },
+        }),
+      );
+
+      /* =============================================
+             5. SUCCESS PAGE
+        ============================================= */
+
+      setOrderResult(completedOrder);
+
+      setOrderComplete(true);
+
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "smooth",
+      });
+    } catch (error) {
+      console.error("Create order error:", error);
+
+      setCartError(error.message || "Could not create your order.");
+
+      submitLockRef.current = false;
+    } finally {
+      setPlacingOrder(false);
     }
+  };
 
-    /*
-      UPI / CARD / 10% COD ADVANCE
-
-      Do NOT clear cart yet.
-
-      Razorpay will be connected next.
-    */
-
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: "smooth",
-    });
-  } catch (error) {
-    console.error(
-      "Create order error:",
-      error,
-    );
-
-    setCartError(
-      error.message ||
-        "Could not create your order.",
-    );
-  } finally {
-    setPlacingOrder(false);
-  }
-};
+  /* =======================================================
+     SUCCESS PAGE
+  ======================================================= */
 
   if (orderComplete) {
-  return (
-    <main className="ax-checkout-page ax-checkout-success-page">
-      <div className="ax-checkout-orb ax-checkout-orb-one"></div>
+    return (
+      <main className="ax-checkout-page ax-checkout-success-page">
+        <div className="ax-checkout-orb ax-checkout-orb-one" />
 
-      <div className="ax-checkout-orb ax-checkout-orb-two"></div>
+        <div className="ax-checkout-orb ax-checkout-orb-two" />
 
-      <section className="ax-checkout-success">
-        <div className="ax-checkout-success-icon">
-          <Check
-            size={28}
-            strokeWidth={1.7}
-          />
-        </div>
+        <section className="ax-checkout-success">
+          <div className="ax-checkout-success-icon">
+            <Check size={28} strokeWidth={1.7} />
+          </div>
 
-        <span className="ax-checkout-eyebrow">
-          {orderResult?.orderNumber ||
-            "ORDER CREATED"}
-        </span>
+          <span className="ax-checkout-eyebrow">
+            {orderResult?.orderNumber || "ORDER CREATED"}
+          </span>
 
-        <h1>
-          ORDER SAVED
-          <br />
-          SUCCESSFULLY.
-        </h1>
+          <h1>
+            ORDER SAVED
+            <br />
+            SUCCESSFULLY.
+          </h1>
 
-        <p>
-          {orderResult?.orderStatus ===
-          "pending_payment"
-            ? "Your order has been saved. Complete the online payment to confirm your order."
-            : "Your order has been placed successfully."}
-        </p>
+          <p>
+            {orderResult?.orderStatus === "pending_payment"
+              ? "Your order has been saved. Complete the online payment to confirm your order."
+              : "Your order has been placed successfully."}
+          </p>
 
-        {orderResult && (
-          <div className="ax-checkout-order-details">
-            <p>
-              ORDER NUMBER:
-              <strong>
-                {" "}
-                {orderResult.orderNumber}
-              </strong>
-            </p>
+          {orderResult && (
+            <div className="ax-checkout-order-details">
+              <p>
+                ORDER NUMBER:
+                <strong> {orderResult.orderNumber}</strong>
+              </p>
 
-            <p>
-              TOTAL:
-              <strong>
-                {" "}
-                {money(
-                  orderResult.total,
-                )}
-              </strong>
-            </p>
+              <p>
+                TOTAL:
+                <strong> {money(orderResult.total)}</strong>
+              </p>
 
-            <p>
-              PAYMENT:
-              <strong>
-                {" "}
-                {String(
-                  orderResult.paymentMethod,
-                ).toUpperCase()}
-              </strong>
-            </p>
+              <p>
+                PAYMENT:
+                <strong>
+                  {" "}
+                  {String(orderResult.paymentMethod || "").toUpperCase()}
+                </strong>
+              </p>
 
-            {orderResult.codAdvanceRequired && (
-              <>
-                <p>
-                  PAY NOW:
-                  <strong>
-                    {" "}
-                    {money(
-                      orderResult.advanceAmount,
-                    )}
-                  </strong>
-                </p>
-
+              {String(orderResult.paymentMethod || "").toLowerCase() ===
+                "cod" && (
                 <p>
                   PAY ON DELIVERY:
-                  <strong>
-                    {" "}
-                    {money(
-                      orderResult.balanceDueOnDelivery,
-                    )}
-                  </strong>
+                  <strong> {money(orderResult.total)}</strong>
                 </p>
-              </>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
 
-        <button
-          type="button"
-          onClick={() =>
-            navigate("/shop")
-          }
-        >
-          CONTINUE SHOPPING
+          <button type="button" onClick={() => navigate("/shop")}>
+            CONTINUE SHOPPING
+            <ArrowRight size={17} />
+          </button>
+        </section>
+      </main>
+    );
+  }
 
-          <ArrowRight size={17} />
-        </button>
-      </section>
-    </main>
-  );
-}
+  /* =======================================================
+     CHECKOUT PAGE
+  ======================================================= */
 
   return (
     <main className="ax-checkout-page">
-      <div className="ax-checkout-orb ax-checkout-orb-one"></div>
-      <div className="ax-checkout-orb ax-checkout-orb-two"></div>
+      <div className="ax-checkout-orb ax-checkout-orb-one" />
+
+      <div className="ax-checkout-orb ax-checkout-orb-two" />
 
       <section className="ax-checkout-shell">
+        {/* =================================================
+            HEADER
+        ================================================= */}
+
         <header className="ax-checkout-heading">
           <button
             type="button"
@@ -615,12 +747,25 @@ function Checkout() {
           </div>
         </header>
 
+        {/* =================================================
+            MAIN GRID
+        ================================================= */}
+
         <div className="ax-checkout-grid">
+          {/* =================================================
+              FORM
+          ================================================= */}
+
           <form className="ax-checkout-form" onSubmit={handleSubmit} noValidate>
+            {/* ===============================================
+                CONTACT
+            =============================================== */}
+
             <section className="ax-checkout-card">
               <div className="ax-checkout-card-head">
                 <div>
                   <span>01</span>
+
                   <h2>CONTACT</h2>
                 </div>
 
@@ -628,12 +773,15 @@ function Checkout() {
               </div>
 
               <div className="ax-checkout-fields ax-checkout-fields-two">
+                {/* FIRST NAME */}
+
                 <label
                   className={`ax-checkout-field ${
                     formErrors.firstName ? "is-error" : ""
                   }`}
                 >
                   <span>FIRST NAME *</span>
+
                   <input
                     type="text"
                     name="firstName"
@@ -642,10 +790,13 @@ function Checkout() {
                     placeholder="Ahmed"
                     autoComplete="given-name"
                   />
+
                   {formErrors.firstName && (
                     <small>{formErrors.firstName}</small>
                   )}
                 </label>
+
+                {/* LAST NAME */}
 
                 <label
                   className={`ax-checkout-field ${
@@ -653,6 +804,7 @@ function Checkout() {
                   }`}
                 >
                   <span>LAST NAME *</span>
+
                   <input
                     type="text"
                     name="lastName"
@@ -661,8 +813,11 @@ function Checkout() {
                     placeholder="Khan"
                     autoComplete="family-name"
                   />
+
                   {formErrors.lastName && <small>{formErrors.lastName}</small>}
                 </label>
+
+                {/* EMAIL */}
 
                 <label
                   className={`ax-checkout-field ${
@@ -670,6 +825,7 @@ function Checkout() {
                   }`}
                 >
                   <span>EMAIL *</span>
+
                   <input
                     type="email"
                     name="email"
@@ -678,8 +834,11 @@ function Checkout() {
                     placeholder="you@example.com"
                     autoComplete="email"
                   />
+
                   {formErrors.email && <small>{formErrors.email}</small>}
                 </label>
+
+                {/* PHONE */}
 
                 <label
                   className={`ax-checkout-field ${
@@ -690,6 +849,7 @@ function Checkout() {
 
                   <div className="ax-checkout-phone">
                     <b>+91</b>
+
                     <input
                       type="tel"
                       inputMode="numeric"
@@ -706,10 +866,15 @@ function Checkout() {
               </div>
             </section>
 
+            {/* ===============================================
+                DELIVERY ADDRESS
+            =============================================== */}
+
             <section className="ax-checkout-card">
               <div className="ax-checkout-card-head">
                 <div>
                   <span>02</span>
+
                   <h2>DELIVERY ADDRESS</h2>
                 </div>
 
@@ -717,12 +882,15 @@ function Checkout() {
               </div>
 
               <div className="ax-checkout-fields">
+                {/* ADDRESS */}
+
                 <label
                   className={`ax-checkout-field ${
                     formErrors.address ? "is-error" : ""
                   }`}
                 >
                   <span>ADDRESS *</span>
+
                   <input
                     type="text"
                     name="address"
@@ -731,11 +899,15 @@ function Checkout() {
                     placeholder="House / Flat no., building, street"
                     autoComplete="street-address"
                   />
+
                   {formErrors.address && <small>{formErrors.address}</small>}
                 </label>
 
+                {/* APARTMENT */}
+
                 <label className="ax-checkout-field">
                   <span>APARTMENT / LANDMARK</span>
+
                   <input
                     type="text"
                     name="apartment"
@@ -745,13 +917,18 @@ function Checkout() {
                   />
                 </label>
 
+                {/* CITY / STATE / PIN / COUNTRY */}
+
                 <div className="ax-checkout-fields ax-checkout-fields-two ax-checkout-nested-fields">
+                  {/* CITY */}
+
                   <label
                     className={`ax-checkout-field ${
                       formErrors.city ? "is-error" : ""
                     }`}
                   >
                     <span>CITY *</span>
+
                     <input
                       type="text"
                       name="city"
@@ -760,8 +937,11 @@ function Checkout() {
                       placeholder="Mumbai"
                       autoComplete="address-level2"
                     />
+
                     {formErrors.city && <small>{formErrors.city}</small>}
                   </label>
+
+                  {/* STATE */}
 
                   <label
                     className={`ax-checkout-field ax-checkout-select ${
@@ -792,12 +972,15 @@ function Checkout() {
                     {formErrors.state && <small>{formErrors.state}</small>}
                   </label>
 
+                  {/* PINCODE */}
+
                   <label
                     className={`ax-checkout-field ${
                       formErrors.pincode ? "is-error" : ""
                     }`}
                   >
                     <span>PIN CODE *</span>
+
                     <input
                       type="text"
                       inputMode="numeric"
@@ -807,11 +990,15 @@ function Checkout() {
                       placeholder="400001"
                       autoComplete="postal-code"
                     />
+
                     {formErrors.pincode && <small>{formErrors.pincode}</small>}
                   </label>
 
+                  {/* COUNTRY */}
+
                   <label className="ax-checkout-field">
                     <span>COUNTRY</span>
+
                     <input
                       type="text"
                       name="country"
@@ -821,8 +1008,11 @@ function Checkout() {
                   </label>
                 </div>
 
+                {/* NOTES */}
+
                 <label className="ax-checkout-field">
                   <span>ORDER NOTE</span>
+
                   <textarea
                     name="notes"
                     value={form.notes}
@@ -834,10 +1024,15 @@ function Checkout() {
               </div>
             </section>
 
+            {/* ===============================================
+                PAYMENT
+            =============================================== */}
+
             <section className="ax-checkout-card">
               <div className="ax-checkout-card-head">
                 <div>
                   <span>03</span>
+
                   <h2>PAYMENT</h2>
                 </div>
 
@@ -847,6 +1042,7 @@ function Checkout() {
               <div className="ax-checkout-payment-list">
                 {paymentOptions.map((option) => {
                   const Icon = option.icon;
+
                   const active = paymentMethod === option.id;
 
                   return (
@@ -859,7 +1055,7 @@ function Checkout() {
                       onClick={() => setPaymentMethod(option.id)}
                     >
                       <span className="ax-checkout-payment-radio">
-                        <i></i>
+                        <i />
                       </span>
 
                       <span className="ax-checkout-payment-icon">
@@ -868,6 +1064,7 @@ function Checkout() {
 
                       <span className="ax-checkout-payment-copy">
                         <strong>{option.title}</strong>
+
                         <small>{option.subtitle}</small>
                       </span>
                     </button>
@@ -875,81 +1072,70 @@ function Checkout() {
                 })}
               </div>
 
+              {/* ONLINE PAYMENT */}
+
               {paymentMethod !== "cod" && (
                 <div className="ax-checkout-online-note">
                   <LockKeyhole size={14} />
                   Online payment will open securely after your backend/Razorpay
-                  order API is connected.
+                  payment API is connected.
                 </div>
               )}
 
+              {/* CASH ON DELIVERY */}
+
               {paymentMethod === "cod" && (
-                <div
-                  className={`ax-checkout-cod-rule ${
-                    codAdvanceRequired ? "advance-required" : ""
-                  }`}
-                >
+                <div className="ax-checkout-cod-rule">
                   <div className="ax-checkout-cod-rule-head">
                     <Truck size={16} />
-                    <strong>CASH ON DELIVERY RULE</strong>
+
+                    <strong>CASH ON DELIVERY</strong>
                   </div>
 
-                  {codAdvanceRequired ? (
-                    <>
-                      <p>
-                        Your order is {money(total)}. Orders of ₹2,000 or more
-                        require a <b>10% online advance</b> before the order is
-                        confirmed.
-                      </p>
-
-                      <div className="ax-checkout-cod-split">
-                        <div>
-                          <span>PAY NOW (10%)</span>
-                          <strong>{money(codAdvanceAmount)}</strong>
-                        </div>
-
-                        <div>
-                          <span>PAY ON DELIVERY</span>
-                          <strong>{money(codBalanceAmount)}</strong>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <p>
-                      Your order is below ₹2,000, so you can place it with
-                      normal Cash on Delivery.
-                    </p>
-                  )}
+                  <p>
+                    Pay the full order amount of <b>{money(total)}</b> when your
+                    order is delivered. No advance payment is required.
+                  </p>
                 </div>
               )}
             </section>
 
+            {/* MOBILE BUTTON */}
+
             <button
               type="submit"
               className="ax-checkout-place-mobile"
-              disabled={placingOrder || loadingCart}
+              disabled={placingOrder || loadingCart || !items.length}
             >
               {placingOrder
                 ? "PROCESSING..."
-                : codAdvanceRequired
-                  ? `PAY 10% (${money(codAdvanceAmount)}) & CONFIRM`
-                  : paymentMethod === "cod"
-                    ? "PLACE COD ORDER"
-                    : "CONTINUE TO PAYMENT"}
+                : paymentMethod === "cod"
+                  ? "PLACE COD ORDER"
+                  : "CONTINUE TO PAYMENT"}
+
               {!placingOrder && <ArrowRight size={18} />}
             </button>
           </form>
 
+          {/* =================================================
+              FINAL REVIEW
+          ================================================= */}
+
           <aside className="ax-checkout-summary">
             <div className="ax-checkout-summary-sticky">
+              {/* HEADER */}
+
               <div className="ax-checkout-summary-head">
                 <span>FINAL REVIEW</span>
+
                 <PackageCheck size={18} strokeWidth={1.5} />
               </div>
 
+              {/* CART */}
+
               {loadingCart ? (
                 <div className="ax-checkout-loading">
-                  <i></i>
+                  <i />
                   LOADING YOUR BAG
                 </div>
               ) : cartError ? (
@@ -957,6 +1143,7 @@ function Checkout() {
               ) : items.length === 0 ? (
                 <div className="ax-checkout-empty">
                   <p>Your bag is empty.</p>
+
                   <button type="button" onClick={() => navigate("/shop")}>
                     GO TO SHOP
                     <ArrowRight size={15} />
@@ -964,50 +1151,78 @@ function Checkout() {
                 </div>
               ) : (
                 <div className="ax-checkout-summary-items">
-                  {items.map((item, index) => (
-                    <article
-                      className="ax-checkout-summary-item"
-                      key={item?._id || item?.product?._id || index}
-                    >
-                      <div className="ax-checkout-item-image">
-                        {getItemImage(item) ? (
-                          <img
-                            src={getItemImage(item)}
-                            alt={getItemName(item)}
-                          />
-                        ) : (
-                          <span>UNBOUND</span>
-                        )}
+                  {items.map((item, index) => {
+                    const image = getItemImage(item);
 
-                        <b>{getItemQuantity(item)}</b>
-                      </div>
+                    const quantity = getItemQuantity(item);
 
-                      <div className="ax-checkout-item-copy">
-                        <h3>{getItemName(item)}</h3>
+                    const price = getItemPrice(item);
 
-                        <p>
-                          {item?.size ? `SIZE ${item.size}` : ""}
-                          {item?.size && item?.color ? " / " : ""}
-                          {item?.color ? String(item.color).toUpperCase() : ""}
-                        </p>
-                      </div>
+                    return (
+                      <article
+                        className="ax-checkout-summary-item"
+                        key={
+                          item?._id ||
+                          item?.product?._id ||
+                          item?.productId?._id ||
+                          index
+                        }
+                      >
+                        {/* IMAGE */}
 
-                      <strong>
-                        {money(getItemPrice(item) * getItemQuantity(item))}
-                      </strong>
-                    </article>
-                  ))}
+                        <div className="ax-checkout-item-image">
+                          {image ? (
+                            <img
+                              src={image}
+                              alt={getItemName(item)}
+                              onError={(event) => {
+                                event.currentTarget.style.display = "none";
+                              }}
+                            />
+                          ) : (
+                            <span>UNBOUND</span>
+                          )}
+
+                          <b>{quantity}</b>
+                        </div>
+
+                        {/* PRODUCT INFORMATION */}
+
+                        <div className="ax-checkout-item-copy">
+                          <h3>{getItemName(item)}</h3>
+
+                          <p>
+                            {item?.size ? `SIZE ${item.size}` : ""}
+
+                            {item?.size && item?.color ? " / " : ""}
+
+                            {item?.color
+                              ? String(item.color).toUpperCase()
+                              : ""}
+                          </p>
+                        </div>
+
+                        {/* PRICE */}
+
+                        <strong>{money(price * quantity)}</strong>
+                      </article>
+                    );
+                  })}
                 </div>
               )}
+
+              {/* PRICE SUMMARY */}
 
               <div className="ax-checkout-price-lines">
                 <div>
                   <span>SUBTOTAL</span>
+
                   <strong>{money(subtotal)}</strong>
                 </div>
 
                 <div>
                   <span>SHIPPING</span>
+
                   <strong className="ax-checkout-free">FREE</strong>
                 </div>
 
@@ -1016,10 +1231,13 @@ function Checkout() {
 
                   <div>
                     <small>INR</small>
+
                     <strong>{money(total)}</strong>
                   </div>
                 </div>
               </div>
+
+              {/* DESKTOP SUBMIT */}
 
               <button
                 type="button"
@@ -1034,14 +1252,14 @@ function Checkout() {
               >
                 {placingOrder
                   ? "PROCESSING..."
-                  : codAdvanceRequired
-                    ? `PAY 10% (${money(codAdvanceAmount)}) & CONFIRM`
-                    : paymentMethod === "cod"
-                      ? "PLACE COD ORDER"
-                      : "CONTINUE TO PAYMENT"}
+                  : paymentMethod === "cod"
+                    ? "PLACE COD ORDER"
+                    : "CONTINUE TO PAYMENT"}
 
                 {!placingOrder && <ArrowRight size={18} />}
               </button>
+
+              {/* TRUST */}
 
               <div className="ax-checkout-trust">
                 <span>

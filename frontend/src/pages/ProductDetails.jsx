@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-
 import {
   ArrowLeft,
   ArrowRight,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CreditCard,
@@ -16,18 +16,15 @@ import {
 } from "lucide-react";
 
 import { Link, useNavigate, useParams } from "react-router-dom";
-
 import gsap from "gsap";
-
 import products from "../data/products";
-
 import "../styles/productDetails.css";
 
-/* =========================================================
-   API
-========================================================= */
-
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+/* =========================================================
+   IMAGE URL
+========================================================= */
 
 const resolveImageUrl = (value) => {
   if (!value || typeof value !== "string") return "";
@@ -41,17 +38,15 @@ const resolveImageUrl = (value) => {
     return value;
   }
 
-  // Backend-served API/GridFS images need the backend origin.
   if (value.startsWith("/api/")) {
     return `${API_BASE}${value}`;
   }
 
-  // Vite public assets such as /products/... should stay on the frontend.
   return value;
 };
 
 /* =========================================================
-   CHECK MONGODB ID
+   MONGODB ID
 ========================================================= */
 
 const isMongoId = (value) => {
@@ -59,18 +54,140 @@ const isMongoId = (value) => {
 };
 
 /* =========================================================
-   NORMALIZE PRODUCT DATA
+   SIZE CHARTS
+========================================================= */
 
-   Supports:
+const TOP_SIZE_GUIDE = {
+  label: "TOPS / OUTERWEAR",
+  columns: [
+    {
+      key: "chest",
+      label: "CHEST",
+    },
+    {
+      key: "waist",
+      label: "WAIST",
+    },
+    {
+      key: "length",
+      label: "LENGTH",
+    },
+  ],
 
-   Backend sizes:
-   [
-     { size: "S", stock: 5 },
-     { size: "M", stock: 3 }
-   ]
+  rows: [
+    {
+      size: "XS",
+      chest: "34–36",
+      waist: "28–30",
+      length: "26",
+    },
+    {
+      size: "S",
+      chest: "36–38",
+      waist: "30–32",
+      length: "27",
+    },
+    {
+      size: "M",
+      chest: "38–40",
+      waist: "32–34",
+      length: "28",
+    },
+    {
+      size: "L",
+      chest: "40–42",
+      waist: "34–36",
+      length: "29",
+    },
+    {
+      size: "XL",
+      chest: "42–44",
+      waist: "36–38",
+      length: "30",
+    },
+    {
+      size: "XXL",
+      chest: "44–46",
+      waist: "38–40",
+      length: "31",
+    },
+  ],
+};
 
-   Old frontend sizes:
-   ["S", "M", "L", "XL"]
+const BOTTOM_SIZE_GUIDE = {
+  label: "BOTTOMS / DENIM",
+
+  columns: [
+    {
+      key: "waist",
+      label: "WAIST",
+    },
+    {
+      key: "hip",
+      label: "HIP",
+    },
+    {
+      key: "inseam",
+      label: "INSEAM",
+    },
+  ],
+
+  rows: [
+    {
+      size: "XS",
+      waist: "26–28",
+      hip: "34–36",
+      inseam: "30",
+    },
+    {
+      size: "S",
+      waist: "28–30",
+      hip: "36–38",
+      inseam: "30",
+    },
+    {
+      size: "M",
+      waist: "30–32",
+      hip: "38–40",
+      inseam: "31",
+    },
+    {
+      size: "L",
+      waist: "32–34",
+      hip: "40–42",
+      inseam: "32",
+    },
+    {
+      size: "XL",
+      waist: "34–36",
+      hip: "42–44",
+      inseam: "32",
+    },
+    {
+      size: "XXL",
+      waist: "36–38",
+      hip: "44–46",
+      inseam: "32",
+    },
+  ],
+};
+
+const getSizeGuide = (product) => {
+  const text = `
+    ${product?.category || ""}
+    ${product?.name || ""}
+  `.toLowerCase();
+
+  const isBottom =
+    /(pant|pants|jean|jeans|cargo|trouser|trousers|short|shorts|bottom|denim)/.test(
+      text,
+    );
+
+  return isBottom ? BOTTOM_SIZE_GUIDE : TOP_SIZE_GUIDE;
+};
+
+/* =========================================================
+   NORMALIZE PRODUCT
 ========================================================= */
 
 const normalizeProduct = (product) => {
@@ -133,7 +250,7 @@ const normalizeProduct = (product) => {
 };
 
 /* =========================================================
-   PRODUCT DETAILS PAGE
+   PRODUCT DETAILS
 ========================================================= */
 
 function ProductDetails() {
@@ -144,10 +261,6 @@ function ProductDetails() {
   const pageRef = useRef(null);
 
   const mainImageRef = useRef(null);
-
-  /* =========================================================
-     STATE
-  ========================================================= */
 
   const [product, setProduct] = useState(null);
 
@@ -167,6 +280,8 @@ function ProductDetails() {
 
   const [cartMessage, setCartMessage] = useState("");
 
+  const [sizeChartOpen, setSizeChartOpen] = useState(false);
+
   /* =========================================================
      LOAD PRODUCT
   ========================================================= */
@@ -177,34 +292,23 @@ function ProductDetails() {
     const loadProduct = async () => {
       try {
         setLoading(true);
-
         setError("");
-
         setProduct(null);
-
         setRelatedProducts([]);
-
         setActiveImage(0);
-
         setSelectedSize("");
-
         setQuantity(1);
-
         setCartMessage("");
+        setSizeChartOpen(false);
 
         let loadedProduct = null;
 
-        /* =====================================================
-           MONGODB PRODUCT
-
-           Example:
-           /product/68d123456789123456789123
-        ===================================================== */
+        /* MONGODB PRODUCT */
 
         if (isMongoId(id)) {
           const response = await fetch(
-  `${API_BASE}/api/catalog/products/${id}`
-);
+            `${API_BASE}/api/catalog/products/${id}`,
+          );
 
           if (!response.ok) {
             throw new Error("Product not found.");
@@ -214,9 +318,7 @@ function ProductDetails() {
 
           loadedProduct = normalizeProduct(data.product);
 
-          /* ===================================================
-             RELATED PRODUCTS
-          =================================================== */
+          /* RELATED PRODUCTS */
 
           try {
             const relatedResponse = await fetch(
@@ -233,16 +335,11 @@ function ProductDetails() {
               }
             }
           } catch (relatedError) {
-            console.log("Related products could not load:", relatedError);
+            console.log("Related products error:", relatedError);
           }
         }
 
-        /* =====================================================
-           LOCAL PRODUCT FALLBACK
-
-           Example:
-           /product/track-2
-        ===================================================== */
+        /* LOCAL FALLBACK */
 
         if (!loadedProduct) {
           const localProduct = products.find(
@@ -252,7 +349,7 @@ function ProductDetails() {
           if (localProduct) {
             loadedProduct = normalizeProduct(localProduct);
 
-            const relatedLocalProducts = products
+            const related = products
               .filter(
                 (item) =>
                   item.category === localProduct.category &&
@@ -262,14 +359,10 @@ function ProductDetails() {
               .map(normalizeProduct);
 
             if (!cancelled) {
-              setRelatedProducts(relatedLocalProducts);
+              setRelatedProducts(related);
             }
           }
         }
-
-        /* =====================================================
-           NOTHING FOUND
-        ===================================================== */
 
         if (!loadedProduct) {
           throw new Error("Product not found.");
@@ -279,24 +372,22 @@ function ProductDetails() {
 
         setProduct(loadedProduct);
 
-        /* =====================================================
-           AUTO SELECT FIRST AVAILABLE SIZE
-        ===================================================== */
+        /* AUTO SELECT FIRST AVAILABLE SIZE */
 
         if (loadedProduct.sizes?.length > 0) {
-          const availableSize = loadedProduct.sizes.find(
+          const firstAvailable = loadedProduct.sizes.find(
             (item) => Number(item.stock) > 0,
           );
 
-          if (availableSize) {
-            setSelectedSize(availableSize.size);
+          if (firstAvailable) {
+            setSelectedSize(firstAvailable.size);
           }
         }
       } catch (loadError) {
         console.error("PRODUCT LOAD ERROR:", loadError);
 
         if (!cancelled) {
-          setError(loadError.message || "Unable to load this product.");
+          setError(loadError.message || "Unable to load product.");
         }
       } finally {
         if (!cancelled) {
@@ -313,24 +404,26 @@ function ProductDetails() {
   }, [id]);
 
   /* =========================================================
-     PAGE GSAP ANIMATION
+     PAGE ANIMATION
   ========================================================= */
 
   useEffect(() => {
-    if (!product || !pageRef.current) return;
+    if (!product || !pageRef.current) {
+      return;
+    }
 
     const ctx = gsap.context(() => {
       gsap.fromTo(
         ".pd-animate",
         {
           opacity: 0,
-          y: 24,
+          y: 22,
         },
         {
           opacity: 1,
           y: 0,
           duration: 0.65,
-          stagger: 0.07,
+          stagger: 0.06,
           ease: "power3.out",
         },
       );
@@ -342,11 +435,13 @@ function ProductDetails() {
   }, [product]);
 
   /* =========================================================
-     MAIN IMAGE GSAP
+     IMAGE ANIMATION
   ========================================================= */
 
   useEffect(() => {
-    if (!mainImageRef.current) return;
+    if (!mainImageRef.current) {
+      return;
+    }
 
     gsap.killTweensOf(mainImageRef.current);
 
@@ -354,7 +449,7 @@ function ProductDetails() {
       mainImageRef.current,
       {
         opacity: 0,
-        scale: 1.045,
+        scale: 1.04,
       },
       {
         opacity: 1,
@@ -374,6 +469,12 @@ function ProductDetails() {
   }, [product]);
 
   /* =========================================================
+     SIZE GUIDE
+  ========================================================= */
+
+  const sizeGuide = useMemo(() => getSizeGuide(product), [product]);
+
+  /* =========================================================
      CURRENT SIZE
   ========================================================= */
 
@@ -383,50 +484,36 @@ function ProductDetails() {
 
   const currentStock = Number(currentSizeData?.stock || 0);
 
-  /* =========================================================
-     STOCK
-  ========================================================= */
-
   const hasStock =
     product?.sizes?.length > 0
       ? currentStock > 0
       : Number(product?.totalStock || 0) > 0;
 
   /* =========================================================
-     PREVIOUS IMAGE
+     IMAGE NAVIGATION
   ========================================================= */
 
   const previousImage = () => {
     if (images.length <= 1) return;
 
-    setActiveImage((previous) => {
-      return (previous - 1 + images.length) % images.length;
-    });
+    setActiveImage(
+      (previous) => (previous - 1 + images.length) % images.length,
+    );
   };
-
-  /* =========================================================
-     NEXT IMAGE
-  ========================================================= */
 
   const nextImage = () => {
     if (images.length <= 1) return;
 
-    setActiveImage((previous) => {
-      return (previous + 1) % images.length;
-    });
+    setActiveImage((previous) => (previous + 1) % images.length);
   };
 
   /* =========================================================
-     QUANTITY -
+     QUANTITY
   ========================================================= */
 
   const decreaseQuantity = () => {
     setQuantity((previous) => Math.max(1, previous - 1));
   };
-
-  /* =========================================================
-     QUANTITY +
-  ========================================================= */
 
   const increaseQuantity = () => {
     let maximum = 10;
@@ -441,7 +528,7 @@ function ProductDetails() {
   };
 
   /* =========================================================
-     CREATE CART ITEM
+     CART ITEM
   ========================================================= */
 
   const createCartItem = () => {
@@ -465,7 +552,7 @@ function ProductDetails() {
   };
 
   /* =========================================================
-     ADD TO CART - MONGODB CART
+     ADD TO CART
   ========================================================= */
 
   const addToCart = async () => {
@@ -556,17 +643,17 @@ function ProductDetails() {
   };
 
   /* =========================================================
-     LOADING SCREEN
+     LOADING
   ========================================================= */
 
   if (loading) {
     return (
       <main className="pd-state-page">
         <div className="pd-loader">
-          <span>AXIEE</span>
+          <span>UNBOUND</span>
 
           <div className="pd-loader-line">
-            <div></div>
+            <div />
           </div>
 
           <p>LOADING PRODUCT</p>
@@ -596,14 +683,12 @@ function ProductDetails() {
   }
 
   /* =========================================================
-     PRODUCT PAGE
+     PAGE
   ========================================================= */
 
   return (
     <main ref={pageRef} className="pd-page">
-      {/* =====================================================
-          TOP BAR
-      ===================================================== */}
+      {/* TOPBAR */}
 
       <section className="pd-topbar pd-animate">
         <button type="button" className="pd-back" onClick={() => navigate(-1)}>
@@ -613,7 +698,7 @@ function ProductDetails() {
         </button>
 
         <div className="pd-breadcrumb">
-          <Link to="/">AXIEE</Link>
+          <Link to="/">UNBOUND</Link>
 
           <span>/</span>
 
@@ -632,18 +717,12 @@ function ProductDetails() {
         </span>
       </section>
 
-      {/* =====================================================
-          MAIN PRODUCT
-      ===================================================== */}
+      {/* MAIN */}
 
       <section className="pd-main">
-        {/* ===================================================
-            LEFT PRODUCT GALLERY
-        =================================================== */}
+        {/* LEFT GALLERY */}
 
         <div className="pd-gallery pd-animate">
-          {/* THUMBNAILS */}
-
           {images.length > 0 && (
             <div className="pd-thumbnails">
               {images.map((image, index) => (
@@ -665,8 +744,6 @@ function ProductDetails() {
             </div>
           )}
 
-          {/* MAIN IMAGE */}
-
           <div className="pd-main-image-box">
             {images.length > 0 ? (
               <img
@@ -680,8 +757,6 @@ function ProductDetails() {
               <div className="pd-no-image">NO IMAGE</div>
             )}
 
-            {/* IMAGE COUNT */}
-
             {images.length > 1 && (
               <div className="pd-image-number">
                 <strong>{String(activeImage + 1).padStart(2, "0")}</strong>
@@ -691,8 +766,6 @@ function ProductDetails() {
                 <span>{String(images.length).padStart(2, "0")}</span>
               </div>
             )}
-
-            {/* IMAGE ARROWS */}
 
             {images.length > 1 && (
               <div className="pd-image-navigation">
@@ -720,13 +793,9 @@ function ProductDetails() {
           </div>
         </div>
 
-        {/* ===================================================
-            RIGHT SIDE
-        =================================================== */}
+        {/* RIGHT PRODUCT INFO */}
 
         <aside className="pd-info pd-animate">
-          {/* PRODUCT NAME */}
-
           <div className="pd-info-top">
             <div>
               <span className="pd-category">{product.category}</span>
@@ -758,15 +827,15 @@ function ProductDetails() {
             )}
           </div>
 
-          {/* SHORT DESCRIPTION */}
+          {/* DESCRIPTION */}
 
           <p className="pd-short-description">
             {product.shortDescription ||
               product.description ||
-              "Designed beyond convention. AXIEE contemporary streetwear built for modern movement."}
+              "Designed beyond convention. Contemporary streetwear built for modern movement."}
           </p>
 
-          {/* PRODUCT META */}
+          {/* META */}
 
           <div className="pd-meta">
             <div>
@@ -798,9 +867,9 @@ function ProductDetails() {
             </div>
           </div>
 
-          {/* =================================================
-              SIZE
-          ================================================= */}
+          {/* =========================
+              SIZE SELECTOR
+          ========================== */}
 
           {product.sizes?.length > 0 && (
             <div className="pd-option-section">
@@ -832,17 +901,112 @@ function ProductDetails() {
                     >
                       {item.size}
 
-                      {disabled && <span></span>}
+                      {disabled && <span />}
                     </button>
                   );
                 })}
               </div>
+
+              {/* =========================
+                  SIZE CHART
+              ========================== */}
+
+              <div
+                className={
+                  sizeChartOpen ? "pd-size-chart open" : "pd-size-chart"
+                }
+              >
+                <button
+                  type="button"
+                  className="pd-size-chart-toggle"
+                  onClick={() => setSizeChartOpen((previous) => !previous)}
+                  aria-expanded={sizeChartOpen}
+                  aria-controls="pd-size-chart-panel"
+                >
+                  <div className="pd-size-chart-toggle-copy">
+                    <span>SIZE CHART</span>
+
+                    <small>{sizeGuide.label} / INCHES</small>
+                  </div>
+
+                  <div className="pd-size-chart-arrow">
+                    <ChevronDown size={18} strokeWidth={1.5} />
+                  </div>
+                </button>
+
+                <div
+                  id="pd-size-chart-panel"
+                  className={
+                    sizeChartOpen
+                      ? "pd-size-chart-panel open"
+                      : "pd-size-chart-panel"
+                  }
+                >
+                  <div className="pd-size-chart-inner">
+                    <div className="pd-size-chart-top">
+                      <div>
+                        <span>SIZE GUIDE</span>
+
+                        <h3>FIND YOUR PERFECT FIT</h3>
+                      </div>
+
+                      <p>All measurements are in inches.</p>
+                    </div>
+
+                    <div className="pd-size-chart-note">
+                      <span>STANDARD BODY GUIDE</span>
+
+                      <small>MEASUREMENTS IN INCHES</small>
+                    </div>
+
+                    <div className="pd-size-chart-table-wrap">
+                      <table className="pd-size-chart-table">
+                        <thead>
+                          <tr>
+                            <th>SIZE</th>
+
+                            {sizeGuide.columns.map((column) => (
+                              <th key={column.key}>{column.label}</th>
+                            ))}
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {sizeGuide.rows.map((row) => (
+                            <tr
+                              key={row.size}
+                              className={
+                                selectedSize === row.size ? "active" : ""
+                              }
+                            >
+                              <td>{row.size}</td>
+
+                              {sizeGuide.columns.map((column) => (
+                                <td key={`${row.size}-${column.key}`}>
+                                  {row[column.key]}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="pd-size-chart-footer">
+                      <span>FIT TIP</span>
+
+                      <p>
+                        If you are between two sizes, choose the larger size for
+                        a relaxed streetwear fit.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* =================================================
-              QUANTITY
-          ================================================= */}
+          {/* QUANTITY */}
 
           <div className="pd-option-section">
             <div className="pd-option-heading">
@@ -882,9 +1046,7 @@ function ProductDetails() {
             </div>
           )}
 
-          {/* =================================================
-              CART / BUY
-          ================================================= */}
+          {/* ACTION BUTTONS */}
 
           <div className="pd-actions">
             <button
@@ -910,9 +1072,7 @@ function ProductDetails() {
             </button>
           </div>
 
-          {/* =================================================
-              PAYMENT
-          ================================================= */}
+          {/* PAYMENT */}
 
           <div className="pd-payment-box">
             <div className="pd-payment-title">
@@ -936,9 +1096,7 @@ function ProductDetails() {
             </div>
           </div>
 
-          {/* =================================================
-              SERVICES
-          ================================================= */}
+          {/* SERVICE */}
 
           <div className="pd-service-list">
             <div>
@@ -964,9 +1122,7 @@ function ProductDetails() {
         </aside>
       </section>
 
-      {/* =====================================================
-          PRODUCT INFORMATION
-      ===================================================== */}
+      {/* DETAILS */}
 
       <section className="pd-details pd-animate">
         <div className="pd-details-heading">
@@ -986,7 +1142,7 @@ function ProductDetails() {
             <p>
               {product.description ||
                 product.shortDescription ||
-                "AXIEE contemporary streetwear engineered for everyday movement, comfort and unconventional form."}
+                "Contemporary streetwear engineered for everyday movement, comfort and unconventional form."}
             </p>
           </div>
 
@@ -1030,9 +1186,7 @@ function ProductDetails() {
         </div>
       </section>
 
-      {/* =====================================================
-          RELATED PRODUCTS
-      ===================================================== */}
+      {/* RELATED PRODUCTS */}
 
       {relatedProducts.length > 0 && (
         <section className="pd-related pd-animate">
@@ -1064,7 +1218,7 @@ function ProductDetails() {
                   {item.images?.length > 0 ? (
                     <img src={item.images[0]} alt={item.name} />
                   ) : (
-                    <div className="pd-related-placeholder">AXIEE</div>
+                    <div className="pd-related-placeholder">UNBOUND</div>
                   )}
 
                   <span>{String(index + 1).padStart(2, "0")}</span>

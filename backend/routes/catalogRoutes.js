@@ -38,27 +38,58 @@ const imageUrl = (id) => {
 };
 
 /* =========================================================
+   CATEGORY FILTER
+
+   Supports:
+   Pants
+   TRACK PANTS
+========================================================= */
+
+const buildCategoryFilter = (category) => {
+  if (!category) {
+    return null;
+  }
+
+  const cleanCategory = String(category).trim();
+
+  const lowerCategory = cleanCategory.toLowerCase();
+
+  if (lowerCategory === "pants" || lowerCategory === "track pants") {
+    return {
+      $regex: "^(pants|track pants)$",
+      $options: "i",
+    };
+  }
+
+  const safeCategory = cleanCategory.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  return {
+    $regex: `^${safeCategory}$`,
+    $options: "i",
+  };
+};
+
+/* =========================================================
    GET ALL PRODUCT IMAGES
 ========================================================= */
 
 const getProductImages = (product) => {
   const images = [];
 
-  /*
-    Your MongoDB currently has:
+  /* =======================================================
+     imageFiles
 
-    imageFiles: [
-      {
-        fileId: ObjectId(...),
-        url: "/api/images/..."
-      }
-    ]
+     Example:
 
-    We use fileId because your real route is:
-    /api/catalog/images/:id
-  */
+     imageFiles: [
+       {
+         fileId: ObjectId(...),
+         url: "/api/images/..."
+       }
+     ]
+  ======================================================= */
 
-  if (Array.isArray(product.imageFiles)) {
+  if (Array.isArray(product?.imageFiles)) {
     const sorted = [...product.imageFiles].sort(
       (a, b) => Number(a?.order || 0) - Number(b?.order || 0),
     );
@@ -72,9 +103,11 @@ const getProductImages = (product) => {
     });
   }
 
-  /* imageIds fallback */
+  /* =======================================================
+     imageIds FALLBACK
+  ======================================================= */
 
-  if (images.length === 0 && Array.isArray(product.imageIds)) {
+  if (images.length === 0 && Array.isArray(product?.imageIds)) {
     product.imageIds.forEach((id) => {
       if (id) {
         images.push(imageUrl(id));
@@ -82,19 +115,21 @@ const getProductImages = (product) => {
     });
   }
 
-  /* existing images fallback */
+  /* =======================================================
+     EXISTING images ARRAY FALLBACK
+  ======================================================= */
 
-  if (images.length === 0 && Array.isArray(product.images)) {
+  if (images.length === 0 && Array.isArray(product?.images)) {
     product.images.forEach((item) => {
       if (!item) return;
 
       const value = String(item);
 
       /*
-        Convert old:
+        OLD:
         /api/images/ID
 
-        to:
+        NEW:
         /api/catalog/images/ID
       */
 
@@ -106,15 +141,19 @@ const getProductImages = (product) => {
     });
   }
 
-  /* single imageId */
+  /* =======================================================
+     SINGLE imageId
+  ======================================================= */
 
-  if (images.length === 0 && product.imageId) {
+  if (images.length === 0 && product?.imageId) {
     images.push(imageUrl(product.imageId));
   }
 
-  /* single image */
+  /* =======================================================
+     SINGLE image
+  ======================================================= */
 
-  if (images.length === 0 && product.image) {
+  if (images.length === 0 && product?.image) {
     const value = String(product.image);
 
     if (value.startsWith("/api/images/")) {
@@ -124,7 +163,11 @@ const getProductImages = (product) => {
     }
   }
 
-  return images;
+  /* =======================================================
+     REMOVE DUPLICATES
+  ======================================================= */
+
+  return [...new Set(images.filter(Boolean))];
 };
 
 /* =========================================================
@@ -132,6 +175,10 @@ const getProductImages = (product) => {
 ========================================================= */
 
 const formatProduct = (product) => {
+  if (!product) {
+    return null;
+  }
+
   const images = getProductImages(product);
 
   return {
@@ -152,9 +199,11 @@ const formatProduct = (product) => {
 /* =========================================================
    GET ALL PRODUCTS
 
-   /api/catalog/products
+   GET /api/catalog/products
 
-   /api/catalog/products?category=Pants
+   GET /api/catalog/products?category=Pants
+
+   GET /api/catalog/products?category=TRACK%20PANTS
 ========================================================= */
 
 router.get("/products", async (req, res) => {
@@ -181,38 +230,10 @@ router.get("/products", async (req, res) => {
     ===================================================== */
 
     if (category) {
-      const cleanCategory = String(
-        category
-      ).trim();
+      const categoryFilter = buildCategoryFilter(category);
 
-      /*
-        Your MongoDB has:
-        category: "Pants"
-
-        But this also allows:
-        TRACK PANTS
-      */
-
-      if (
-        cleanCategory.toLowerCase() ===
-          "pants" ||
-        cleanCategory.toLowerCase() ===
-          "track pants"
-      ) {
-        filter.category = {
-          $regex: "^(pants|track pants)$",
-          $options: "i",
-        };
-      } else {
-        const safeCategory = cleanCategory.replace(
-          /[.*+?^${}()|[\]\\]/g,
-          "\\$&",
-        );
-
-        filter.category = {
-          $regex: `^${safeCategory}$`,
-          $options: "i",
-        };
+      if (categoryFilter) {
+        filter.category = categoryFilter;
       }
     }
 
@@ -250,49 +271,48 @@ router.get("/products", async (req, res) => {
 /* =========================================================
    GET ONE PRODUCT
 
-   /api/catalog/products/:id
+   THIS WAS MISSING IN YOUR OLD FILE
+
+   GET /api/catalog/products/:id
 ========================================================= */
 
-router.get(
-  "/products/:id/related",
-  async (req, res) => {
-    try {
-      const db = getDatabase();
+router.get("/products/:id", async (req, res) => {
+  try {
+    const db = getDatabase();
 
-      if (!db) {
-        return res.status(500).json({
-          success: false,
-          message: "Database not connected",
-        });
-      }
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+        message: "Database not connected",
+      });
+    }
 
-      const { id } = req.params;
+    const { id } = req.params;
 
-      /* ===================================================
+    /* ===================================================
          VALIDATE ID
       =================================================== */
 
-      if (
-        !mongoose.Types.ObjectId.isValid(id)
-      ) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid product ID",
-        });
-      }
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid product ID",
+      });
+    }
 
-      const objectId =
-        new mongoose.Types.ObjectId(id);
+    const objectId = new mongoose.Types.ObjectId(id);
 
-      /* ===================================================
-         FIND CURRENT PRODUCT
+    /* ===================================================
+         FIND PRODUCT
       =================================================== */
 
-      const product = await db
-        .collection("products")
-        .findOne({
-          _id: objectId,
-        });
+    const product = await db.collection("products").findOne({
+      _id: objectId,
+
+      isActive: {
+        $ne: false,
+      },
+    });
 
     if (!product) {
       return res.status(404).json({
@@ -303,106 +323,207 @@ router.get(
 
     return res.status(200).json({
       success: true,
+
       product: formatProduct(product),
     });
   } catch (error) {
-    console.error("❌ Get catalog product error:", error);
+    console.error("❌ Get single product error:", error);
 
+    return res.status(500).json({
+      success: false,
+
+      message: "Failed to get product",
+
+      error: error.message,
+    });
+  }
+});
+
+/* =========================================================
+   GET RELATED PRODUCTS
+
+   GET /api/catalog/products/:id/related
+========================================================= */
+
+router.get("/products/:id/related", async (req, res) => {
+  try {
+    const db = getDatabase();
+
+    if (!db) {
       return res.status(500).json({
         success: false,
-
-        message: "Failed to get product",
-
-        error: error.message,
+        message: "Database not connected",
       });
     }
+
+    const { id } = req.params;
+
+    /* ===================================================
+         VALIDATE ID
+      =================================================== */
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid product ID",
+      });
+    }
+
+    const objectId = new mongoose.Types.ObjectId(id);
+
+    /* ===================================================
+         GET CURRENT PRODUCT
+      =================================================== */
+
+    const currentProduct = await db.collection("products").findOne({
+      _id: objectId,
+
+      isActive: {
+        $ne: false,
+      },
+    });
+
+    if (!currentProduct) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    /* ===================================================
+         CATEGORY MATCH
+      =================================================== */
+
+    const categoryFilter = buildCategoryFilter(currentProduct.category);
+
+    const filter = {
+      _id: {
+        $ne: objectId,
+      },
+
+      isActive: {
+        $ne: false,
+      },
+    };
+
+    if (categoryFilter) {
+      filter.category = categoryFilter;
+    }
+
+    /* ===================================================
+         FIND RELATED
+      =================================================== */
+
+    const relatedProducts = await db
+      .collection("products")
+      .find(filter)
+      .sort({
+        featured: -1,
+        soldCount: -1,
+        createdAt: -1,
+      })
+      .limit(4)
+      .toArray();
+
+    return res.status(200).json({
+      success: true,
+
+      count: relatedProducts.length,
+
+      products: relatedProducts.map(formatProduct),
+    });
+  } catch (error) {
+    console.error("❌ Get related products error:", error);
+
+    return res.status(500).json({
+      success: false,
+
+      message: "Failed to get related products",
+
+      error: error.message,
+    });
   }
-);
+});
 
 /* =========================================================
    GRIDFS IMAGE
 
-   /api/catalog/images/:id
+   GET /api/catalog/images/:id
 ========================================================= */
 
-router.get(
-  "/images/:id",
-  async (req, res) => {
-    try {
-      const db = getDatabase();
+router.get("/images/:id", async (req, res) => {
+  try {
+    const db = getDatabase();
 
-      if (!db) {
-        return res
-          .status(500)
-          .send("Database not connected");
-      }
+    if (!db) {
+      return res.status(500).send("Database not connected");
+    }
 
     const { id } = req.params;
 
-      if (
-        !mongoose.Types.ObjectId.isValid(id)
-      ) {
-        return res
-          .status(400)
-          .send("Invalid image ID");
-      }
+    /* ===================================================
+         VALIDATE IMAGE ID
+      =================================================== */
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).send("Invalid image ID");
+    }
 
     const objectId = new mongoose.Types.ObjectId(id);
 
-      const bucket = getGridFSBucket();
+    const bucket = getGridFSBucket();
 
     if (!bucket) {
       return res.status(500).send("GridFS unavailable");
     }
 
-      const file = await db
-        .collection("productImages.files")
-        .findOne({
-          _id: objectId,
-        });
+    /* ===================================================
+         CHECK FILE EXISTS
+      =================================================== */
+
+    const file = await db.collection("productImages.files").findOne({
+      _id: objectId,
+    });
 
     if (!file) {
       return res.status(404).send("Image not found");
     }
 
-      const contentType =
-        file.metadata?.contentType ||
-        file.contentType ||
-        "image/jpeg";
+    /* ===================================================
+         CONTENT TYPE
+      =================================================== */
 
-      res.setHeader(
-        "Content-Type",
-        contentType
-      );
+    const contentType =
+      file.metadata?.contentType || file.contentType || "image/jpeg";
 
-      res.setHeader(
-        "Cache-Control",
-        "public, max-age=31536000, immutable"
-      );
+    res.setHeader("Content-Type", contentType);
 
-   const stream = bucket.openDownloadStream(objectId);
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
 
-stream.on("error", (error) => {
-  console.error("❌ GridFS stream error:", error);
+    /* ===================================================
+         STREAM IMAGE
+      =================================================== */
 
-  if (!res.headersSent) {
-    res.status(404).send("Image not found");
-  } else {
-    res.end();
+    const stream = bucket.openDownloadStream(objectId);
+
+    stream.on("error", (error) => {
+      console.error("❌ GridFS stream error:", error);
+
+      if (!res.headersSent) {
+        res.status(404).send("Image not found");
+      } else {
+        res.end();
+      }
+    });
+
+    stream.pipe(res);
+  } catch (error) {
+    console.error("❌ GridFS image error:", error);
+
+    if (!res.headersSent) {
+      return res.status(500).send("Failed to load image");
+    }
   }
-});
-
-stream.pipe(res);
-
-} catch (error) {
-  console.error("❌ GridFS image error:", error);
-
-  if (!res.headersSent) {
-    return res
-      .status(500)
-      .send("Failed to load image");
-  }
-}
 });
 
 export default router;

@@ -1724,3 +1724,143 @@
     font-size: 4px;
   }
 }
+
+/* =========================================================
+   SHOP CATEGORY TEXT TABS
+========================================================= */
+
+.shop-category-filter {
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+
+  gap: 34px;
+
+  padding: 0 0 24px;
+
+  overflow-x: auto;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+  scrollbar-width: none;
+}
+
+.shop-category-filter::-webkit-scrollbar {
+  display: none;
+}
+
+/* =========================================================
+   NORMAL TAB
+========================================================= */
+
+.shop-category-filter button {
+  position: relative;
+
+  flex: 0 0 auto;
+
+  appearance: none;
+  -webkit-appearance: none;
+
+  padding: 0 0 14px;
+
+  border: none !important;
+  outline: none !important;
+
+  background: transparent !important;
+
+  color: rgba(255, 255, 255, 0.45);
+
+  font-family: inherit;
+
+  font-size: 10px;
+  font-weight: 600;
+
+  letter-spacing: 0.12em;
+
+  text-transform: uppercase;
+
+  white-space: nowrap;
+
+  cursor: pointer;
+
+  transition:
+    color 0.25s ease,
+    opacity 0.25s ease;
+}
+
+/* =========================================================
+   UNDERLINE
+========================================================= */
+
+.shop-category-filter button::after {
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+  bottom: -1px;
+
+  width: 0;
+  height: 2px;
+
+  background: #cfff24;
+
+  transition: width 0.3s ease;
+}
+
+/* =========================================================
+   HOVER
+========================================================= */
+
+.shop-category-filter button:hover {
+  color: #ffffff;
+}
+
+/* =========================================================
+   ACTIVE
+========================================================= */
+
+.shop-category-filter button.active {
+  color: #cfff24 !important;
+
+  background: transparent !important;
+
+  border: none !important;
+}
+
+.shop-category-filter button.active::after {
+  width: 100%;
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+  .shop-category-filter {
+    gap: 24px;
+
+    padding-bottom: 20px;
+  }
+
+  .shop-category-filter button {
+    font-size: 9px;
+
+    padding-bottom: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .shop-category-filter {
+    gap: 20px;
+
+    width: calc(100% + 20px);
+
+    padding-right: 20px;
+  }
+
+  .shop-category-filter button {
+    font-size: 8px;
+  }
+}

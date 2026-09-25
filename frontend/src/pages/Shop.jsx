@@ -18,49 +18,41 @@ const categories = [
     label: "ALL",
     value: "ALL",
   },
-
   {
     id: "tshirts",
     label: "T-SHIRTS",
     value: "T-SHIRTS",
   },
-
   {
     id: "jeans",
     label: "JEANS",
     value: "JEANS",
   },
-
   {
     id: "trackpants",
     label: "TRACK PANTS",
     value: "TRACK PANTS",
   },
-
   {
     id: "shirts",
     label: "SHIRTS",
     value: "SHIRTS",
   },
-
   {
     id: "shorts",
     label: "SHORTS",
     value: "SHORTS",
   },
-
   {
     id: "hoodies",
     label: "HOODIES",
     value: "HOODIES",
   },
-
   {
     id: "coords",
     label: "CO-ORD SETS",
     value: "CO-ORD SETS",
   },
-
   {
     id: "jackets",
     label: "JACKETS",
@@ -100,9 +92,9 @@ function Shop() {
 
   const [likedProducts, setLikedProducts] = useState({});
 
-  /* =========================================================
+  /* =======================================================
      FILTER PRODUCTS
-  ========================================================= */
+  ======================================================= */
 
   const filteredProducts = useMemo(() => {
     let result = [...products];
@@ -123,9 +115,12 @@ function Shop() {
           product.name,
           product.category,
           product.color,
+
           ...(product.colors || []),
+
           product.fit,
           product.style,
+
           ...(product.keywords || []),
         ]
           .filter(Boolean)
@@ -153,9 +148,9 @@ function Shop() {
     return result;
   }, [activeCategory, search, sort]);
 
-  /* =========================================================
+  /* =======================================================
      SELECT SIZE
-  ========================================================= */
+  ======================================================= */
 
   const selectSize = (productId, size) => {
     setSelectedSizes((previous) => ({
@@ -165,9 +160,9 @@ function Shop() {
     }));
   };
 
-  /* =========================================================
+  /* =======================================================
      LIKE PRODUCT
-  ========================================================= */
+  ======================================================= */
 
   const toggleLike = (productId) => {
     setLikedProducts((previous) => ({
@@ -177,9 +172,9 @@ function Shop() {
     }));
   };
 
-  /* =========================================================
+  /* =======================================================
      ADD TO CART
-  ========================================================= */
+  ======================================================= */
 
   const addToCart = (product) => {
     const selectedSize = selectedSizes[product.id] || product.sizes?.[0];
@@ -210,7 +205,11 @@ function Shop() {
         });
       }
 
-      localStorage.setItem("axiee-cart", JSON.stringify(currentCart));
+      localStorage.setItem(
+        "axiee-cart",
+
+        JSON.stringify(currentCart),
+      );
 
       window.dispatchEvent(new Event("axiee-cart-updated"));
     } catch (error) {
@@ -218,9 +217,9 @@ function Shop() {
     }
   };
 
-  /* =========================================================
+  /* =======================================================
      BUY NOW
-  ========================================================= */
+  ======================================================= */
 
   const buyNow = (product) => {
     const selectedSize = selectedSizes[product.id] || product.sizes?.[0];
@@ -239,18 +238,26 @@ function Shop() {
       quantity: 1,
     };
 
-    localStorage.setItem("axiee-buy-now", JSON.stringify(buyNowProduct));
+    localStorage.setItem(
+      "axiee-buy-now",
+
+      JSON.stringify(buyNowProduct),
+    );
 
     navigate("/checkout");
   };
 
-  /* =========================================================
+  /* =======================================================
      PRODUCT URL
-  ========================================================= */
+  ======================================================= */
 
   const productUrl = (product) => {
     return `/product/${product.id}`;
   };
+
+  /* =======================================================
+     RETURN
+  ======================================================= */
 
   return (
     <main className="shop-page">
@@ -259,11 +266,11 @@ function Shop() {
       ===================================================== */}
 
       <section className="category-text-hero">
-        <div className="category-grid-bg"></div>
+        <div className="category-grid-bg" />
 
-        <div className="category-glow category-glow-one"></div>
+        <div className="category-glow category-glow-one" />
 
-        <div className="category-glow category-glow-two"></div>
+        <div className="category-glow category-glow-two" />
 
         {/* LEFT */}
 
@@ -289,7 +296,7 @@ function Shop() {
           </p>
         </div>
 
-        {/* RIGHT TECHNICAL ART */}
+        {/* RIGHT */}
 
         <div className="category-visual">
           <svg
@@ -387,8 +394,6 @@ function Shop() {
           <span className="category-coordinate bottom">72°52'18"E</span>
         </div>
 
-        {/* BOTTOM */}
-
         <div className="category-hero-bottom">
           <span>AXIEE © 2026</span>
 
@@ -397,7 +402,7 @@ function Shop() {
       </section>
 
       {/* =====================================================
-          GLOBAL SEARCH
+          SEARCH
       ===================================================== */}
 
       <section className="category-global-search">
@@ -458,7 +463,7 @@ function Shop() {
 
       <section className="shop-products-section">
         {/* =================================================
-            CATEGORY FILTER
+            CLEAN TEXT CATEGORY TABS
         ================================================= */}
 
         <div className="shop-category-filter">
@@ -474,9 +479,7 @@ function Shop() {
           ))}
         </div>
 
-        {/* =================================================
-            TOOLBAR
-        ================================================= */}
+        {/* TOOLBAR */}
 
         <div className="shop-products-toolbar">
           <div className="shop-products-count">
@@ -525,7 +528,7 @@ function Shop() {
                     className="shop-product-image"
                   />
 
-                  <div className="shop-image-fog"></div>
+                  <div className="shop-image-fog" />
 
                   {product.isNew !== false && (
                     <span className="shop-new-tag">NEW</span>
@@ -565,7 +568,7 @@ function Shop() {
                     </Link>
                   </div>
 
-                  {/* PRODUCT META */}
+                  {/* META */}
 
                   <div className="category-product-meta">
                     <span>{product.color || product.category}</span>

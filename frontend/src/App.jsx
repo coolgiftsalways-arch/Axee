@@ -29,6 +29,7 @@ import Footer from "./components/Footer.jsx";
 ========================================================= */
 
 import Home from "./pages/Home.jsx";
+import Shop from "./pages/Shop.jsx";
 import Tshirts from "./pages/Tshirts.jsx";
 import Shirts from "./pages/Shirts.jsx";
 import Hoodies from "./pages/Hoodies.jsx";
@@ -93,8 +94,6 @@ function Layout() {
 
   const audioRef = useRef(null);
 
-  // Keep access to the current smooth-scroll instance so route changes
-  // can force the next page to the real top.
   const locomotiveRef = useRef(null);
 
   const shouldPlayHeroIntro = loadingComplete && !heroAlreadyPlayed;
@@ -117,15 +116,22 @@ function Layout() {
   }, []);
 
   const forceScrollToTop = useCallback(() => {
-    // Clear GSAP's remembered scroll position.
+    /* =================================================
+       CLEAR GSAP SCROLL MEMORY
+    ================================================= */
+
     try {
       ScrollTrigger.clearScrollMemory("manual");
     } catch (error) {
       console.warn("ScrollTrigger scroll memory error:", error);
     }
 
-    // Reset normal browser scroll.
+    /* =================================================
+       NORMAL BROWSER SCROLL
+    ================================================= */
+
     document.documentElement.scrollTop = 0;
+
     document.body.scrollTop = 0;
 
     window.scrollTo({
@@ -134,7 +140,10 @@ function Layout() {
       behavior: "auto",
     });
 
-    // Reset Locomotive Scroll / Lenis as well.
+    /* =================================================
+       LOCOMOTIVE / LENIS SCROLL
+    ================================================= */
+
     const locomotive = locomotiveRef.current;
 
     if (locomotive) {
@@ -178,7 +187,6 @@ function Layout() {
 
     forceScrollToTop();
 
-    // Run again after React paints the new page.
     const frameOne = requestAnimationFrame(() => {
       forceScrollToTop();
 
@@ -187,8 +195,6 @@ function Layout() {
       });
     });
 
-    // PageTransition / images / layout can move the page after the first paint,
-    // so do one final hard reset shortly afterwards.
     const timer = setTimeout(() => {
       forceScrollToTop();
 
@@ -225,7 +231,9 @@ function Layout() {
     }
 
     audio.preload = "auto";
+
     audio.volume = 1;
+
     audio.muted = false;
 
     audio.load();
@@ -277,7 +285,6 @@ function Layout() {
             .then(() => {
               console.log("🔊 AXIEE SOUND PLAYING");
             })
-
             .catch((error) => {
               console.warn("Browser blocked autoplay:", error);
             });
@@ -322,9 +329,11 @@ function Layout() {
     /* RESTORE NORMAL SCROLL */
 
     document.documentElement.style.overflow = "";
+
     document.body.style.overflow = "";
 
     document.documentElement.style.height = "";
+
     document.body.style.height = "";
 
     /* SCROLL TOP */
@@ -377,7 +386,7 @@ function Layout() {
     }
 
     /* ===================================================
-       WEBSITE
+       NORMAL WEBSITE
     =================================================== */
 
     document.documentElement.style.overflow = "";
@@ -397,8 +406,6 @@ function Layout() {
 
       locomotiveRef.current = locomotiveScroll;
 
-      // Important: native window.scrollTo alone is not enough when
-      // smooth scrolling is active. Reset the smooth-scroll engine too.
       forceScrollToTop();
     } catch (error) {
       console.warn("Locomotive Scroll error:", error);
@@ -455,65 +462,65 @@ function Layout() {
     return (
       <Routes>
         <Route path="/admin" element={<AdminLayout />}>
-          {/* =============================
+          {/* =================================================
               DASHBOARD
-          ============================== */}
+          ================================================= */}
 
           <Route index element={<Dashboard />} />
 
           <Route path="dashboard" element={<Dashboard />} />
 
-          {/* =============================
+          {/* =================================================
               ORDERS
-          ============================== */}
+          ================================================= */}
 
           <Route path="orders" element={<Orders />} />
 
-          {/* =============================
+          {/* =================================================
               PRODUCTS
-          ============================== */}
+          ================================================= */}
 
           <Route path="products" element={<Products />} />
 
-          {/* =============================
+          {/* =================================================
               CATEGORIES
-          ============================== */}
+          ================================================= */}
 
           <Route path="categories" element={<Categories />} />
 
-          {/* =============================
+          {/* =================================================
               CUSTOMERS
-          ============================== */}
+          ================================================= */}
 
           <Route path="customers" element={<Customers />} />
 
-          {/* =============================
+          {/* =================================================
               COUPONS
-          ============================== */}
+          ================================================= */}
 
           <Route path="coupons" element={<Coupons />} />
 
-          {/* =============================
+          {/* =================================================
               SLIDERS
-          ============================== */}
+          ================================================= */}
 
           <Route path="sliders" element={<Sliders />} />
 
-          {/* =============================
+          {/* =================================================
               BANNERS
-          ============================== */}
+          ================================================= */}
 
           <Route path="banners" element={<Banners />} />
 
-          {/* =============================
+          {/* =================================================
               SETTINGS
-          ============================== */}
+          ================================================= */}
 
           <Route path="settings" element={<Settings />} />
 
-          {/* =============================
+          {/* =================================================
               WRONG ADMIN URL
-          ============================== */}
+          ================================================= */}
 
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Route>
@@ -538,6 +545,10 @@ function Layout() {
         <Navbar />
 
         <Routes>
+          {/* =================================================
+              HOME
+          ================================================= */}
+
           <Route
             path="/"
             element={
@@ -550,29 +561,105 @@ function Layout() {
             }
           />
 
+          {/* =================================================
+              SHOP
+          ================================================= */}
+
+          <Route path="/shop" element={<Shop />} />
+
+          {/* =================================================
+              PRODUCT DETAILS
+          ================================================= */}
+
           <Route path="/product/:id" element={<ProductDetails />} />
 
+          {/* =================================================
+              T-SHIRTS
+          ================================================= */}
+
           <Route path="/tshirts" element={<Tshirts />} />
+
           <Route path="/t-shirts" element={<Tshirts />} />
+
+          {/* =================================================
+              SHIRTS
+          ================================================= */}
+
           <Route path="/shirts" element={<Shirts />} />
+
+          {/* =================================================
+              HOODIES
+          ================================================= */}
+
           <Route path="/hoodies" element={<Hoodies />} />
+
+          {/* =================================================
+              JEANS
+          ================================================= */}
+
           <Route path="/jeans" element={<Jeans />} />
+
+          {/* =================================================
+              TRACK PANTS
+          ================================================= */}
+
           <Route path="/track-pants" element={<TrackPants />} />
+
+          {/* =================================================
+              SHORTS
+          ================================================= */}
+
           <Route path="/shorts" element={<Shorts />} />
+
+          {/* =================================================
+              JACKETS
+          ================================================= */}
+
           <Route path="/jackets" element={<Jackets />} />
+
+          {/* =================================================
+              CO-ORD SETS
+          ================================================= */}
+
           <Route path="/co-ord-sets" element={<CoOrdSets />} />
+
+          {/* =================================================
+              BEST SELLERS
+          ================================================= */}
+
           <Route path="/best-sellers" element={<BestSellers />} />
+
+          {/* =================================================
+              TRACK ORDER
+          ================================================= */}
+
           <Route path="/track-order" element={<TrackOrder />} />
+
+          {/* =================================================
+              CART
+          ================================================= */}
+
           <Route path="/cart" element={<Cart />} />
+
+          {/* =================================================
+              CHECKOUT
+          ================================================= */}
+
           <Route path="/checkout" element={<Checkout />} />
 
-          <Route path="/shop" element={<Shirts />} />
+          {/* =================================================
+              WRONG URL
+          ================================================= */}
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
 
         <Footer />
       </div>
+
+      {/* =====================================================
+          HOME LOADER
+      ===================================================== */}
 
       {isHomePage && !loadingComplete && !heroAlreadyPlayed && (
         <Loader onComplete={handleLoaderComplete} />

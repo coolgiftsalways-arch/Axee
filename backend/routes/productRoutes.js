@@ -15,6 +15,9 @@ const router = express.Router();
 
 /* =========================================================
    GET ALL PRODUCTS
+
+   /api/products
+   /api/products?includeInactive=true
 ========================================================= */
 
 router.get("/", getProducts);
@@ -60,9 +63,5 @@ router.put("/:id", updateProduct);
 ========================================================= */
 
 router.delete("/:id", deleteProduct);
-
-/* =========================================================
-   IMPORTANT
-========================================================= */
 
 export default router;

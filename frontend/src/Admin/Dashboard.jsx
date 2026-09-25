@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+
+import { useNavigate } from "react-router-dom";
 
 import {
   IndianRupee,
@@ -8,6 +10,7 @@ import {
   TrendingUp,
   CalendarDays,
   ArrowUpRight,
+  RefreshCw,
 } from "lucide-react";
 
 import {
@@ -22,106 +25,572 @@ import {
 
 import "../AdminCss/dashboard.css";
 
+/* =========================================================
+   API
+========================================================= */
+
+const API_BASE = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000"
+).replace(/\/$/, "");
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const formatMoney = (value) => {
+  return `₹${Number(value || 0).toLocaleString("en-IN")}`;
+};
+
+const formatDate = (value) => {
+  if (!value) {
+    return "-";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const formatStatus = (status) => {
+  return String(status || "")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+};
+
+const getStatusClass = (status) => {
+  const value = String(status || "").toLowerCase();
+
+  if (value === "pending_payment" || value === "placed") {
+    return "admin-status admin-status-pending";
+  }
+
+  if (value === "confirmed" || value === "processing") {
+    return "admin-status admin-status-processing";
+  }
+
+  if (value === "shipped") {
+    return "admin-status admin-status-shipped";
+  }
+
+  if (value === "delivered") {
+    return "admin-status admin-status-delivered";
+  }
+
+  if (value === "cancelled") {
+    return "admin-status admin-status-cancelled";
+  }
+
+  return "admin-status admin-status-pending";
+};
+
+/* =========================================================
+   DASHBOARD
+========================================================= */
+
 const Dashboard = () => {
+  const navigate = useNavigate();
+
+  const [orders, setOrders] = useState([]);
+
+  const [products, setProducts] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  const [error, setError] = useState("");
+
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  /* =======================================================
+     FETCH ORDERS
+  ======================================================= */
+
+  const fetchOrders = async () => {
+    const response = await fetch(`${API_BASE}/api/orders`, {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data?.message || "Could not load orders.");
+    }
+
+    return Array.isArray(data?.orders) ? data.orders : [];
+  };
+
+  /* =======================================================
+     FETCH PRODUCTS
+  ======================================================= */
+
+  const fetchProducts = async () => {
+    const response = await fetch(`${API_BASE}/api/catalog/products`, {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data?.message || "Could not load products.");
+    }
+
+    return Array.isArray(data?.products) ? data.products : [];
+  };
+
+  /* =======================================================
+     LOAD DASHBOARD
+
+     IMPORTANT:
+     Orders and products load separately.
+
+     So if product API fails,
+     orders will STILL appear.
+  ======================================================= */
+
+  const loadDashboard = useCallback(async (showMainLoader = false) => {
+    try {
+      if (showMainLoader) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
+
+      setError("");
+
+      const results = await Promise.allSettled([
+        fetchOrders(),
+        fetchProducts(),
+      ]);
+
+      const ordersResult = results[0];
+
+      const productsResult = results[1];
+
+      /* ORDERS */
+
+      if (ordersResult.status === "fulfilled") {
+        setOrders(ordersResult.value);
+      } else {
+        console.error("Dashboard orders error:", ordersResult.reason);
+
+        setError(ordersResult.reason?.message || "Orders could not be loaded.");
+      }
+
+      /* PRODUCTS */
+
+      if (productsResult.status === "fulfilled") {
+        setProducts(productsResult.value);
+      } else {
+        console.error("Dashboard products error:", productsResult.reason);
+
+        /*
+            Do NOT stop orders from showing
+            because products failed.
+          */
+      }
+
+      setLastUpdated(new Date());
+    } catch (loadError) {
+      console.error("Dashboard error:", loadError);
+
+      setError(loadError.message || "Dashboard could not be loaded.");
+    } finally {
+      setLoading(false);
+
+      setRefreshing(false);
+    }
+  }, []);
+
+  /* =======================================================
+     INITIAL LOAD + AUTO REFRESH
+  ======================================================= */
+
+  useEffect(() => {
+    loadDashboard(true);
+
+    /*
+      Refresh every 10 seconds.
+      Useful if admin dashboard is open
+      while customers place orders.
+    */
+
+    const interval = window.setInterval(() => {
+      loadDashboard(false);
+    }, 10000);
+
+    /*
+      Refresh when you return to
+      the browser/tab.
+    */
+
+    const handleFocus = () => {
+      loadDashboard(false);
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadDashboard(false);
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.clearInterval(interval);
+
+      window.removeEventListener("focus", handleFocus);
+
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [loadDashboard]);
+
+  /* =======================================================
+     TOTAL ORDERS
+  ======================================================= */
+
+  const totalOrders = orders.length;
+
+  /* =======================================================
+     TOTAL PRODUCTS
+  ======================================================= */
+
+  const totalProducts = products.length;
+
+  /* =======================================================
+     CUSTOMERS
+
+     Same email = same customer.
+  ======================================================= */
+
+  const totalCustomers = useMemo(() => {
+    const uniqueCustomers = new Set();
+
+    orders.forEach((order) => {
+      const email = order?.customer?.email?.trim()?.toLowerCase();
+
+      if (email) {
+        uniqueCustomers.add(email);
+      }
+    });
+
+    return uniqueCustomers.size;
+  }, [orders]);
+
+  /* =======================================================
+     VALID ORDERS
+
+     Cancelled orders do not count
+     in revenue/product sales.
+  ======================================================= */
+
+  const validOrders = useMemo(() => {
+    return orders.filter(
+      (order) => String(order?.orderStatus || "").toLowerCase() !== "cancelled",
+    );
+  }, [orders]);
+
+  /* =======================================================
+     REVENUE
+  ======================================================= */
+
+  const totalRevenue = useMemo(() => {
+    return validOrders.reduce(
+      (total, order) => total + Number(order?.total || 0),
+      0,
+    );
+  }, [validOrders]);
+
+  /* =======================================================
+     PRODUCTS SOLD
+  ======================================================= */
+
+  const productsSold = useMemo(() => {
+    return validOrders.reduce((grandTotal, order) => {
+      const orderQuantity = (order?.items || []).reduce(
+        (itemTotal, item) => itemTotal + Number(item?.quantity || 0),
+        0,
+      );
+
+      return grandTotal + orderQuantity;
+    }, 0);
+  }, [validOrders]);
+
+  /* =======================================================
+     AVERAGE ORDER
+  ======================================================= */
+
+  const averageOrder =
+    validOrders.length > 0 ? totalRevenue / validOrders.length : 0;
+
+  /* =======================================================
+     RETURNING CUSTOMERS
+  ======================================================= */
+
+  const returningCustomerRate = useMemo(() => {
+    const customerCount = {};
+
+    validOrders.forEach((order) => {
+      const email = order?.customer?.email?.trim()?.toLowerCase();
+
+      if (!email) {
+        return;
+      }
+
+      customerCount[email] = (customerCount[email] || 0) + 1;
+    });
+
+    const counts = Object.values(customerCount);
+
+    if (counts.length === 0) {
+      return 0;
+    }
+
+    const returning = counts.filter((count) => count > 1).length;
+
+    return Math.round((returning / counts.length) * 100);
+  }, [validOrders]);
+
+  /* =======================================================
+     SALES CHART
+  ======================================================= */
+
+  const salesData = useMemo(() => {
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+
+    const currentYear = new Date().getFullYear();
+
+    return months.map((month, monthIndex) => {
+      const sales = validOrders
+        .filter((order) => {
+          if (!order?.createdAt) {
+            return false;
+          }
+
+          const date = new Date(order.createdAt);
+
+          return (
+            date.getFullYear() === currentYear && date.getMonth() === monthIndex
+          );
+        })
+        .reduce((total, order) => total + Number(order?.total || 0), 0);
+
+      return {
+        month,
+        sales,
+      };
+    });
+  }, [validOrders]);
+
+  /* =======================================================
+     RECENT ORDERS
+  ======================================================= */
+
+  const recentOrders = useMemo(() => {
+    return [...orders]
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+      .slice(0, 5);
+  }, [orders]);
+
+  /* =======================================================
+     TOP PRODUCTS
+  ======================================================= */
+
+  const topProducts = useMemo(() => {
+    const map = {};
+
+    validOrders.forEach((order) => {
+      (order?.items || []).forEach((item) => {
+        const key = item?.productId || item?.name;
+
+        if (!key) {
+          return;
+        }
+
+        if (!map[key]) {
+          map[key] = {
+            id: key,
+
+            name: item?.name || "Product",
+
+            sold: 0,
+
+            revenue: 0,
+          };
+        }
+
+        const quantity = Number(item?.quantity || 0);
+
+        const lineTotal = Number(
+          item?.lineTotal ?? Number(item?.price || 0) * quantity,
+        );
+
+        map[key].sold += quantity;
+
+        map[key].revenue += lineTotal;
+      });
+    });
+
+    return Object.values(map)
+      .sort((a, b) => b.sold - a.sold)
+      .slice(0, 5);
+  }, [validOrders]);
+
+  /* =======================================================
+     STATS
+  ======================================================= */
+
   const stats = [
     {
       title: "Total Orders",
-      value: "1,248",
-      change: "+12%",
+
+      value: totalOrders.toLocaleString("en-IN"),
+
       icon: ShoppingBag,
     },
+
     {
       title: "Total Products",
-      value: "356",
-      change: "+8%",
+
+      value: totalProducts.toLocaleString("en-IN"),
+
       icon: Package,
     },
+
     {
       title: "Total Customers",
-      value: "892",
-      change: "+15%",
+
+      value: totalCustomers.toLocaleString("en-IN"),
+
       icon: Users,
     },
+
     {
       title: "Total Revenue",
-      value: "₹4,52,300",
-      change: "+18%",
+
+      value: formatMoney(totalRevenue),
+
       icon: IndianRupee,
     },
   ];
 
-  const salesData = [
-    { month: "Jan", sales: 14000 },
-    { month: "Feb", sales: 21000 },
-    { month: "Mar", sales: 18500 },
-    { month: "Apr", sales: 27000 },
-    { month: "May", sales: 42000 },
-    { month: "Jun", sales: 35000 },
-    { month: "Jul", sales: 31000 },
-    { month: "Aug", sales: 45000 },
-    { month: "Sep", sales: 42000 },
-    { month: "Oct", sales: 58000 },
-    { month: "Nov", sales: 47000 },
-    { month: "Dec", sales: 64000 },
-  ];
+  /* =======================================================
+     DATE
+  ======================================================= */
 
-  const recentOrders = [
-    {
-      id: "#AX1001",
-      customer: "Rahul Sharma",
-      date: "21 Sep 2026",
-      amount: "₹2,499",
-      status: "Delivered",
-    },
-    {
-      id: "#AX1002",
-      customer: "Priya Mehta",
-      date: "21 Sep 2026",
-      amount: "₹1,299",
-      status: "Processing",
-    },
-    {
-      id: "#AX1003",
-      customer: "Arjun Verma",
-      date: "20 Sep 2026",
-      amount: "₹3,499",
-      status: "Shipped",
-    },
-    {
-      id: "#AX1004",
-      customer: "Sneha Kapoor",
-      date: "20 Sep 2026",
-      amount: "₹999",
-      status: "Pending",
-    },
-    {
-      id: "#AX1005",
-      customer: "Karan Singh",
-      date: "19 Sep 2026",
-      amount: "₹1,499",
-      status: "Delivered",
-    },
-  ];
+  const today = new Date().toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 
-  const getStatusClass = (status) => {
-    return `admin-status admin-status-${status.toLowerCase()}`;
-  };
+  /* =======================================================
+     UI
+  ======================================================= */
 
   return (
     <div className="dashboard-page">
+      {/* =================================================
+          HEADER
+      ================================================= */}
+
       <div className="dashboard-heading-row">
         <div>
+          <span className="dashboard-eyebrow">AXIEE ADMIN / OVERVIEW</span>
+
           <h1>Dashboard</h1>
 
-          <p>Welcome back. Here's what's happening with your AXIEE store.</p>
+          <p>Live overview of your AXIEE store.</p>
+
+          {lastUpdated && (
+            <p
+              style={{
+                marginTop: "5px",
+                fontSize: "10px",
+              }}
+            >
+              Last updated:{" "}
+              {lastUpdated.toLocaleTimeString("en-IN", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              })}
+            </p>
+          )}
+
+          {error && (
+            <p
+              style={{
+                color: "#d92d20",
+                marginTop: "8px",
+              }}
+            >
+              {error}
+            </p>
+          )}
         </div>
 
-        <button className="dashboard-date-button">
-          <CalendarDays size={17} />
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            flexWrap: "wrap",
+          }}
+        >
+          <button
+            type="button"
+            className="dashboard-date-button"
+            onClick={() => loadDashboard(false)}
+            disabled={refreshing}
+          >
+            <RefreshCw size={16} />
 
-          <span>September 21, 2026</span>
-        </button>
+            <span>{refreshing ? "Refreshing..." : "Refresh"}</span>
+          </button>
+
+          <button type="button" className="dashboard-date-button">
+            <CalendarDays size={17} />
+
+            <span>{today}</span>
+          </button>
+        </div>
       </div>
+
+      {/* =================================================
+          STATS
+      ================================================= */}
 
       <div className="dashboard-stats-grid">
         {stats.map((stat) => {
@@ -137,11 +606,11 @@ const Dashboard = () => {
                 <p>{stat.title}</p>
 
                 <div className="dashboard-stat-value-row">
-                  <h2>{stat.value}</h2>
+                  <h2>{loading ? "..." : stat.value}</h2>
 
                   <span>
                     <TrendingUp size={14} />
-                    {stat.change}
+                    LIVE
                   </span>
                 </div>
               </div>
@@ -150,19 +619,22 @@ const Dashboard = () => {
         })}
       </div>
 
+      {/* =================================================
+          MIDDLE
+      ================================================= */}
+
       <div className="dashboard-middle-grid">
+        {/* SALES */}
+
         <section className="dashboard-card dashboard-chart-card">
           <div className="dashboard-card-heading">
             <div>
-              <h2>Sales Overview</h2>
-              <p>Store revenue performance</p>
-            </div>
+              <span className="dashboard-card-label">ANALYTICS</span>
 
-            <select>
-              <option>This Year</option>
-              <option>This Month</option>
-              <option>This Week</option>
-            </select>
+              <h2>Sales Overview</h2>
+
+              <p>Revenue during {new Date().getFullYear()}</p>
+            </div>
           </div>
 
           <div className="dashboard-chart">
@@ -186,9 +658,15 @@ const Dashboard = () => {
 
                 <XAxis dataKey="month" tickLine={false} axisLine={false} />
 
-                <YAxis tickLine={false} axisLine={false} />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `₹${Math.round(value / 1000)}k`}
+                />
 
-                <Tooltip />
+                <Tooltip
+                  formatter={(value) => [formatMoney(value), "Revenue"]}
+                />
 
                 <Area
                   type="monotone"
@@ -202,112 +680,153 @@ const Dashboard = () => {
           </div>
         </section>
 
+        {/* RECENT ORDERS */}
+
         <section className="dashboard-card">
           <div className="dashboard-card-heading">
             <div>
+              <span className="dashboard-card-label">ORDERS</span>
+
               <h2>Recent Orders</h2>
+
               <p>Latest customer orders</p>
             </div>
 
-            <button className="dashboard-view-all">
+            <button
+              type="button"
+              className="dashboard-view-all"
+              onClick={() => navigate("/admin/orders")}
+            >
               View All
               <ArrowUpRight size={15} />
             </button>
           </div>
 
           <div className="dashboard-recent-orders">
-            {recentOrders.map((order) => (
-              <div className="dashboard-order-row" key={order.id}>
-                <div>
-                  <strong>{order.id}</strong>
-                  <span>{order.customer}</span>
+            {!loading && recentOrders.length === 0 && <p>No orders yet.</p>}
+
+            {recentOrders.map((order) => {
+              const customerName = [
+                order?.customer?.firstName,
+
+                order?.customer?.lastName,
+              ]
+                .filter(Boolean)
+                .join(" ");
+
+              return (
+                <div
+                  className="dashboard-order-row"
+                  key={order._id || order.orderNumber}
+                >
+                  <div>
+                    <strong>{order.orderNumber || order._id}</strong>
+
+                    <span>{customerName || "Customer"}</span>
+                  </div>
+
+                  <div className="dashboard-order-date">
+                    {formatDate(order.createdAt)}
+                  </div>
+
+                  <strong>{formatMoney(order.total)}</strong>
+
+                  <span className={getStatusClass(order.orderStatus)}>
+                    {formatStatus(order.orderStatus)}
+                  </span>
                 </div>
-
-                <div className="dashboard-order-date">{order.date}</div>
-
-                <strong>{order.amount}</strong>
-
-                <span className={getStatusClass(order.status)}>
-                  {order.status}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       </div>
 
+      {/* =================================================
+          BOTTOM
+      ================================================= */}
+
       <div className="dashboard-bottom-grid">
+        {/* TOP PRODUCTS */}
+
         <section className="dashboard-card">
           <div className="dashboard-card-heading">
             <div>
+              <span className="dashboard-card-label">PRODUCTS</span>
+
               <h2>Top Products</h2>
+
               <p>Best performing products</p>
             </div>
+
+            <button
+              type="button"
+              className="dashboard-view-all"
+              onClick={() => navigate("/admin/products")}
+            >
+              View All
+              <ArrowUpRight size={15} />
+            </button>
           </div>
 
           <div className="dashboard-product-list">
-            <div className="dashboard-product-item">
-              <div className="dashboard-product-placeholder">01</div>
+            {!loading && topProducts.length === 0 && (
+              <p>No product sales yet.</p>
+            )}
 
-              <div>
-                <strong>Oversized T-Shirt</strong>
-                <span>124 sold</span>
+            {topProducts.map((product, index) => (
+              <div className="dashboard-product-item" key={product.id}>
+                <div className="dashboard-product-placeholder">
+                  {String(index + 1).padStart(2, "0")}
+                </div>
+
+                <div>
+                  <strong>{product.name}</strong>
+
+                  <span>{product.sold} sold</span>
+                </div>
+
+                <strong>{formatMoney(product.revenue)}</strong>
               </div>
-
-              <strong>₹1,999</strong>
-            </div>
-
-            <div className="dashboard-product-item">
-              <div className="dashboard-product-placeholder">02</div>
-
-              <div>
-                <strong>Cargo Jeans</strong>
-                <span>98 sold</span>
-              </div>
-
-              <strong>₹2,499</strong>
-            </div>
-
-            <div className="dashboard-product-item">
-              <div className="dashboard-product-placeholder">03</div>
-
-              <div>
-                <strong>Classic Hoodie</strong>
-                <span>83 sold</span>
-              </div>
-
-              <strong>₹2,999</strong>
-            </div>
+            ))}
           </div>
         </section>
+
+        {/* PERFORMANCE */}
 
         <section className="dashboard-card">
           <div className="dashboard-card-heading">
             <div>
+              <span className="dashboard-card-label">PERFORMANCE</span>
+
               <h2>Store Performance</h2>
-              <p>This month's performance</p>
+
+              <p>Current store data</p>
             </div>
           </div>
 
           <div className="dashboard-performance">
             <div>
-              <span>Conversion Rate</span>
-              <strong>8.4%</strong>
-            </div>
-
-            <div>
               <span>Average Order</span>
-              <strong>₹2,140</strong>
+
+              <strong>{formatMoney(averageOrder)}</strong>
             </div>
 
             <div>
               <span>Returning Customers</span>
-              <strong>34%</strong>
+
+              <strong>{returningCustomerRate}%</strong>
             </div>
 
             <div>
               <span>Products Sold</span>
-              <strong>2,847</strong>
+
+              <strong>{productsSold.toLocaleString("en-IN")}</strong>
+            </div>
+
+            <div>
+              <span>Active Products</span>
+
+              <strong>{totalProducts.toLocaleString("en-IN")}</strong>
             </div>
           </div>
         </section>

@@ -1,4 +1,13 @@
+import mongoose from "mongoose";
 import Product from "../models/Product.js";
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const escapeRegex = (value = "") => {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+};
 
 /* =========================================================
    GET ALL PRODUCTS
@@ -6,87 +15,152 @@ import Product from "../models/Product.js";
 
 export const getProducts = async (req, res) => {
   try {
-    const { category, search, bestSeller, featured, sort, limit } = req.query;
+    const {
+      category,
+      search,
+      bestSeller,
+      featured,
+      sort,
+      limit,
+      includeInactive,
+    } = req.query;
 
-    const filter = {
-      isActive: true,
-    };
+    const filter = {};
 
-    /* Category */
+    /*
+      Normal shop request:
+      show anything that is NOT explicitly inactive.
 
-    if (category) {
-      filter.category = category.toUpperCase();
+      Admin:
+      ?includeInactive=true
+      shows everything.
+    */
+
+    if (includeInactive !== "true") {
+      filter.isActive = {
+        $ne: false,
+      };
     }
 
-    /* Best seller */
+    /* =====================================================
+       CATEGORY
+    ===================================================== */
+
+    if (category) {
+      const categoryValue = escapeRegex(String(category).trim());
+
+      filter.category = {
+        $regex: `^${categoryValue}$`,
+
+        $options: "i",
+      };
+    }
+
+    /* =====================================================
+       BEST SELLER
+    ===================================================== */
 
     if (bestSeller === "true") {
       filter.bestSeller = true;
     }
 
-    /* Featured */
+    /* =====================================================
+       FEATURED
+    ===================================================== */
 
     if (featured === "true") {
       filter.featured = true;
     }
 
-    /* Search */
+    /* =====================================================
+       SEARCH
+    ===================================================== */
 
     if (search) {
+      const searchText = escapeRegex(search);
+
       filter.$or = [
         {
           name: {
-            $regex: search,
+            $regex: searchText,
+
             $options: "i",
           },
         },
 
         {
           category: {
-            $regex: search,
+            $regex: searchText,
+
             $options: "i",
           },
         },
 
         {
           description: {
-            $regex: search,
+            $regex: searchText,
+
+            $options: "i",
+          },
+        },
+
+        {
+          shortDescription: {
+            $regex: searchText,
+
             $options: "i",
           },
         },
 
         {
           colors: {
-            $regex: search,
+            $regex: searchText,
+
             $options: "i",
           },
         },
 
         {
           fit: {
-            $regex: search,
+            $regex: searchText,
+
             $options: "i",
           },
         },
 
         {
           style: {
-            $regex: search,
+            $regex: searchText,
+
+            $options: "i",
+          },
+        },
+
+        {
+          material: {
+            $regex: searchText,
+
             $options: "i",
           },
         },
 
         {
           keywords: {
-            $regex: search,
+            $regex: searchText,
+
             $options: "i",
           },
         },
       ];
     }
 
+    /* =====================================================
+       SORT
+    ===================================================== */
+
     let sortOption = {
       createdAt: -1,
+      _id: -1,
     };
 
     if (sort === "price-low") {
@@ -113,15 +187,23 @@ export const getProducts = async (req, res) => {
       };
     }
 
+    /* =====================================================
+       QUERY
+    ===================================================== */
+
     let query = Product.find(filter).sort(sortOption);
 
     if (limit) {
-      query = query.limit(Number(limit));
+      const number = Number(limit);
+
+      if (Number.isFinite(number) && number > 0) {
+        query = query.limit(number);
+      }
     }
 
     const products = await query;
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
 
       count: products.length,
@@ -129,9 +211,9 @@ export const getProducts = async (req, res) => {
       products,
     });
   } catch (error) {
-    console.error("GET PRODUCTS ERROR:", error);
+    console.error("❌ GET PRODUCTS ERROR:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
 
       message: "Failed to get products",
@@ -147,9 +229,19 @@ export const getProducts = async (req, res) => {
 
 export const getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const { id } = req.params;
 
-    if (!product || !product.isActive) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+
+        message: "Invalid product ID",
+      });
+    }
+
+    const product = await Product.findById(id);
+
+    if (!product) {
       return res.status(404).json({
         success: false,
 
@@ -157,15 +249,15 @@ export const getProductById = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
 
       product,
     });
   } catch (error) {
-    console.error("GET PRODUCT ERROR:", error);
+    console.error("❌ GET PRODUCT ERROR:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
 
       message: "Failed to get product",
@@ -184,7 +276,9 @@ export const getProductBySlug = async (req, res) => {
     const product = await Product.findOne({
       slug: req.params.slug,
 
-      isActive: true,
+      isActive: {
+        $ne: false,
+      },
     });
 
     if (!product) {
@@ -195,15 +289,15 @@ export const getProductBySlug = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
 
       product,
     });
   } catch (error) {
-    console.error("GET PRODUCT BY SLUG ERROR:", error);
+    console.error("❌ GET PRODUCT BY SLUG ERROR:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
 
       message: "Failed to get product",
@@ -219,7 +313,17 @@ export const getProductBySlug = async (req, res) => {
 
 export const getRelatedProducts = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+
+        message: "Invalid product ID",
+      });
+    }
+
+    const product = await Product.findById(id);
 
     if (!product) {
       return res.status(404).json({
@@ -229,11 +333,6 @@ export const getRelatedProducts = async (req, res) => {
       });
     }
 
-    /*
-      Find more products from same category
-      but don't show current product.
-    */
-
     const relatedProducts = await Product.find({
       _id: {
         $ne: product._id,
@@ -241,15 +340,18 @@ export const getRelatedProducts = async (req, res) => {
 
       category: product.category,
 
-      isActive: true,
+      isActive: {
+        $ne: false,
+      },
     })
       .sort({
         soldCount: -1,
+
         createdAt: -1,
       })
       .limit(8);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
 
       count: relatedProducts.length,
@@ -257,9 +359,9 @@ export const getRelatedProducts = async (req, res) => {
       products: relatedProducts,
     });
   } catch (error) {
-    console.error("RELATED PRODUCTS ERROR:", error);
+    console.error("❌ RELATED PRODUCTS ERROR:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
 
       message: "Failed to get related products",
@@ -270,20 +372,24 @@ export const getRelatedProducts = async (req, res) => {
 };
 
 /* =========================================================
-   GET BEST SELLERS
+   BEST SELLERS
 ========================================================= */
 
 export const getBestSellers = async (req, res) => {
   try {
     const products = await Product.find({
-      isActive: true,
+      isActive: {
+        $ne: false,
+      },
     })
       .sort({
         soldCount: -1,
+
+        createdAt: -1,
       })
       .limit(8);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
 
       count: products.length,
@@ -291,9 +397,9 @@ export const getBestSellers = async (req, res) => {
       products,
     });
   } catch (error) {
-    console.error("BEST SELLERS ERROR:", error);
+    console.error("❌ BEST SELLERS ERROR:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
 
       message: "Failed to get best sellers",
@@ -309,9 +415,21 @@ export const getBestSellers = async (req, res) => {
 
 export const createProduct = async (req, res) => {
   try {
-    const product = await Product.create(req.body);
+    const body = {
+      ...req.body,
+    };
 
-    res.status(201).json({
+    if (body.category) {
+      body.category = String(body.category).trim().toUpperCase();
+    }
+
+    if (body.name) {
+      body.name = String(body.name).trim();
+    }
+
+    const product = await Product.create(body);
+
+    return res.status(201).json({
       success: true,
 
       message: "Product created successfully",
@@ -319,9 +437,9 @@ export const createProduct = async (req, res) => {
       product,
     });
   } catch (error) {
-    console.error("CREATE PRODUCT ERROR:", error);
+    console.error("❌ CREATE PRODUCT ERROR:", error);
 
-    res.status(400).json({
+    return res.status(400).json({
       success: false,
 
       message: "Failed to create product",
@@ -337,7 +455,17 @@ export const createProduct = async (req, res) => {
 
 export const updateProduct = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+
+        message: "Invalid product ID",
+      });
+    }
+
+    const product = await Product.findById(id);
 
     if (!product) {
       return res.status(404).json({
@@ -347,13 +475,25 @@ export const updateProduct = async (req, res) => {
       });
     }
 
-    Object.keys(req.body).forEach((key) => {
-      product[key] = req.body[key];
+    const body = {
+      ...req.body,
+    };
+
+    if (body.category) {
+      body.category = String(body.category).trim().toUpperCase();
+    }
+
+    if (body.name) {
+      body.name = String(body.name).trim();
+    }
+
+    Object.keys(body).forEach((key) => {
+      product[key] = body[key];
     });
 
     const updatedProduct = await product.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
 
       message: "Product updated successfully",
@@ -361,9 +501,9 @@ export const updateProduct = async (req, res) => {
       product: updatedProduct,
     });
   } catch (error) {
-    console.error("UPDATE PRODUCT ERROR:", error);
+    console.error("❌ UPDATE PRODUCT ERROR:", error);
 
-    res.status(400).json({
+    return res.status(400).json({
       success: false,
 
       message: "Failed to update product",
@@ -379,7 +519,17 @@ export const updateProduct = async (req, res) => {
 
 export const deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+
+        message: "Invalid product ID",
+      });
+    }
+
+    const product = await Product.findById(id);
 
     if (!product) {
       return res.status(404).json({
@@ -391,15 +541,15 @@ export const deleteProduct = async (req, res) => {
 
     await product.deleteOne();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
 
       message: "Product deleted successfully",
     });
   } catch (error) {
-    console.error("DELETE PRODUCT ERROR:", error);
+    console.error("❌ DELETE PRODUCT ERROR:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
 
       message: "Failed to delete product",

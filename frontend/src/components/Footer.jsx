@@ -1,32 +1,62 @@
 import React, { useState } from "react";
-import { ArrowRight, Plus, Minus } from "lucide-react";
+
+import { Plus, Minus } from "lucide-react";
+
 import { FaWhatsapp, FaInstagram, FaEnvelope } from "react-icons/fa";
+
+import { Link } from "react-router-dom";
+
 import "../styles/footer.css";
 
 function Footer() {
   const [openSection, setOpenSection] = useState("");
 
+  /* =========================================================
+     TOGGLE MOBILE SECTION
+  ========================================================= */
+
   const toggleSection = (section) => {
     setOpenSection((current) => (current === section ? "" : section));
   };
 
+  /* =========================================================
+     CLOSE MOBILE SECTION
+  ========================================================= */
+
+  const closeAccordion = () => {
+    setOpenSection("");
+  };
+
   return (
     <footer className="ax-footer">
-      <div className="ax-footer-planet ax-footer-planet-left"></div>
-      <div className="ax-footer-planet ax-footer-planet-right"></div>
+      {/* =====================================================
+          BACKGROUND
+      ===================================================== */}
 
-      <div className="ax-footer-mountains ax-footer-mountains-left"></div>
-      <div className="ax-footer-mountains ax-footer-mountains-right"></div>
+      <div className="ax-footer-planet ax-footer-planet-left" />
 
-      <div className="ax-footer-fog"></div>
+      <div className="ax-footer-planet ax-footer-planet-right" />
+
+      <div className="ax-footer-mountains ax-footer-mountains-left" />
+
+      <div className="ax-footer-mountains ax-footer-mountains-right" />
+
+      <div className="ax-footer-fog" />
+
+      {/* =====================================================
+          INNER
+      ===================================================== */}
 
       <div className="ax-footer-inner">
         <div className="ax-footer-main">
-          {/* BRAND */}
+          {/* =================================================
+              BRAND
+          ================================================= */}
+
           <div className="ax-footer-brand">
-            <a href="#home" className="ax-footer-logo">
+            <Link to="/" className="ax-footer-logo">
               UNBOUND
-            </a>
+            </Link>
 
             <h2>
               MORE
@@ -44,7 +74,10 @@ function Footer() {
               who see beyond.
             </p>
 
-            {/* SOCIAL LINKS */}
+            {/* ===============================================
+                SOCIAL LINKS
+            =============================================== */}
+
             <div className="ax-footer-socials">
               <a
                 href="https://wa.me/91XXXXXXXXXX"
@@ -72,42 +105,78 @@ function Footer() {
             </div>
           </div>
 
-          {/* DESKTOP LINKS */}
+          {/* =================================================
+              DESKTOP LINKS
+          ================================================= */}
+
           <div className="ax-footer-links-desktop">
+            {/* ===============================================
+                SHOP
+            =============================================== */}
+
             <div className="ax-footer-column">
               <h3>SHOP</h3>
-              <a href="#shop">All Products</a>
-              <a href="#shop">T-Shirts</a>
-              <a href="#shop">Hoodies</a>
-              <a href="#shop">Jackets</a>
-              <a href="#shop">Jeans</a>
-              <a href="#shop">Shorts</a>
-              <a href="#shop">Accessories</a>
-              <a href="#shop">New Drops</a>
+
+              <Link to="/shop">All Products</Link>
+
+              <Link to="/tshirts">T-Shirts</Link>
+
+              <Link to="/jeans">Jeans</Link>
+
+              <Link to="/track-pants">Track Pants</Link>
+
+              <Link to="/shirts">Shirts</Link>
+
+              <Link to="/shorts">Shorts</Link>
+
+              <Link to="/hoodies">Hoodies</Link>
+
+              <Link to="/co-ord-sets">Co-ord Sets</Link>
+
+              <Link to="/jackets">Jackets</Link>
             </div>
 
-            <div className="ax-footer-column">
-              <h3>COMPANY</h3>
-              <a href="#about">About Us</a>
-              <a href="#about">Our Story</a>
-              <a href="#about">Sustainability</a>
-              <a href="#about">Careers</a>
-              <a href="#about">Press</a>
-              <a href="#about">Affiliates</a>
-            </div>
+            {/* ===============================================
+                PAGES
+            =============================================== */}
 
             <div className="ax-footer-column">
-              <h3>HELP</h3>
-              <a href="#faq">FAQ</a>
-              <a href="#shipping">Shipping Info</a>
-              <a href="#returns">Returns & Exchange</a>
-              <a href="#size">Size Guide</a>
-              <a href="#track">Track Order</a>
-              <a href="#contact">Contact Us</a>
+              <h3>PAGES</h3>
+
+              <Link to="/">Home</Link>
+
+              <Link to="/shop">Shop</Link>
+
+              <Link to="/best-sellers">Best Sellers</Link>
+
+              <Link to="/track-order">Track Order</Link>
+            </div>
+
+            {/* ===============================================
+                ADDRESS
+            =============================================== */}
+
+            <div className="ax-footer-column ax-footer-address">
+              <h3>ADDRESS</h3>
+
+              <p>
+                TP Road,
+                <br />
+                Whitefield,
+                <br />
+                Bangalore,
+                <br />
+                Karnataka - 560066,
+                <br />
+                India
+              </p>
             </div>
           </div>
 
-          {/* NEWSLETTER */}
+          {/* =================================================
+              NEWSLETTER
+          ================================================= */}
+
           <div className="ax-footer-newsletter">
             <span className="ax-footer-small-title">STAY IN THE LOOP</span>
 
@@ -122,17 +191,22 @@ function Footer() {
               <br />
               early access and special offers.
             </p>
-
-            
           </div>
         </div>
 
-        {/* MOBILE ACCORDIONS */}
+        {/* =====================================================
+            MOBILE ACCORDIONS
+        ===================================================== */}
+
         <div className="ax-footer-mobile-links">
-          {/* SHOP */}
+          {/* =================================================
+              SHOP
+          ================================================= */}
+
           <div className="ax-footer-accordion">
             <button type="button" onClick={() => toggleSection("shop")}>
               <span>SHOP</span>
+
               {openSection === "shop" ? (
                 <Minus size={17} />
               ) : (
@@ -145,22 +219,53 @@ function Footer() {
                 openSection === "shop" ? "active" : ""
               }`}
             >
-              <a href="#shop">All Products</a>
-              <a href="#shop">T-Shirts</a>
-              <a href="#shop">Hoodies</a>
-              <a href="#shop">Jackets</a>
-              <a href="#shop">Jeans</a>
-              <a href="#shop">Shorts</a>
-              <a href="#shop">Accessories</a>
-              <a href="#shop">New Drops</a>
+              <Link to="/shop" onClick={closeAccordion}>
+                All Products
+              </Link>
+
+              <Link to="/tshirts" onClick={closeAccordion}>
+                T-Shirts
+              </Link>
+
+              <Link to="/jeans" onClick={closeAccordion}>
+                Jeans
+              </Link>
+
+              <Link to="/track-pants" onClick={closeAccordion}>
+                Track Pants
+              </Link>
+
+              <Link to="/shirts" onClick={closeAccordion}>
+                Shirts
+              </Link>
+
+              <Link to="/shorts" onClick={closeAccordion}>
+                Shorts
+              </Link>
+
+              <Link to="/hoodies" onClick={closeAccordion}>
+                Hoodies
+              </Link>
+
+              <Link to="/co-ord-sets" onClick={closeAccordion}>
+                Co-ord Sets
+              </Link>
+
+              <Link to="/jackets" onClick={closeAccordion}>
+                Jackets
+              </Link>
             </div>
           </div>
 
-          {/* COMPANY */}
+          {/* =================================================
+              PAGES
+          ================================================= */}
+
           <div className="ax-footer-accordion">
-            <button type="button" onClick={() => toggleSection("company")}>
-              <span>COMPANY</span>
-              {openSection === "company" ? (
+            <button type="button" onClick={() => toggleSection("pages")}>
+              <span>PAGES</span>
+
+              {openSection === "pages" ? (
                 <Minus size={17} />
               ) : (
                 <Plus size={17} />
@@ -169,23 +274,36 @@ function Footer() {
 
             <div
               className={`ax-footer-accordion-content ${
-                openSection === "company" ? "active" : ""
+                openSection === "pages" ? "active" : ""
               }`}
             >
-              <a href="#about">About Us</a>
-              <a href="#about">Our Story</a>
-              <a href="#about">Sustainability</a>
-              <a href="#about">Careers</a>
-              <a href="#about">Press</a>
-              <a href="#about">Affiliates</a>
+              <Link to="/" onClick={closeAccordion}>
+                Home
+              </Link>
+
+              <Link to="/shop" onClick={closeAccordion}>
+                Shop
+              </Link>
+
+              <Link to="/best-sellers" onClick={closeAccordion}>
+                Best Sellers
+              </Link>
+
+              <Link to="/track-order" onClick={closeAccordion}>
+                Track Order
+              </Link>
             </div>
           </div>
 
-          {/* HELP */}
+          {/* =================================================
+              ADDRESS
+          ================================================= */}
+
           <div className="ax-footer-accordion">
-            <button type="button" onClick={() => toggleSection("help")}>
-              <span>HELP</span>
-              {openSection === "help" ? (
+            <button type="button" onClick={() => toggleSection("address")}>
+              <span>ADDRESS</span>
+
+              {openSection === "address" ? (
                 <Minus size={17} />
               ) : (
                 <Plus size={17} />
@@ -194,49 +312,23 @@ function Footer() {
 
             <div
               className={`ax-footer-accordion-content ${
-                openSection === "help" ? "active" : ""
+                openSection === "address" ? "active" : ""
               }`}
             >
-              <a href="#faq">FAQ</a>
-              <a href="#shipping">Shipping Info</a>
-              <a href="#returns">Returns & Exchange</a>
-              <a href="#size">Size Guide</a>
-              <a href="#track">Track Order</a>
-              <a href="#contact">Contact Us</a>
+              <p className="ax-footer-mobile-address">
+                TP Road,
+                <br />
+                Whitefield,
+                <br />
+                Bangalore,
+                <br />
+                Karnataka - 560066,
+                <br />
+                India
+              </p>
             </div>
           </div>
         </div>
-
-        {/* BOTTOM */}
-        <div className="ax-footer-bottom">
-          <div className="ax-footer-tagline">WEAR THE UNKNOWN</div>
-
-          <div className="ax-footer-bottom-row">
-            <p>© 2026 UNBOUND. ALL RIGHTS RESERVED.</p>
-
-            <div className="ax-footer-payments">
-              <span>VISA</span>
-              <span>MC</span>
-              <span>PAYPAL</span>
-              <span>G PAY</span>
-              <span>APPLE PAY</span>
-            </div>
-
-            <div className="ax-footer-legal">
-              <a href="#">Privacy Policy</a>
-              <a href="#">Terms of Service</a>
-              <a href="#">Cookies</a>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="ax-footer-handwriting">
-        WEAR
-        <br />
-        THE
-        <br />
-        UNKNOWN
       </div>
     </footer>
   );

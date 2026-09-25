@@ -1,7 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=New+Rocker&display=swap");
 
 /* =========================================================
-   GLOBAL SAFE BOX SIZING
+   GLOBAL
 ========================================================= */
 
 *,
@@ -18,9 +18,9 @@
      position: relative;
 
      width: 100%;
-     min-height: 620px;
+     min-height: auto;
 
-     padding: 82px 4vw 28px;
+     padding: 65px 4vw 38px;
 
      overflow: hidden;
 
@@ -115,14 +115,14 @@
 .ax-footer-mountains {
      position: absolute;
 
-     bottom: -85px;
+     bottom: -65px;
 
      width: 48%;
-     height: 260px;
+     height: 140px;
 
      pointer-events: none;
 
-     opacity: 0.72;
+     opacity: 0.5;
 
      filter: blur(0.2px);
 }
@@ -174,26 +174,26 @@
 
      left: -5%;
      right: -5%;
-     bottom: -80px;
+     bottom: -65px;
 
-     height: 230px;
+     height: 110px;
 
      pointer-events: none;
 
      background:
           radial-gradient(ellipse at 15% 60%,
-               rgba(255, 255, 255, 0.065),
+               rgba(255, 255, 255, 0.05),
                transparent 28%),
           radial-gradient(ellipse at 38% 80%,
-               rgba(255, 255, 255, 0.045),
+               rgba(255, 255, 255, 0.035),
                transparent 28%),
           radial-gradient(ellipse at 72% 70%,
-               rgba(255, 255, 255, 0.04),
+               rgba(255, 255, 255, 0.03),
                transparent 30%);
 
-     filter: blur(30px);
+     filter: blur(24px);
 
-     opacity: 0.8;
+     opacity: 0.6;
 }
 
 /* =========================================================
@@ -204,11 +204,11 @@
      display: grid;
 
      grid-template-columns:
-          minmax(250px, 0.95fr) minmax(420px, 1.35fr) minmax(320px, 0.95fr);
+          minmax(250px, 0.95fr) minmax(430px, 1.4fr) minmax(300px, 0.9fr);
 
      align-items: start;
 
-     gap: clamp(45px, 4vw, 70px);
+     gap: clamp(40px, 4vw, 70px);
 }
 
 /* =========================================================
@@ -330,7 +330,7 @@
 }
 
 /* =========================================================
-   SOCIALS
+   SOCIAL ICONS
 ========================================================= */
 
 .ax-footer-socials {
@@ -343,25 +343,24 @@
 }
 
 .ax-footer-socials a {
-     min-width: 30px;
-     height: 30px;
+     width: 34px;
+     height: 34px;
 
-     padding: 0 5px;
+     flex: 0 0 34px;
 
      display: flex;
      align-items: center;
      justify-content: center;
 
-     border: 1px solid rgba(255, 255, 255, 0.08);
+     border: 1px solid rgba(255, 255, 255, 0.1);
 
      border-radius: 50%;
 
-     color: rgba(255, 255, 255, 0.62);
+     background: rgba(255, 255, 255, 0.01);
 
-     font-family: Arial, Helvetica, sans-serif;
+     color: rgba(255, 255, 255, 0.65);
 
-     font-size: 8px;
-     font-weight: 500;
+     font-size: 14px;
 
      text-decoration: none;
 
@@ -375,39 +374,29 @@
 .ax-footer-socials a:hover {
      color: #cbff27;
 
-     border-color: rgba(203, 255, 39, 0.32);
+     border-color: rgba(203, 255, 39, 0.4);
 
-     background: rgba(203, 255, 39, 0.035);
+     background: rgba(203, 255, 39, 0.04);
 
-     transform: translateY(-2px);
-}
-
-
-.ax-footer-socials a svg {
-     width: 15px;
-     height: 15px;
-
-     display: block;
-
-     transition:
-          transform 0.3s ease;
-}
-
-.ax-footer-socials a:hover svg {
-     transform: scale(1.12);
+     transform: translateY(-3px);
 }
 
 /* =========================================================
-   DESKTOP LINKS
+   DESKTOP LINKS AREA
 ========================================================= */
 
 .ax-footer-links-desktop {
      display: grid;
 
-     grid-template-columns: repeat(3, minmax(110px, 1fr));
+     grid-template-columns:
+          repeat(3, minmax(110px, 1fr));
 
      gap: clamp(28px, 3vw, 55px);
 }
+
+/* =========================================================
+   FOOTER COLUMN
+========================================================= */
 
 .ax-footer-column {
      display: flex;
@@ -418,7 +407,7 @@
 }
 
 .ax-footer-column h3 {
-     margin: 0 0 12px;
+     margin: 0 0 14px;
 
      color: #ffffff;
 
@@ -430,6 +419,8 @@
      line-height: 1;
 
      letter-spacing: 0.16em;
+
+     text-transform: uppercase;
 }
 
 .ax-footer-column a {
@@ -455,6 +446,23 @@
      color: #cbff27;
 
      transform: translateX(3px);
+}
+
+/* =========================================================
+   ADDRESS
+========================================================= */
+
+.ax-footer-address p {
+     margin: 0;
+
+     color: rgba(255, 255, 255, 0.7);
+
+     font-family: Arial, Helvetica, sans-serif;
+
+     font-size: 12px;
+     font-weight: 400;
+
+     line-height: 1.55;
 }
 
 /* =========================================================
@@ -513,94 +521,7 @@
 }
 
 /* =========================================================
-   NEWSLETTER FORM
-========================================================= */
-
-.ax-footer-email {
-     width: 100%;
-     max-width: 390px;
-     height: 52px;
-
-     margin-top: 30px;
-
-     padding: 0 4px 0 20px;
-
-     display: flex;
-     align-items: center;
-
-     border: 1px solid rgba(203, 255, 39, 0.85);
-
-     border-radius: 999px;
-
-     background: rgba(7, 7, 7, 0.68);
-
-     box-shadow:
-          0 0 10px rgba(203, 255, 39, 0.18),
-          0 0 28px rgba(203, 255, 39, 0.05);
-
-     overflow: hidden;
-}
-
-.ax-footer-email input {
-     flex: 1;
-
-     width: 100%;
-     min-width: 0;
-
-     border: 0;
-     outline: 0;
-
-     background: transparent;
-
-     color: #ffffff;
-
-     font-family: Arial, Helvetica, sans-serif;
-
-     font-size: 11px;
-}
-
-.ax-footer-email input::placeholder {
-     color: rgba(255, 255, 255, 0.36);
-}
-
-.ax-footer-email button {
-     flex: 0 0 44px;
-
-     width: 44px;
-     height: 44px;
-
-     padding: 0;
-
-     display: flex;
-     align-items: center;
-     justify-content: center;
-
-     border: 1px solid rgba(203, 255, 39, 0.75);
-
-     border-radius: 50%;
-
-     background: #050505;
-
-     color: #ffffff;
-
-     cursor: pointer;
-
-     transition:
-          background 0.3s ease,
-          color 0.3s ease,
-          transform 0.3s ease;
-}
-
-.ax-footer-email button:hover {
-     background: #cbff27;
-
-     color: #050505;
-
-     transform: rotate(-8deg);
-}
-
-/* =========================================================
-   MOBILE ACCORDIONS
+   MOBILE LINKS - HIDDEN ON DESKTOP
 ========================================================= */
 
 .ax-footer-mobile-links {
@@ -608,145 +529,16 @@
 }
 
 /* =========================================================
-   BOTTOM
-========================================================= */
-
-.ax-footer-bottom {
-     position: relative;
-
-     z-index: 10;
-
-     margin-top: 72px;
-}
-
-.ax-footer-tagline {
-     margin-bottom: 25px;
-
-     color: rgba(255, 255, 255, 0.46);
-
-     font-family: Arial, Helvetica, sans-serif;
-
-     font-size: 8px;
-
-     letter-spacing: 0.34em;
-}
-
-.ax-footer-bottom-row {
-     min-height: 68px;
-
-     display: grid;
-
-     grid-template-columns:
-          minmax(220px, 1fr) auto minmax(270px, 1fr);
-
-     align-items: center;
-
-     gap: 26px;
-
-     border-top: 1px solid rgba(255, 255, 255, 0.075);
-}
-
-.ax-footer-bottom-row p {
-     margin: 0;
-
-     color: rgba(255, 255, 255, 0.38);
-
-     font-family: Arial, Helvetica, sans-serif;
-
-     font-size: 8px;
-
-     letter-spacing: 0.13em;
-}
-
-/* =========================================================
-   PAYMENTS
-========================================================= */
-
-.ax-footer-payments {
-     display: flex;
-     align-items: center;
-
-     gap: 15px;
-}
-
-.ax-footer-payments span {
-     color: rgba(255, 255, 255, 0.68);
-
-     font-family: Arial, Helvetica, sans-serif;
-
-     font-size: 9px;
-     font-weight: 600;
-
-     white-space: nowrap;
-}
-
-/* =========================================================
-   LEGAL
-========================================================= */
-
-.ax-footer-legal {
-     display: flex;
-
-     justify-content: flex-end;
-
-     gap: 20px;
-}
-
-.ax-footer-legal a {
-     color: rgba(255, 255, 255, 0.37);
-
-     font-family: Arial, Helvetica, sans-serif;
-
-     font-size: 8px;
-
-     text-decoration: none;
-
-     white-space: nowrap;
-
-     transition: color 0.3s ease;
-}
-
-.ax-footer-legal a:hover {
-     color: #cbff27;
-}
-
-/* =========================================================
-   HANDWRITING
-========================================================= */
-
-.ax-footer-handwriting {
-     position: absolute;
-
-     top: 70px;
-     right: 18px;
-
-     z-index: 2;
-
-     color: rgba(203, 255, 39, 0.35);
-
-     font-family: Georgia, "Times New Roman", serif;
-
-     font-size: 18px;
-     font-style: italic;
-     font-weight: 600;
-
-     line-height: 1.05;
-
-     transform: rotate(-8deg);
-
-     pointer-events: none;
-}
-
-/* =========================================================
    LARGE DESKTOP
 ========================================================= */
 
 @media (min-width: 1400px) {
-     .ax-footer-newsletter {
-          max-width: 380px;
+     .ax-footer {
+          padding-top: 70px;
+          padding-bottom: 42px;
      }
 
-     .ax-footer-email {
+     .ax-footer-newsletter {
           max-width: 380px;
      }
 }
@@ -757,13 +549,13 @@
 
 @media (max-width: 1250px) {
      .ax-footer {
-          padding-left: 32px;
-          padding-right: 32px;
+          padding:
+               60px 32px 35px;
      }
 
      .ax-footer-main {
           grid-template-columns:
-               minmax(220px, 0.8fr) minmax(390px, 1.5fr) minmax(300px, 1fr);
+               minmax(220px, 0.8fr) minmax(390px, 1.5fr) minmax(280px, 1fr);
 
           gap: 40px;
      }
@@ -776,12 +568,8 @@
           max-width: 340px;
      }
 
-     .ax-footer-email {
-          max-width: 340px;
-     }
-
-     .ax-footer-handwriting {
-          display: none;
+     .ax-footer-logo {
+          font-size: 36px;
      }
 }
 
@@ -790,34 +578,30 @@
 ========================================================= */
 
 @media (max-width: 1000px) {
-     .ax-footer-main {
-          grid-template-columns: 1fr 1.6fr;
+     .ax-footer {
+          padding:
+               55px 28px 35px;
+     }
 
-          gap: 60px;
+     .ax-footer-main {
+          grid-template-columns:
+               minmax(220px, 0.7fr) minmax(440px, 1.5fr);
+
+          gap: 50px;
      }
 
      .ax-footer-newsletter {
           grid-column: 1 / -1;
 
-          max-width: 620px;
+          max-width: 600px;
 
           justify-self: start;
+
+          margin-top: 5px;
      }
 
-     .ax-footer-email {
-          max-width: 520px;
-     }
-
-     .ax-footer-bottom-row {
-          grid-template-columns: 1fr auto;
-
-          padding: 20px 0;
-     }
-
-     .ax-footer-legal {
-          grid-column: 1 / -1;
-
-          justify-content: flex-start;
+     .ax-footer-planet-right {
+          right: -230px;
      }
 }
 
@@ -830,21 +614,29 @@
           min-height: auto;
 
           padding:
-               70px 22px 25px;
+               52px 22px 30px;
      }
+
+     /* ===============================================
+     MAIN
+  =============================================== */
 
      .ax-footer-main {
           display: block;
      }
 
+     /* ===============================================
+     BRAND
+  =============================================== */
+
      .ax-footer-brand {
           max-width: 100%;
 
-          margin-bottom: 48px;
+          margin-bottom: 0;
      }
 
      .ax-footer-logo {
-          margin-bottom: 30px;
+          margin-bottom: 28px;
 
           font-size: 34px;
      }
@@ -863,12 +655,20 @@
           margin-top: 24px;
      }
 
+     /* ===============================================
+     HIDE DESKTOP COLUMNS
+  =============================================== */
+
      .ax-footer-links-desktop {
           display: none;
      }
 
+     /* ===============================================
+     NEWSLETTER
+  =============================================== */
+
      .ax-footer-newsletter {
-          margin-top: 48px;
+          margin-top: 44px;
 
           max-width: 100%;
 
@@ -879,28 +679,27 @@
           font-size: 26px;
      }
 
-     .ax-footer-email {
-          width: 100%;
-          max-width: 100%;
-     }
-
-     /* ACCORDIONS */
+     /* ===============================================
+     MOBILE ACCORDIONS
+  =============================================== */
 
      .ax-footer-mobile-links {
           display: block;
 
-          margin-top: 50px;
+          margin-top: 42px;
 
-          border-top: 1px solid rgba(255, 255, 255, 0.08);
+          border-top:
+               1px solid rgba(255, 255, 255, 0.08);
      }
 
      .ax-footer-accordion {
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          border-bottom:
+               1px solid rgba(255, 255, 255, 0.08);
      }
 
      .ax-footer-accordion>button {
           width: 100%;
-          height: 58px;
+          height: 56px;
 
           padding: 0;
 
@@ -909,6 +708,7 @@
           justify-content: space-between;
 
           border: 0;
+          outline: 0;
 
           background: transparent;
 
@@ -946,7 +746,7 @@
      }
 
      .ax-footer-accordion-content.active {
-          max-height: 420px;
+          max-height: 500px;
 
           padding: 0 0 24px;
 
@@ -954,48 +754,48 @@
      }
 
      .ax-footer-accordion-content a {
+          width: fit-content;
+
           color: rgba(255, 255, 255, 0.48);
 
           font-family: Arial, Helvetica, sans-serif;
 
           font-size: 11px;
 
+          line-height: 1.4;
+
           text-decoration: none;
+
+          transition:
+               color 0.25s ease,
+               transform 0.25s ease;
      }
 
-     /* bottom */
+     .ax-footer-accordion-content a:hover {
+          color: #cbff27;
 
-     .ax-footer-bottom {
-          margin-top: 50px;
+          transform: translateX(3px);
      }
 
-     .ax-footer-bottom-row {
-          display: flex;
+     /* ===============================================
+     MOBILE ADDRESS
+  =============================================== */
 
-          flex-direction: column;
+     .ax-footer-mobile-address {
+          margin: 0;
 
-          align-items: flex-start;
+          color: rgba(255, 255, 255, 0.58);
 
-          gap: 22px;
+          font-family: Arial, Helvetica, sans-serif;
 
-          padding: 28px 0 0;
+          font-size: 11px;
+
+          line-height: 1.65;
      }
 
-     .ax-footer-payments {
-          flex-wrap: wrap;
-
-          gap: 13px;
-     }
-
-     .ax-footer-legal {
-          flex-wrap: wrap;
-
-          justify-content: flex-start;
-
-          gap: 17px;
-     }
-
-     /* visuals */
+     /* ===============================================
+     PLANETS
+  =============================================== */
 
      .ax-footer-planet-left {
           width: 290px;
@@ -1010,10 +810,20 @@
           height: 230px;
 
           top: auto;
-          right: -120px;
-          bottom: 60px;
+          right: -130px;
+          bottom: -90px;
 
-          opacity: 0.55;
+          opacity: 0.4;
+     }
+
+     /* ===============================================
+     MOUNTAINS
+  =============================================== */
+
+     .ax-footer-mountains {
+          height: 100px;
+
+          bottom: -55px;
      }
 
      .ax-footer-mountains-left {
@@ -1026,8 +836,16 @@
           display: none;
      }
 
-     .ax-footer-handwriting {
-          display: none;
+     /* ===============================================
+     FOG
+  =============================================== */
+
+     .ax-footer-fog {
+          height: 90px;
+
+          bottom: -50px;
+
+          opacity: 0.45;
      }
 }
 
@@ -1036,29 +854,57 @@
 ========================================================= */
 
 @media (max-width: 480px) {
+     .ax-footer {
+          padding:
+               45px 19px 25px;
+     }
 
      .ax-footer-logo {
+          margin-bottom: 25px;
+
           font-size: 30px;
 
           letter-spacing: 0.02em;
      }
 
-     .ax-footer {
-          padding:
-               62px 19px 22px;
-     }
-
      .ax-footer-brand h2 {
+          margin-bottom: 18px;
+
           font-size: 25px;
 
           letter-spacing: 0.17em;
      }
 
+     .ax-footer-brand p {
+          font-size: 10.5px;
+     }
+
+     .ax-footer-socials {
+          margin-top: 21px;
+     }
+
+     .ax-footer-socials a {
+          width: 31px;
+          height: 31px;
+
+          flex-basis: 31px;
+
+          font-size: 13px;
+     }
+
+     .ax-footer-newsletter {
+          margin-top: 38px;
+     }
+
      .ax-footer-small-title {
+          margin-bottom: 16px;
+
           font-size: 7px;
      }
 
      .ax-footer-newsletter h3 {
+          margin-bottom: 15px;
+
           font-size: 23px;
 
           letter-spacing: 0.17em;
@@ -1068,24 +914,18 @@
           font-size: 10px;
      }
 
-     .ax-footer-email {
-          width: 100%;
-          max-width: 100%;
-
-          height: 50px;
-
-          padding-left: 17px;
+     .ax-footer-mobile-links {
+          margin-top: 36px;
      }
 
-     .ax-footer-email button {
-          flex-basis: 42px;
+     .ax-footer-accordion>button {
+          height: 54px;
 
-          width: 42px;
-          height: 42px;
+          font-size: 10px;
      }
 
-     .ax-footer-socials a {
-          min-width: 28px;
-          height: 28px;
+     .ax-footer-accordion-content a,
+     .ax-footer-mobile-address {
+          font-size: 10.5px;
      }
 }

@@ -3,7 +3,6 @@ import React, { useLayoutEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import gsap from "gsap";
-
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 import heroSpace from "../assets/hero-space.png";
@@ -12,225 +11,126 @@ import heroModel from "../assets/hero-model.png";
 import heroNeon from "../assets/hero-neon.png";
 import heroFog from "../assets/hero-fog.png";
 
+import products from "../data/products";
+
 import "../styles/home.css";
 
 gsap.registerPlugin(ScrollTrigger);
 
 /* =========================================================
-   PRODUCTS
+   API
 ========================================================= */
 
-const productSections = [
+const API_BASE = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000"
+).replace(/\/$/, "");
+
+/* =========================================================
+   PRODUCT SECTION CONFIG
+========================================================= */
+
+const sectionConfig = [
   {
     id: "tshirts",
+    category: "T-SHIRTS",
     number: "01",
     eyebrow: "ESSENTIAL / FORM",
     title: "T-SHIRTS",
     subtitle: "Engineered silhouettes for everyday movement.",
-
-    products: [
-      {
-        id: "void-tee",
-        name: "VOID TEE",
-        price: 1499,
-        image: "/products/tshirt-1.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "signal-tee",
-        name: "SIGNAL TEE",
-        price: 1699,
-        image: "/products/tshirt-2.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "echo-tee",
-        name: "ECHO TEE",
-        price: 1599,
-        image: "/products/tshirt-3.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "unknown-tee",
-        name: "UNKNOWN TEE",
-        price: 1899,
-        image: "/products/tshirt-4.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-    ],
+    link: "/tshirts",
   },
 
   {
     id: "jeans",
+    category: "JEANS",
     number: "02",
     eyebrow: "DENIM / DISTORTION",
     title: "JEANS",
     subtitle: "Oversized denim built beyond convention.",
-
-    products: [
-      {
-        id: "shadow-denim",
-        name: "SHADOW DENIM",
-        price: 2899,
-        image: "/products/jean-1.jpg",
-        sizes: ["28", "30", "32", "34"],
-      },
-
-      {
-        id: "void-denim",
-        name: "VOID DENIM",
-        price: 3199,
-        image: "/products/jean-2.jpg",
-        sizes: ["28", "30", "32", "34"],
-      },
-
-      {
-        id: "fracture-jean",
-        name: "FRACTURE JEAN",
-        price: 3499,
-        image: "/products/jean-3.jpg",
-        sizes: ["28", "30", "32", "34"],
-      },
-
-      {
-        id: "raw-denim",
-        name: "RAW DENIM 01",
-        price: 2999,
-        image: "/products/jean-4.jpg",
-        sizes: ["28", "30", "32", "34"],
-      },
-    ],
+    link: "/jeans",
   },
 
   {
     id: "trackpants",
+    category: "TRACK PANTS",
     number: "03",
     eyebrow: "MOTION / SYSTEM",
     title: "TRACK PANTS",
     subtitle: "Utility forms designed for unrestricted movement.",
-
-    products: [
-      {
-        id: "motion-track",
-        name: "MOTION TRACK",
-        price: 2499,
-        image: "/products/track-1.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "core-track",
-        name: "CORE TRACK",
-        price: 2699,
-        image: "/products/track-2.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "terminal-track",
-        name: "TERMINAL TRACK",
-        price: 2899,
-        image: "/products/track-3.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "phantom-track",
-        name: "PHANTOM TRACK",
-        price: 2999,
-        image: "/products/track-4.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-    ],
+    link: "/track-pants",
   },
 
   {
     id: "shirts",
+    category: "SHIRTS",
     number: "04",
     eyebrow: "STRUCTURE / LAYER",
     title: "SHIRTS",
     subtitle: "Dark tailoring reshaped for the next world.",
-
-    products: [
-      {
-        id: "system-shirt",
-        name: "SYSTEM SHIRT",
-        price: 2199,
-        image: "/products/shirt-1.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "signal-shirt",
-        name: "SIGNAL SHIRT",
-        price: 2399,
-        image: "/products/shirt-2.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "shadow-shirt",
-        name: "SHADOW SHIRT",
-        price: 2599,
-        image: "/products/shirt-3.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "frame-shirt",
-        name: "FRAME SHIRT",
-        price: 2299,
-        image: "/products/shirt-4.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-    ],
+    link: "/shirts",
   },
 
   {
     id: "shorts",
+    category: "SHORTS",
     number: "05",
     eyebrow: "UTILITY / SUMMER",
     title: "SHORTS",
     subtitle: "Reduced construction. Maximum movement.",
-
-    products: [
-      {
-        id: "void-short",
-        name: "VOID SHORT",
-        price: 1799,
-        image: "/products/short-1.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "cargo-short",
-        name: "CARGO SHORT",
-        price: 1999,
-        image: "/products/short-2.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "motion-short",
-        name: "MOTION SHORT",
-        price: 1899,
-        image: "/products/short-3.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "utility-short",
-        name: "UTILITY SHORT",
-        price: 2199,
-        image: "/products/short-4.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-    ],
+    link: "/shorts",
   },
 ];
+
+/* =========================================================
+   BUILD PRODUCT SECTIONS
+========================================================= */
+
+const productSections = sectionConfig.map((section) => ({
+  ...section,
+
+  products: products
+    .filter(
+      (product) =>
+        String(product.category || "").toUpperCase() === section.category,
+    )
+    .slice(0, 4),
+}));
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const getProductId = (product) => {
+  return String(product?._id || product?.id || product?.slug || "");
+};
+
+const getProductSizes = (product) => {
+  if (!Array.isArray(product?.sizes)) {
+    return [];
+  }
+
+  return product.sizes
+    .map((item) => {
+      if (typeof item === "string") {
+        return item;
+      }
+
+      return item?.size;
+    })
+    .filter(Boolean);
+};
+
+const getProductImage = (product) => {
+  if (product?.image) {
+    return product.image;
+  }
+
+  if (Array.isArray(product?.images) && product.images.length > 0) {
+    return product.images[0];
+  }
+
+  return "";
+};
 
 /* =========================================================
    PRODUCT CARD
@@ -245,123 +145,252 @@ function ProductCard({
 }) {
   const navigate = useNavigate();
 
-  const selectedSize = selectedSizes[product.id];
+  const productId = getProductId(product);
 
-  const quantity = quantities[product.id] || 1;
+  const sizes = getProductSizes(product);
+
+  const productImage = getProductImage(product);
+
+  const selectedSize = selectedSizes[productId];
+
+  /* =======================================================
+     QUANTITY STARTS FROM 0
+  ======================================================= */
+
+  const quantity = quantities[productId] ?? 0;
 
   const changeQuantity = (amount) => {
     setQuantities((previous) => {
-      const currentQuantity = previous[product.id] || 1;
-      const nextQuantity = Math.min(10, Math.max(1, currentQuantity + amount));
+      const currentQuantity = previous[productId] ?? 0;
+
+      const nextQuantity = Math.min(
+        10,
+
+        Math.max(0, currentQuantity + amount),
+      );
 
       return {
         ...previous,
-        [product.id]: nextQuantity,
+
+        [productId]: nextQuantity,
       };
     });
   };
+
+  /* =======================================================
+     SELECT SIZE
+  ======================================================= */
 
   const chooseSize = (size) => {
     setSelectedSizes((previous) => ({
       ...previous,
 
-      [product.id]: size,
+      [productId]: size,
     }));
   };
 
-  /* ======================================================
-     ADD TO CART
-  ====================================================== */
+  /* =======================================================
+     ADD TO CART - BACKEND CART
+  ======================================================= */
 
-  const addToCart = () => {
+  const addToCart = async () => {
+    if (!productId) {
+      alert("Product ID is missing.");
+
+      return;
+    }
+
+    if (sizes.length === 0) {
+      alert("Sizes are not configured for this product yet.");
+
+      return;
+    }
+
     if (!selectedSize) {
       alert("Please select a size first.");
 
       return;
     }
 
-    const oldCart = JSON.parse(localStorage.getItem("axiee-cart")) || [];
+    if (quantity <= 0) {
+      alert("Please select quantity first.");
 
-    const existingIndex = oldCart.findIndex(
-      (item) => item.id === product.id && item.size === selectedSize,
-    );
+      return;
+    }
 
-    let updatedCart;
+    try {
+      let cartId = localStorage.getItem("axiee-cart-id");
 
-    if (existingIndex >= 0) {
-      updatedCart = [...oldCart];
+      /* CREATE CART ID */
 
-      updatedCart[existingIndex] = {
-        ...updatedCart[existingIndex],
+      if (!cartId) {
+        cartId = crypto.randomUUID();
 
-        quantity: Number(updatedCart[existingIndex].quantity || 1) + quantity,
-      };
-    } else {
-      updatedCart = [
-        ...oldCart,
+        localStorage.setItem("axiee-cart-id", cartId);
+      }
 
-        {
-          ...product,
+      /* SEND TO BACKEND */
+
+      const response = await fetch(`${API_BASE}/api/cart/add`, {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+          cartId,
+
+          productId,
 
           size: selectedSize,
 
           quantity,
-        },
-      ];
+
+          name: product?.name || "UNBOUND Product",
+
+          price: Number(product?.price || 0),
+
+          image: productImage || "",
+
+          category: product?.category || "",
+        }),
+      });
+
+      let data = null;
+
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Unable to add to cart");
+      }
+
+      /* UPDATE NAVBAR */
+
+      window.dispatchEvent(
+        new CustomEvent("axiee-cart-updated", {
+          detail: data?.cart || {
+            items: [],
+          },
+        }),
+      );
+
+      alert(`${product.name} - Size ${selectedSize} added to cart`);
+    } catch (error) {
+      console.error("Add to cart error:", error);
+
+      alert(error?.message || "Unable to add product to cart.");
     }
-
-    localStorage.setItem("axiee-cart", JSON.stringify(updatedCart));
-
-    window.dispatchEvent(new Event("axiee-cart-updated"));
-
-    alert(`${product.name} - Size ${selectedSize} added to cart`);
   };
 
-  /* ======================================================
+  /* =======================================================
      BUY NOW
-  ====================================================== */
+  ======================================================= */
 
   const buyNow = () => {
+    if (!productId) {
+      alert("Product ID is missing.");
+
+      return;
+    }
+
+    if (sizes.length === 0) {
+      alert("Sizes are not configured for this product yet.");
+
+      return;
+    }
+
     if (!selectedSize) {
       alert("Please select a size first.");
 
       return;
     }
 
+    if (quantity <= 0) {
+      alert("Please select quantity first.");
+
+      return;
+    }
+
+    const buyNowProduct = {
+      ...product,
+
+      id: productId,
+
+      productId,
+
+      image: productImage,
+
+      size: selectedSize,
+
+      quantity,
+
+      price: Number(product?.price || 0),
+    };
+
     localStorage.setItem(
       "axiee-buy-now",
 
-      JSON.stringify({
-        ...product,
-
-        size: selectedSize,
-
-        quantity,
-      }),
+      JSON.stringify(buyNowProduct),
     );
 
     navigate("/checkout");
   };
 
+  /* =======================================================
+     NO ID
+  ======================================================= */
+
+  if (!productId) {
+    return null;
+  }
+
+  /* =======================================================
+     CARD
+  ======================================================= */
+
   return (
     <article className="ax-product-card">
-      {/* IMAGE */}
+      {/* ===============================================
+          IMAGE
+      =============================================== */}
 
       <Link
-        to={`/product/${product.id}`}
+        to={`/product/${productId}`}
         className="ax-product-image-wrap"
         aria-label={`View ${product.name}`}
       >
-        <img
-          src={product.image}
-          alt={product.name}
-          className="ax-product-image"
-        />
+        {productImage ? (
+          <img
+            src={productImage}
+            alt={product.name}
+            className="ax-product-image"
+          />
+        ) : (
+          <div
+            className="ax-product-image"
+            style={{
+              display: "grid",
+
+              placeItems: "center",
+
+              background: "#111",
+
+              color: "#777",
+            }}
+          >
+            NO IMAGE
+          </div>
+        )}
 
         <div className="ax-product-smoke" />
 
         <span className="ax-product-index">
-          AX / {product.id.slice(0, 2).toUpperCase()}
+          AX / {productId.slice(0, 2).toUpperCase()}
         </span>
 
         <button
@@ -383,39 +412,55 @@ function ProductCard({
         </span>
       </Link>
 
-      {/* PRODUCT INFO */}
+      {/* ===============================================
+          PRODUCT INFO
+      =============================================== */}
 
       <div className="ax-product-info">
         <div className="ax-product-heading">
           <div>
             <h3>{product.name}</h3>
 
-            <p>₹{product.price.toLocaleString("en-IN")}</p>
+            <p>₹{Number(product.price || 0).toLocaleString("en-IN")}</p>
           </div>
 
-          <span className="ax-card-arrow">→</span>
+          <Link
+            to={`/product/${productId}`}
+            className="ax-card-arrow"
+            aria-label={`View ${product.name}`}
+          >
+            →
+          </Link>
         </div>
 
-        {/* SIZES */}
+        {/* ===============================================
+            SIZE
+        =============================================== */}
 
-        <div className="ax-size-area">
-          <span className="ax-size-label">SELECT SIZE</span>
+        {sizes.length > 0 && (
+          <div className="ax-size-area">
+            <span className="ax-size-label">SELECT SIZE</span>
 
-          <div className="ax-size-list">
-            {product.sizes.map((size) => (
-              <button
-                type="button"
-                key={size}
-                onClick={() => chooseSize(size)}
-                className={selectedSize === size ? "ax-size active" : "ax-size"}
-              >
-                {size}
-              </button>
-            ))}
+            <div className="ax-size-list">
+              {sizes.map((size) => (
+                <button
+                  type="button"
+                  key={size}
+                  onClick={() => chooseSize(size)}
+                  className={
+                    selectedSize === size ? "ax-size active" : "ax-size"
+                  }
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* QUANTITY */}
+        {/* ===============================================
+            QUANTITY
+        =============================================== */}
 
         <div className="ax-quantity-area">
           <span className="ax-quantity-label">QUANTITY</span>
@@ -425,7 +470,7 @@ function ProductCard({
               type="button"
               className="ax-quantity-btn"
               onClick={() => changeQuantity(-1)}
-              disabled={quantity <= 1}
+              disabled={quantity <= 0}
               aria-label={`Decrease ${product.name} quantity`}
             >
               −
@@ -445,7 +490,9 @@ function ProductCard({
           </div>
         </div>
 
-        {/* BUTTONS */}
+        {/* ===============================================
+            ACTIONS
+        =============================================== */}
 
         <div className="ax-product-actions">
           <button type="button" className="ax-add-cart" onClick={addToCart}>
@@ -490,28 +537,27 @@ function ProductSection({
           <p>{section.subtitle}</p>
         </div>
 
-        <Link
-          to={
-            section.id === "shirts" ? "/shirts" : `/shop?category=${section.id}`
-          }
-          className="ax-view-all"
-        >
+        <Link to={section.link || "/shop"} className="ax-view-all">
           VIEW ALL
           <span>↗</span>
         </Link>
       </div>
 
       <div className="ax-products-grid">
-        {section.products.map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            selectedSizes={selectedSizes}
-            setSelectedSizes={setSelectedSizes}
-            quantities={quantities}
-            setQuantities={setQuantities}
-          />
-        ))}
+        {section.products.map((product) => {
+          const productId = getProductId(product);
+
+          return (
+            <ProductCard
+              key={productId}
+              product={product}
+              selectedSizes={selectedSizes}
+              setSelectedSizes={setSelectedSizes}
+              quantities={quantities}
+              setQuantities={setQuantities}
+            />
+          );
+        })}
       </div>
     </section>
   );
@@ -559,99 +605,89 @@ function Home({
 
   const [quantities, setQuantities] = useState({});
 
-  /* ======================================================
+  /* =======================================================
      HERO INTRO
-  ====================================================== */
+  ======================================================= */
 
   useLayoutEffect(() => {
     /* =====================================================
        RETURNING TO HOME
-
-       Home → Shirts → Home
-
-       Intro already played,
-       so show final state instantly.
     ===================================================== */
 
     if (heroAlreadyPlayed && !startAnimation) {
-      const ctx = gsap.context(() => {
-        gsap.set(heroRef.current, {
-          x: 0,
-          y: 0,
-        });
+      const ctx = gsap.context(
+        () => {
+          gsap.set(heroRef.current, {
+            x: 0,
+            y: 0,
+          });
 
-        gsap.set(spaceRef.current, {
-          opacity: 1,
-
-          scale: 1,
-
-          yPercent: 0,
-        });
-
-        gsap.set(unboundWrapRef.current, {
-          xPercent: 0,
-
-          yPercent: 0,
-
-          opacity: 1,
-        });
-
-        gsap.set(unboundRef.current, {
-          filter: "blur(0px)",
-        });
-
-        gsap.set(mountainRef.current, {
-          yPercent: 0,
-
-          opacity: 1,
-        });
-
-        gsap.set(modelRef.current, {
-          yPercent: 0,
-
-          opacity: 1,
-        });
-
-        gsap.set(neonRef.current, {
-          opacity: 1,
-
-          scale: 1,
-
-          rotation: 0,
-        });
-
-        gsap.set(fogBackRef.current, {
-          opacity: 0.72,
-
-          y: 0,
-
-          scale: 1,
-        });
-
-        gsap.set(fogFrontRef.current, {
-          opacity: 0.88,
-
-          y: 0,
-
-          yPercent: 0,
-
-          scale: 1,
-        });
-
-        gsap.set(
-          [
-            leftUIRef.current,
-            numbersRef.current,
-            exploreRef.current,
-            engineeredRef.current,
-          ],
-          {
+          gsap.set(spaceRef.current, {
             opacity: 1,
+            scale: 1,
+            yPercent: 0,
+          });
+
+          gsap.set(unboundWrapRef.current, {
+            xPercent: 0,
+            yPercent: 0,
+            opacity: 1,
+          });
+
+          gsap.set(unboundRef.current, {
+            filter: "blur(0px)",
+          });
+
+          gsap.set(mountainRef.current, {
+            yPercent: 0,
+            opacity: 1,
+          });
+
+          gsap.set(modelRef.current, {
+            yPercent: 0,
+            opacity: 1,
+          });
+
+          gsap.set(neonRef.current, {
+            opacity: 1,
+            scale: 1,
+            rotation: 0,
+          });
+
+          gsap.set(fogBackRef.current, {
+            opacity: 0.72,
 
             y: 0,
-          },
-        );
-      }, homeRef);
+
+            scale: 1,
+          });
+
+          gsap.set(fogFrontRef.current, {
+            opacity: 0.88,
+
+            y: 0,
+
+            yPercent: 0,
+
+            scale: 1,
+          });
+
+          gsap.set(
+            [
+              leftUIRef.current,
+              numbersRef.current,
+              exploreRef.current,
+              engineeredRef.current,
+            ],
+            {
+              opacity: 1,
+              y: 0,
+            },
+          );
+        },
+
+        homeRef,
+      );
 
       return () => {
         ctx.revert();
@@ -667,490 +703,505 @@ function Home({
     }
 
     /* =====================================================
-       FIRST OPEN / REFRESH
-
-       Full cinematic intro.
+       FIRST OPEN
     ===================================================== */
 
-    const ctx = gsap.context(() => {
-      gsap.killTweensOf([
-        heroRef.current,
-        spaceRef.current,
-        unboundWrapRef.current,
-        unboundRef.current,
-        mountainRef.current,
-        modelRef.current,
-        neonRef.current,
-        fogBackRef.current,
-        fogFrontRef.current,
-        leftUIRef.current,
-        numbersRef.current,
-        exploreRef.current,
-        engineeredRef.current,
-      ]);
-
-      /* HERO */
-
-      gsap.set(heroRef.current, {
-        x: 0,
-
-        y: 0,
-      });
-
-      /* SPACE */
-
-      gsap.set(spaceRef.current, {
-        opacity: 0,
-
-        scale: 1.08,
-
-        yPercent: 0,
-      });
-
-      /* UNBOUND */
-
-      gsap.set(unboundWrapRef.current, {
-        xPercent: 120,
-
-        yPercent: 0,
-
-        opacity: 0,
-      });
-
-      gsap.set(unboundRef.current, {
-        filter: "blur(16px)",
-      });
-
-      /* MOUNTAIN */
-
-      gsap.set(mountainRef.current, {
-        yPercent: -120,
-
-        opacity: 0,
-      });
-
-      /* MODEL */
-
-      gsap.set(modelRef.current, {
-        yPercent: -125,
-
-        opacity: 0,
-      });
-
-      /* NEON */
-
-      gsap.set(neonRef.current, {
-        opacity: 0,
-
-        scale: 0.65,
-
-        rotation: -15,
-      });
-
-      /* BACK FOG */
-
-      gsap.set(fogBackRef.current, {
-        opacity: 0,
-
-        y: 150,
-
-        scale: 1.18,
-      });
-
-      /* FRONT FOG */
-
-      gsap.set(fogFrontRef.current, {
-        opacity: 0,
-
-        y: 160,
-
-        yPercent: 0,
-
-        scale: 1.2,
-      });
-
-      /* FINAL UI */
-
-      gsap.set(
-        [
+    const ctx = gsap.context(
+      () => {
+        gsap.killTweensOf([
+          heroRef.current,
+          spaceRef.current,
+          unboundWrapRef.current,
+          unboundRef.current,
+          mountainRef.current,
+          modelRef.current,
+          neonRef.current,
+          fogBackRef.current,
+          fogFrontRef.current,
           leftUIRef.current,
           numbersRef.current,
           exploreRef.current,
           engineeredRef.current,
-        ],
-        {
+        ]);
+
+        /* HERO */
+
+        gsap.set(heroRef.current, {
+          x: 0,
+          y: 0,
+        });
+
+        /* SPACE */
+
+        gsap.set(spaceRef.current, {
           opacity: 0,
 
-          y: 22,
-        },
-      );
+          scale: 1.08,
 
-      /* ===============================================
+          yPercent: 0,
+        });
+
+        /* UNBOUND */
+
+        gsap.set(unboundWrapRef.current, {
+          xPercent: 120,
+
+          yPercent: 0,
+
+          opacity: 0,
+        });
+
+        gsap.set(unboundRef.current, {
+          filter: "blur(16px)",
+        });
+
+        /* MOUNTAIN */
+
+        gsap.set(mountainRef.current, {
+          yPercent: -120,
+
+          opacity: 0,
+        });
+
+        /* MODEL */
+
+        gsap.set(modelRef.current, {
+          yPercent: -125,
+
+          opacity: 0,
+        });
+
+        /* NEON */
+
+        gsap.set(neonRef.current, {
+          opacity: 0,
+
+          scale: 0.65,
+
+          rotation: -15,
+        });
+
+        /* BACK FOG */
+
+        gsap.set(fogBackRef.current, {
+          opacity: 0,
+
+          y: 150,
+
+          scale: 1.18,
+        });
+
+        /* FRONT FOG */
+
+        gsap.set(fogFrontRef.current, {
+          opacity: 0,
+
+          y: 160,
+
+          yPercent: 0,
+
+          scale: 1.2,
+        });
+
+        /* FINAL UI */
+
+        gsap.set(
+          [
+            leftUIRef.current,
+            numbersRef.current,
+            exploreRef.current,
+            engineeredRef.current,
+          ],
+          {
+            opacity: 0,
+
+            y: 22,
+          },
+        );
+
+        /* ===============================================
              TIMELINE
           =============================================== */
 
-      const tl = gsap.timeline({
-        defaults: {
-          overwrite: "auto",
-        },
+        const tl = gsap.timeline({
+          defaults: {
+            overwrite: "auto",
+          },
 
-        onComplete: () => {
-          onHeroComplete?.();
-        },
-      });
+          onComplete: () => {
+            onHeroComplete?.();
+          },
+        });
 
-      /* UNBOUND */
+        /* UNBOUND */
 
-      tl.to(
-        unboundWrapRef.current,
-        {
-          xPercent: 0,
+        tl.to(
+          unboundWrapRef.current,
+          {
+            xPercent: 0,
 
-          opacity: 1,
+            opacity: 1,
 
-          duration: 1.25,
+            duration: 1.25,
 
-          ease: "expo.out",
-        },
-        0,
-      );
+            ease: "expo.out",
+          },
 
-      tl.to(
-        unboundRef.current,
-        {
-          filter: "blur(0px)",
+          0,
+        );
 
-          duration: 0.9,
+        tl.to(
+          unboundRef.current,
+          {
+            filter: "blur(0px)",
 
-          ease: "power3.out",
-        },
-        0,
-      );
+            duration: 0.9,
 
-      /* SPACE */
+            ease: "power3.out",
+          },
 
-      tl.to(
-        spaceRef.current,
-        {
-          opacity: 1,
+          0,
+        );
 
-          scale: 1,
+        /* SPACE */
 
-          duration: 1.1,
+        tl.to(
+          spaceRef.current,
+          {
+            opacity: 1,
 
-          ease: "power3.out",
-        },
-        0.65,
-      );
+            scale: 1,
 
-      /* MOUNTAIN */
+            duration: 1.1,
 
-      tl.to(
-        mountainRef.current,
-        {
-          yPercent: 0,
+            ease: "power3.out",
+          },
 
-          opacity: 1,
+          0.65,
+        );
 
-          duration: 0.9,
+        /* MOUNTAIN */
 
-          ease: "expo.in",
-        },
-        1.65,
-      );
+        tl.to(
+          mountainRef.current,
+          {
+            yPercent: 0,
 
-      /* IMPACT */
+            opacity: 1,
 
-      tl.to(heroRef.current, {
-        x: -6,
+            duration: 0.9,
 
-        duration: 0.04,
-      });
+            ease: "expo.in",
+          },
 
-      tl.to(heroRef.current, {
-        x: 6,
+          1.65,
+        );
 
-        duration: 0.04,
-      });
+        /* IMPACT */
 
-      tl.to(heroRef.current, {
-        x: -3,
+        tl.to(heroRef.current, {
+          x: -6,
 
-        duration: 0.04,
-      });
+          duration: 0.04,
+        });
 
-      tl.to(heroRef.current, {
-        x: 2,
+        tl.to(heroRef.current, {
+          x: 6,
 
-        duration: 0.04,
-      });
+          duration: 0.04,
+        });
 
-      tl.to(heroRef.current, {
-        x: 0,
+        tl.to(heroRef.current, {
+          x: -3,
 
-        duration: 0.08,
-      });
+          duration: 0.04,
+        });
 
-      /* BACK FOG */
+        tl.to(heroRef.current, {
+          x: 2,
 
-      tl.to(
-        fogBackRef.current,
-        {
+          duration: 0.04,
+        });
+
+        tl.to(heroRef.current, {
+          x: 0,
+
+          duration: 0.08,
+        });
+
+        /* BACK FOG */
+
+        tl.to(
+          fogBackRef.current,
+          {
+            y: 0,
+
+            opacity: 0.72,
+
+            scale: 1,
+
+            duration: 0.7,
+
+            ease: "power4.out",
+          },
+
+          "-=0.12",
+        );
+
+        /* MODEL */
+
+        tl.to(
+          modelRef.current,
+          {
+            yPercent: 0,
+
+            opacity: 1,
+
+            duration: 0.82,
+
+            ease: "expo.in",
+          },
+
+          "-=0.08",
+        );
+
+        /* MODEL IMPACT */
+
+        tl.to(heroRef.current, {
+          y: 7,
+
+          duration: 0.045,
+        });
+
+        tl.to(heroRef.current, {
+          y: -4,
+
+          duration: 0.045,
+        });
+
+        tl.to(heroRef.current, {
+          y: 2,
+
+          duration: 0.045,
+        });
+
+        tl.to(heroRef.current, {
           y: 0,
 
-          opacity: 0.72,
+          duration: 0.08,
+        });
 
-          scale: 1,
+        /* FRONT FOG */
 
-          duration: 0.7,
+        tl.to(
+          fogFrontRef.current,
+          {
+            y: 0,
 
-          ease: "power4.out",
-        },
-        "-=0.12",
-      );
+            opacity: 0.88,
 
-      /* MODEL */
+            scale: 1,
 
-      tl.to(
-        modelRef.current,
-        {
-          yPercent: 0,
+            duration: 0.68,
 
-          opacity: 1,
+            ease: "power4.out",
+          },
 
-          duration: 0.82,
+          "-=0.13",
+        );
 
-          ease: "expo.in",
-        },
-        "-=0.08",
-      );
+        /* NEON */
 
-      /* MODEL IMPACT */
+        tl.to(
+          neonRef.current,
+          {
+            opacity: 1,
 
-      tl.to(heroRef.current, {
-        y: 7,
+            scale: 1,
 
-        duration: 0.045,
-      });
+            rotation: 0,
 
-      tl.to(heroRef.current, {
-        y: -4,
+            duration: 0.9,
 
-        duration: 0.045,
-      });
+            ease: "expo.out",
+          },
 
-      tl.to(heroRef.current, {
-        y: 2,
+          "-=0.32",
+        );
 
-        duration: 0.045,
-      });
+        /* FINAL UI */
 
-      tl.to(heroRef.current, {
-        y: 0,
+        tl.to(
+          [
+            leftUIRef.current,
+            numbersRef.current,
+            exploreRef.current,
+            engineeredRef.current,
+          ],
 
-        duration: 0.08,
-      });
+          {
+            opacity: 1,
 
-      /* FRONT FOG */
+            y: 0,
 
-      tl.to(
-        fogFrontRef.current,
-        {
-          y: 0,
+            duration: 0.65,
 
-          opacity: 0.88,
+            stagger: 0.09,
 
-          scale: 1,
+            ease: "power3.out",
+          },
 
-          duration: 0.68,
+          "-=0.2",
+        );
+      },
 
-          ease: "power4.out",
-        },
-        "-=0.13",
-      );
-
-      /* NEON */
-
-      tl.to(
-        neonRef.current,
-        {
-          opacity: 1,
-
-          scale: 1,
-
-          rotation: 0,
-
-          duration: 0.9,
-
-          ease: "expo.out",
-        },
-        "-=0.32",
-      );
-
-      /* FINAL UI */
-
-      tl.to(
-        [
-          leftUIRef.current,
-          numbersRef.current,
-          exploreRef.current,
-          engineeredRef.current,
-        ],
-        {
-          opacity: 1,
-
-          y: 0,
-
-          duration: 0.65,
-
-          stagger: 0.09,
-
-          ease: "power3.out",
-        },
-        "-=0.2",
-      );
-    }, homeRef);
+      homeRef,
+    );
 
     return () => {
       ctx.revert();
     };
   }, [startAnimation, heroAlreadyPlayed, onHeroComplete]);
 
-  /* ======================================================
+  /* =======================================================
      HERO SCROLL PARALLAX
-  ====================================================== */
+  ======================================================= */
 
   useLayoutEffect(() => {
     if (!heroComplete) {
       return;
     }
 
-    const ctx = gsap.context(() => {
-      /* SPACE */
+    const ctx = gsap.context(
+      () => {
+        /* SPACE */
 
-      gsap.to(spaceRef.current, {
-        yPercent: 8,
+        gsap.to(spaceRef.current, {
+          yPercent: 8,
 
-        scale: 1.04,
+          scale: 1.04,
 
-        ease: "none",
+          ease: "none",
 
-        scrollTrigger: {
-          trigger: heroRef.current,
+          scrollTrigger: {
+            trigger: heroRef.current,
 
-          start: "top top",
+            start: "top top",
 
-          end: "bottom top",
+            end: "bottom top",
 
-          scrub: 1.5,
-        },
-      });
+            scrub: 1.5,
+          },
+        });
 
-      /* UNBOUND */
+        /* UNBOUND */
 
-      gsap.to(unboundWrapRef.current, {
-        yPercent: -7,
+        gsap.to(unboundWrapRef.current, {
+          yPercent: -7,
 
-        ease: "none",
+          ease: "none",
 
-        scrollTrigger: {
-          trigger: heroRef.current,
+          scrollTrigger: {
+            trigger: heroRef.current,
 
-          start: "top top",
+            start: "top top",
 
-          end: "bottom top",
+            end: "bottom top",
 
-          scrub: 1.2,
-        },
-      });
+            scrub: 1.2,
+          },
+        });
 
-      /* MOUNTAIN */
+        /* MOUNTAIN */
 
-      gsap.to(mountainRef.current, {
-        yPercent: -17,
+        gsap.to(mountainRef.current, {
+          yPercent: -17,
 
-        ease: "none",
+          ease: "none",
 
-        scrollTrigger: {
-          trigger: heroRef.current,
+          scrollTrigger: {
+            trigger: heroRef.current,
 
-          start: "top top",
+            start: "top top",
 
-          end: "bottom top",
+            end: "bottom top",
 
-          scrub: 1.25,
-        },
-      });
+            scrub: 1.25,
+          },
+        });
 
-      /* MODEL */
+        /* MODEL */
 
-      gsap.to(modelRef.current, {
-        yPercent: -6,
+        gsap.to(modelRef.current, {
+          yPercent: -6,
 
-        ease: "none",
+          ease: "none",
 
-        scrollTrigger: {
-          trigger: heroRef.current,
+          scrollTrigger: {
+            trigger: heroRef.current,
 
-          start: "top top",
+            start: "top top",
 
-          end: "bottom top",
+            end: "bottom top",
 
-          scrub: 1.35,
-        },
-      });
+            scrub: 1.35,
+          },
+        });
 
-      /* NEON */
+        /* NEON */
 
-      gsap.to(neonRef.current, {
-        rotation: 7,
+        gsap.to(neonRef.current, {
+          rotation: 7,
 
-        scale: 1.05,
+          scale: 1.05,
 
-        ease: "none",
+          ease: "none",
 
-        scrollTrigger: {
-          trigger: heroRef.current,
+          scrollTrigger: {
+            trigger: heroRef.current,
 
-          start: "top top",
+            start: "top top",
 
-          end: "bottom top",
+            end: "bottom top",
 
-          scrub: 1.3,
-        },
-      });
+            scrub: 1.3,
+          },
+        });
 
-      /* FRONT FOG */
+        /* FRONT FOG */
 
-      gsap.to(fogFrontRef.current, {
-        opacity: 0,
+        gsap.to(fogFrontRef.current, {
+          opacity: 0,
 
-        yPercent: -7,
+          yPercent: -7,
 
-        ease: "none",
+          ease: "none",
 
-        scrollTrigger: {
-          trigger: heroRef.current,
+          scrollTrigger: {
+            trigger: heroRef.current,
 
-          start: "top top",
+            start: "top top",
 
-          end: "70% top",
+            end: "70% top",
 
-          scrub: 1,
-        },
-      });
+            scrub: 1,
+          },
+        });
 
-      ScrollTrigger.refresh();
-    }, homeRef);
+        ScrollTrigger.refresh();
+      },
+
+      homeRef,
+    );
 
     return () => {
       ctx.revert();
     };
   }, [heroComplete]);
 
-  /* ======================================================
+  /* =======================================================
      PRODUCT REVEAL
-  ====================================================== */
+  ======================================================= */
 
   useLayoutEffect(() => {
     if (!heroComplete) {
@@ -1240,6 +1291,10 @@ function Home({
     };
   }, [heroComplete]);
 
+  /* =======================================================
+     RETURN
+  ======================================================= */
+
   return (
     <main ref={homeRef} className="ax-home">
       {/* =================================================
@@ -1259,7 +1314,7 @@ function Home({
           </h1>
         </div>
 
-        {/* MOUNTAINS */}
+        {/* MOUNTAIN */}
 
         <img
           ref={mountainRef}
@@ -1319,9 +1374,7 @@ function Home({
 
         {/* SLIDE NUMBERS */}
 
-        <div ref={numbersRef} className="hero-numbers">
-       
-        </div>
+        <div ref={numbersRef} className="hero-numbers" />
 
         {/* EXPLORE */}
 
@@ -1336,7 +1389,7 @@ function Home({
           <p>
             ENGINEERED
             <br />
-            FOR WHAT'S NEXT
+            FOR WHAT&apos;S NEXT
           </p>
 
           <span>↓</span>

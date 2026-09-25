@@ -5,11 +5,8 @@ import {
   LayoutDashboard,
   ShoppingBag,
   Package,
-  Layers3,
   Users,
   TicketPercent,
-  GalleryHorizontalEnd,
-  Image,
   Settings,
   LogOut,
   X,
@@ -36,11 +33,6 @@ const AdminSidebar = ({ sidebarOpen, closeSidebar }) => {
       icon: Package,
     },
     {
-      name: "Categories",
-      path: "/admin/categories",
-      icon: Layers3,
-    },
-    {
       name: "Customers",
       path: "/admin/customers",
       icon: Users,
@@ -49,16 +41,6 @@ const AdminSidebar = ({ sidebarOpen, closeSidebar }) => {
       name: "Coupons",
       path: "/admin/coupons",
       icon: TicketPercent,
-    },
-    {
-      name: "Sliders",
-      path: "/admin/sliders",
-      icon: GalleryHorizontalEnd,
-    },
-    {
-      name: "Banners",
-      path: "/admin/banners",
-      icon: Image,
     },
     {
       name: "Settings",
@@ -71,16 +53,25 @@ const AdminSidebar = ({ sidebarOpen, closeSidebar }) => {
     <aside
       className={`admin-sidebar ${sidebarOpen ? "admin-sidebar-open" : ""}`}
     >
+      {/* HEADER */}
+
       <div className="admin-sidebar-header">
         <div>
           <h1>AXIEE</h1>
           <span>ADMIN PANEL</span>
         </div>
 
-        <button className="admin-sidebar-close" onClick={closeSidebar}>
+        <button
+          type="button"
+          className="admin-sidebar-close"
+          onClick={closeSidebar}
+          aria-label="Close sidebar"
+        >
           <X size={21} />
         </button>
       </div>
+
+      {/* NAVIGATION */}
 
       <nav className="admin-sidebar-nav">
         {menuItems.map((item) => {
@@ -104,8 +95,10 @@ const AdminSidebar = ({ sidebarOpen, closeSidebar }) => {
         })}
       </nav>
 
+      {/* FOOTER */}
+
       <div className="admin-sidebar-footer">
-        <button className="admin-logout-button">
+        <button type="button" className="admin-logout-button">
           <LogOut size={19} />
 
           <span>Logout</span>

@@ -133,9 +133,9 @@ const orderSchema = new mongoose.Schema(
 
     items: {
       type: [orderItemSchema],
-
       validate: {
         validator: (items) => Array.isArray(items) && items.length > 0,
+
         message: "Order must contain at least one item.",
       },
     },
@@ -166,13 +166,7 @@ const orderSchema = new mongoose.Schema(
 
     paymentStatus: {
       type: String,
-      enum: [
-        "pending",
-        "partially_paid",
-        "paid",
-        "failed",
-        "refunded",
-      ],
+      enum: ["pending", "paid", "failed", "refunded"],
       default: "pending",
     },
 
@@ -188,28 +182,6 @@ const orderSchema = new mongoose.Schema(
         "cancelled",
       ],
       default: "placed",
-    },
-
-    codAdvanceRequired: {
-      type: Boolean,
-      default: false,
-    },
-
-    advancePercentage: {
-      type: Number,
-      default: 0,
-    },
-
-    advanceAmount: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-
-    balanceDueOnDelivery: {
-      type: Number,
-      default: 0,
-      min: 0,
     },
 
     razorpayOrderId: {
@@ -233,8 +205,6 @@ const orderSchema = new mongoose.Schema(
   },
 );
 
-const Order =
-  mongoose.models.Order ||
-  mongoose.model("Order", orderSchema);
+const Order = mongoose.models.Order || mongoose.model("Order", orderSchema);
 
 export default Order;

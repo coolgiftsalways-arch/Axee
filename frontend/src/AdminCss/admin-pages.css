@@ -1372,3 +1372,271 @@ body.admin-drawer-open {
           gap: 7px;
      }
 }
+
+
+/* =========================================================
+   CUSTOMER PAGE UPDATED
+========================================================= */
+
+.admin-customer-summary-grid {
+     width: 100%;
+
+     display: grid;
+
+     grid-template-columns:
+          repeat(3, minmax(0, 1fr));
+
+     gap: 14px;
+
+     margin-bottom: 18px;
+}
+
+.admin-customer-summary-card {
+     padding: 18px;
+}
+
+.admin-customer-summary-card>span {
+     color: #858c97;
+
+     font-size: 11px;
+}
+
+.admin-customer-summary-card h2 {
+     margin: 8px 0 4px;
+
+     color: #15181d;
+
+     font-size: 24px;
+}
+
+.admin-customer-summary-card small {
+     color: #a0a5ad;
+
+     font-size: 9px;
+}
+
+.admin-customer-result-count {
+     color: #858c97;
+
+     font-size: 11px;
+}
+
+/* =========================================================
+   CUSTOMER TABLE
+========================================================= */
+
+.admin-customer-table {
+     min-width: 1200px;
+}
+
+.admin-customer-main-info {
+     min-width: 0;
+
+     display: flex;
+     flex-direction: column;
+
+     gap: 3px;
+}
+
+.admin-customer-main-info strong {
+     max-width: 150px;
+
+     overflow: hidden;
+
+     color: #252a31;
+
+     font-size: 12px;
+
+     text-overflow: ellipsis;
+
+     white-space: nowrap;
+}
+
+.admin-customer-main-info span {
+     color: #959ba5;
+
+     font-size: 9px;
+}
+
+/* =========================================================
+   LATEST ORDER PRODUCT
+========================================================= */
+
+.admin-latest-product {
+     min-width: 195px;
+
+     display: flex;
+     align-items: center;
+
+     gap: 10px;
+}
+
+.admin-latest-product-info {
+     min-width: 0;
+
+     display: flex;
+     flex-direction: column;
+
+     gap: 3px;
+}
+
+.admin-latest-product-info strong {
+     max-width: 180px;
+
+     overflow: hidden;
+
+     color: #262b31;
+
+     font-size: 11px;
+
+     text-overflow: ellipsis;
+
+     white-space: nowrap;
+}
+
+.admin-latest-product-info span {
+     color: #8d949e;
+
+     font-size: 9px;
+}
+
+.admin-latest-product-info small {
+     color: #555c65;
+
+     font-size: 9px;
+     font-weight: 600;
+}
+
+/* =========================================================
+   PRODUCT IMAGE
+========================================================= */
+
+.admin-customer-order-product-image {
+     width: 54px;
+     height: 66px;
+
+     display: flex;
+     align-items: center;
+     justify-content: center;
+
+     flex-shrink: 0;
+
+     overflow: hidden;
+
+     border-radius: 7px;
+
+     background: #eef0f3;
+
+     color: #555d68;
+}
+
+.admin-customer-order-product-image img {
+     width: 100%;
+     height: 100%;
+
+     display: block;
+
+     object-fit: cover;
+     object-position: center;
+}
+
+/* Small version in main table */
+
+.admin-customer-order-product-image-small {
+     width: 42px;
+     height: 52px;
+}
+
+/* =========================================================
+   ORDER COUNT
+========================================================= */
+
+.admin-customer-order-count {
+     display: inline-flex;
+     align-items: center;
+
+     min-width: max-content;
+
+     padding: 5px 8px;
+
+     border-radius: 6px;
+
+     background: #f2f3f5;
+
+     color: #343a42;
+
+     font-size: 10px;
+}
+
+/* =========================================================
+   LAST ORDER
+========================================================= */
+
+.admin-customer-last-order {
+     display: flex;
+     flex-direction: column;
+
+     gap: 3px;
+}
+
+.admin-customer-last-order strong {
+     font-size: 11px;
+}
+
+.admin-customer-last-order span {
+     color: #9299a4;
+
+     font-size: 9px;
+}
+
+/* =========================================================
+   ORDER PRODUCT ROW
+========================================================= */
+
+.admin-customer-order-product {
+     grid-template-columns:
+          54px minmax(0, 1fr) auto;
+}
+
+/* =========================================================
+   DARK MODE
+========================================================= */
+
+.admin-dark-mode .admin-customer-summary-card h2 {
+     color: #ffffff;
+}
+
+.admin-dark-mode .admin-customer-order-count {
+     background: #23272e;
+
+     color: #e6e8eb;
+}
+
+.admin-dark-mode .admin-latest-product-info strong,
+.admin-dark-mode .admin-customer-main-info strong {
+     color: #e6e8eb;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 900px) {
+     .admin-customer-summary-grid {
+          grid-template-columns:
+               1fr;
+     }
+}
+
+@media (max-width: 500px) {
+     .admin-customer-order-product {
+          grid-template-columns:
+               54px minmax(0, 1fr);
+     }
+
+     .admin-customer-order-product-price {
+          grid-column: 2;
+
+          align-items: flex-start;
+     }
+}
