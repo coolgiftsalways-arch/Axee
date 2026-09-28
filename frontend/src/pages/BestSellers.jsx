@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -14,26 +14,30 @@ import {
   Tag,
   ChevronDown,
   Play,
+  Pause,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 
 import "../styles/bestSellers.css";
 
 import Best from "../assets/Bestseller/bestseller.png";
 
+import reel1 from "../assets/Bestseller/reel1.mp4";
+import reel2 from "../assets/Bestseller/reel2.mp4";
+import reel3 from "../assets/Bestseller/reel3.mp4";
+import reel4 from "../assets/Bestseller/reel4.mp4";
+import reel5 from "../assets/Bestseller/reel5.mp4";
+import reel6 from "../assets/Bestseller/reel6.mp4";
+import reel7 from "../assets/Bestseller/reel7.mp4";
+import reel8 from "../assets/Bestseller/reel8.mp4";
+import reel9 from "../assets/Bestseller/reel9.mp4";
+import reel10 from "../assets/Bestseller/reel10.mp4";
+
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 /* =========================================================
    CATEGORY ORDER
-
-   This matches your Explore menu:
-   01 T-SHIRTS
-   02 JEANS
-   03 TRACK PANTS
-   04 SHIRTS
-   05 SHORTS
-   06 HOODIES
-   07 CO-ORD SETS
-   08 JACKETS
 ========================================================= */
 
 const categories = [
@@ -71,7 +75,7 @@ const categoryTypeMap = {
 };
 
 /* =========================================================
-   GET PRODUCTS ARRAY FROM API RESPONSE
+   GET PRODUCTS ARRAY
 ========================================================= */
 
 const extractProducts = (data) => {
@@ -105,7 +109,7 @@ const extractProducts = (data) => {
 const normalizeText = (value = "") => String(value).trim().toLowerCase();
 
 /* =========================================================
-   SAME CATEGORY RULES AS useCategoryProducts.js
+   CATEGORY MATCH
 ========================================================= */
 
 const matchCategory = (product, type) => {
@@ -147,10 +151,6 @@ const matchCategory = (product, type) => {
     );
   }
 
-  /*
-    Imported jeans are currently stored as Pants,
-    so identify them using denim/jean in the name.
-  */
   if (type === "jeans") {
     const pantsCategory = category === "pants" || category === "pant";
 
@@ -160,10 +160,6 @@ const matchCategory = (product, type) => {
     return pantsCategory && denimName;
   }
 
-  /*
-    Track pants can also be stored as Pants.
-    Exclude denim/imported clothing exactly like your hook.
-  */
   if (type === "trackpants") {
     const pantsCategory =
       category === "pants" ||
@@ -183,7 +179,7 @@ const matchCategory = (product, type) => {
 };
 
 /* =========================================================
-   FIND DISPLAY CATEGORY
+   DISPLAY CATEGORY
 ========================================================= */
 
 const getDisplayCategory = (product) => {
@@ -199,10 +195,7 @@ const getDisplayCategory = (product) => {
 };
 
 /* =========================================================
-   IMAGE HELPERS
-
-   Uses the SAME MongoDB/GridFS image returned by
-   /api/catalog/products.
+   MAIN IMAGE
 ========================================================= */
 
 const getRawProductImage = (product) => {
@@ -230,6 +223,10 @@ const getRawProductImage = (product) => {
   return String(value);
 };
 
+/* =========================================================
+   RESOLVE MAIN IMAGE
+========================================================= */
+
 const resolveProductImage = (product) => {
   let value = getRawProductImage(product).trim().replace(/\\/g, "/");
 
@@ -254,9 +251,6 @@ const resolveProductImage = (product) => {
     return value;
   }
 
-  /*
-    API and upload paths belong to backend.
-  */
   if (value.startsWith("/api/") || value.startsWith("/uploads/")) {
     return `${API_BASE}${value}`;
   }
@@ -265,14 +259,100 @@ const resolveProductImage = (product) => {
     return `${API_BASE}/${value}`;
   }
 
-  /*
-    Public frontend assets such as /products/file.jpg
-    should stay on the frontend origin.
-  */
   return value.startsWith("/") ? value : `/${value}`;
 };
 
 const getBestSellerImage = (product) => resolveProductImage(product);
+
+/* =========================================================
+   RESOLVE ANY SINGLE IMAGE
+
+   This works with:
+   - GridFS objects
+   - image URLs
+   - /api/images
+   - /api/catalog/images
+   - /uploads
+   - frontend public images
+========================================================= */
+
+const resolveImageValue = (imageValue) => {
+  if (!imageValue) {
+    return "";
+  }
+
+  let value = imageValue;
+
+  if (typeof value === "object") {
+    const fileId = value?.fileId || value?._id || value?.id;
+
+    if (fileId) {
+      value = `/api/catalog/images/${String(fileId)}`;
+    } else {
+      value = value?.url || value?.src || value?.path || "";
+    }
+  }
+
+  value = String(value).trim().replace(/\\/g, "/");
+
+  if (!value) {
+    return "";
+  }
+
+  if (value.startsWith("/api/images/")) {
+    value = value.replace("/api/images/", "/api/catalog/images/");
+  }
+
+  if (value.startsWith("api/images/")) {
+    value = `/${value.replace("api/images/", "api/catalog/images/")}`;
+  }
+
+  if (
+    value.startsWith("http://") ||
+    value.startsWith("https://") ||
+    value.startsWith("data:") ||
+    value.startsWith("blob:")
+  ) {
+    return value;
+  }
+
+  if (value.startsWith("/api/") || value.startsWith("/uploads/")) {
+    return `${API_BASE}${value}`;
+  }
+
+  if (value.startsWith("api/") || value.startsWith("uploads/")) {
+    return `${API_BASE}/${value}`;
+  }
+
+  return value.startsWith("/") ? value : `/${value}`;
+};
+
+/* =========================================================
+   ⭐ HOVER IMAGE
+
+   Main image:
+   product.image / mainImage / images[0]
+
+   Hover:
+   Find next DIFFERENT available image.
+========================================================= */
+
+const getProductHoverImage = (product) => {
+  const imageCandidates = [
+    product?.image,
+    product?.mainImage,
+    ...(Array.isArray(product?.images) ? product.images : []),
+  ];
+
+  const resolvedImages = imageCandidates
+    .map((image) => resolveImageValue(image))
+    .filter(Boolean)
+    .filter((image, index, allImages) => allImages.indexOf(image) === index);
+
+  const mainImage = getBestSellerImage(product);
+
+  return resolvedImages.find((image) => image !== mainImage) || "";
+};
 
 /* =========================================================
    SIZE HELPERS
@@ -289,10 +369,6 @@ const getBestSellerSizes = (product) => {
         return true;
       }
 
-      /*
-        If stock exists, only choose sizes that have stock.
-        If stock is absent, keep the size.
-      */
       if (item?.stock !== undefined && item?.stock !== null) {
         return Number(item.stock) > 0;
       }
@@ -304,7 +380,7 @@ const getBestSellerSizes = (product) => {
 };
 
 /* =========================================================
-   NUMBER HELPERS
+   NUMBERS
 ========================================================= */
 
 const safeNumber = (value, fallback = 0) => {
@@ -342,7 +418,7 @@ const getDiscountText = (price, oldPrice) => {
 };
 
 /* =========================================================
-   SALES / ACTIVITY
+   SALES ACTIVITY
 ========================================================= */
 
 const getRecentActivityText = (lastSoldAt) => {
@@ -380,7 +456,7 @@ const getRecentActivityText = (lastSoldAt) => {
 };
 
 /* =========================================================
-   MERGE REAL CATALOG PRODUCT + REAL ORDER SALES
+   DISPLAY PRODUCT
 ========================================================= */
 
 const buildDisplayProduct = (product, salesMap) => {
@@ -431,6 +507,10 @@ const buildDisplayProduct = (product, salesMap) => {
   };
 };
 
+/* =========================================================
+   STATS
+========================================================= */
+
 const stats = [
   {
     icon: ShoppingBag,
@@ -466,399 +546,592 @@ const stats = [
 ];
 
 /* =========================================================
-   PEOPLE / REELS
-   Portrait fashion content shown between products + insights.
+   PEOPLE REELS / VIDEOS
 ========================================================= */
 
 const peopleReels = [
-  {
-    id: "reel-01",
-    image:
-      "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=88",
-    name: "VOID HOODIE",
-    meta: "MUMBAI / 00:12",
-    handle: "@unbound.people",
-  },
-  {
-    id: "reel-02",
-    image:
-      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=900&q=88",
-    name: "SHADOW DENIM",
-    meta: "DELHI / 00:09",
-    handle: "@unbound.people",
-  },
-  {
-    id: "reel-03",
-    image:
-      "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=900&q=88",
-    name: "SYSTEM SHIRT",
-    meta: "BANGALORE / 00:14",
-    handle: "@unbound.people",
-  },
-  {
-    id: "reel-04",
-    image:
-      "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=900&q=88",
-    name: "VOID JACKET",
-    meta: "PUNE / 00:11",
-    handle: "@unbound.people",
-  },
-  {
-    id: "reel-05",
-    image:
-      "https://images.unsplash.com/photo-1506629082955-511b1aa562c8?auto=format&fit=crop&w=900&q=88",
-    name: "MOTION TRACK",
-    meta: "HYDERABAD / 00:08",
-    handle: "@unbound.people",
-  },
-  {
-    id: "reel-06",
-    image:
-      "https://images.unsplash.com/photo-1485968579580-b6d095142e6e?auto=format&fit=crop&w=900&q=88",
-    name: "VOID CO-ORD",
-    meta: "GOA / 00:13",
-    handle: "@unbound.people",
-  },
+  { id: "reel-01", video: reel1 },
+  { id: "reel-02", video: reel2 },
+  { id: "reel-03", video: reel3 },
+  { id: "reel-04", video: reel4 },
+  { id: "reel-05", video: reel5 },
+  { id: "reel-06", video: reel6 },
+  { id: "reel-07", video: reel7 },
+  { id: "reel-08", video: reel8 },
+  { id: "reel-09", video: reel9 },
+  { id: "reel-10", video: reel10 },
 ];
 
-const peopleReelStyles = `
-  .best-people-section {
-    position: relative;
-    padding: 84px 28px 92px;
-    overflow: hidden;
-    border-top: 1px solid rgba(255,255,255,.06);
-    border-bottom: 1px solid rgba(255,255,255,.06);
-    background:
-      radial-gradient(circle at 14% 8%, rgba(190,255,0,.08), transparent 30%),
-      linear-gradient(180deg, #050605 0%, #080a07 100%);
-  }
+/* =========================================================
+   EXTRA STYLES
+========================================================= */
 
-  .best-people-section::before {
-    content: "";
-    position: absolute;
-    width: 360px;
-    height: 360px;
-    right: -120px;
-    top: -120px;
-    border: 1px solid rgba(190,255,0,.18);
-    border-radius: 50%;
-    box-shadow: 0 0 90px rgba(190,255,0,.08);
-    pointer-events: none;
+const peopleReelStyles = `
+.best-people-section {
+  position: relative;
+  padding: 74px 0 86px;
+  overflow: hidden;
+  border-top: 1px solid rgba(255,255,255,.06);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  background:
+    radial-gradient(circle at 14% 8%, rgba(190,255,0,.08), transparent 30%),
+    linear-gradient(180deg, #050605 0%, #080a07 100%);
+}
+
+.best-people-section::before {
+  content: "";
+  position: absolute;
+  width: 360px;
+  height: 360px;
+  right: -120px;
+  top: -120px;
+  border: 1px solid rgba(190,255,0,.18);
+  border-radius: 50%;
+  box-shadow: 0 0 90px rgba(190,255,0,.08);
+  pointer-events: none;
+}
+
+.best-people-head,
+.best-reel-footer {
+  width: min(1480px, calc(100% - 56px));
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.best-people-head {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 30px;
+  margin-bottom: 34px;
+}
+
+.best-people-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: #baff00;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2.8px;
+}
+
+.best-people-kicker i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #baff00;
+  box-shadow: 0 0 16px #baff00;
+}
+
+.best-people-title {
+  margin: 0;
+  color: #fff;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(44px, 6vw, 88px);
+  line-height: .86;
+  font-weight: 500;
+  letter-spacing: -3px;
+}
+
+.best-people-copy {
+  max-width: 390px;
+  margin: 0 0 4px;
+  color: rgba(255,255,255,.56);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.best-reel-viewport {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  cursor: grab;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
+}
+
+.best-reel-viewport::-webkit-scrollbar {
+  display: none;
+}
+
+.best-reel-viewport.is-paused {
+  cursor: default;
+}
+
+.best-reel-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: clamp(250px, 20vw, 330px);
+  gap: 14px;
+  width: max-content;
+  padding: 2px 28px 12px;
+}
+
+.best-reel-card {
+  position: relative;
+  height: 500px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 20px;
+  background: #080908;
+  isolation: isolate;
+  transform: translateZ(0);
+}
+
+.best-reel-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(180deg, rgba(0,0,0,.2) 0%, transparent 34%, rgba(0,0,0,.83) 100%);
+  pointer-events: none;
+}
+
+.best-reel-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #050505;
+  filter: saturate(.9) contrast(1.05) brightness(.88);
+  transform: scale(1.01);
+  transition: transform .7s cubic-bezier(.2,.8,.2,1), filter .5s ease;
+}
+
+.best-reel-card:hover .best-reel-video {
+  transform: scale(1.045);
+  filter: saturate(1) contrast(1.03) brightness(.98);
+}
+
+.best-reel-number {
+  position: absolute;
+  z-index: 5;
+  top: 15px;
+  left: 15px;
+  min-height: 29px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 11px;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 999px;
+  background: rgba(5,6,5,.55);
+  backdrop-filter: blur(10px);
+  color: rgba(255,255,255,.92);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+}
+
+.best-reel-controls {
+  position: absolute;
+  z-index: 7;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  gap: 7px;
+}
+
+.best-reel-control {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 50%;
+  background: rgba(5,6,5,.64);
+  color: #fff;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: background .25s ease, color .25s ease, border-color .25s ease, transform .25s ease;
+}
+
+.best-reel-control:hover {
+  color: #c7ff13;
+  border-color: rgba(199,255,19,.72);
+  background: rgba(5,7,4,.82);
+  transform: translateY(-1px);
+}
+
+.best-reel-control.active {
+  background: #c7ff13;
+  border-color: #c7ff13;
+  color: #050505;
+}
+
+.best-reel-center-play {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  top: 48%;
+  width: 62px;
+  height: 62px;
+  transform: translate(-50%, -50%) scale(.92);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(199,255,19,.72);
+  border-radius: 50%;
+  background: rgba(5,7,4,.55);
+  color: #c7ff13;
+  opacity: 0;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+  transition: opacity .25s ease, transform .25s ease;
+}
+
+.best-reel-card.is-paused .best-reel-center-play {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.best-reel-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 18px;
+  color: rgba(255,255,255,.42);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.best-reel-footer strong {
+  color: #baff00;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .best-people-section { padding: 58px 0 68px; }
+  .best-people-head, .best-reel-footer { width: min(calc(100% - 36px), 760px); }
+  .best-people-head { align-items: flex-start; flex-direction: column; margin-bottom: 26px; }
+  .best-people-copy { max-width: 520px; }
+  .best-reel-track { grid-auto-columns: minmax(235px, 58vw); gap: 12px; padding-left: 18px; padding-right: 18px; }
+  .best-reel-card { height: 440px; }
+}
+
+@media (max-width: 560px) {
+  .best-people-section { padding: 48px 0 56px; }
+  .best-people-head, .best-reel-footer { width: calc(100% - 28px); }
+  .best-people-title { font-size: 44px; letter-spacing: -2px; }
+  .best-people-copy { font-size: 11px; line-height: 1.6; }
+  .best-reel-track { grid-auto-columns: 78vw; gap: 10px; padding-left: 14px; padding-right: 14px; }
+  .best-reel-card { height: min(68vh, 500px); min-height: 390px; border-radius: 16px; }
+  .best-reel-controls { top: 11px; right: 11px; }
+  .best-reel-control { width: 38px; height: 38px; }
+  .best-reel-number { top: 11px; left: 11px; min-height: 27px; font-size: 8px; }
+  .best-reel-footer { margin-top: 14px; font-size: 7px; letter-spacing: 1px; }
+}
+
+/* =========================================================
+   ⭐ PRODUCT HOVER IMAGE
+========================================================= */
+
+.best-product-image {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.best-product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.best-product-image
+.best-image-main,
+.best-product-image
+.best-image-hover {
+  transition:
+    opacity .42s ease,
+    transform .72s
+      cubic-bezier(.2,.8,.2,1);
+
+  will-change:
+    opacity,
+    transform;
+}
+
+.best-product-image
+.best-image-main {
+  position: relative;
+  z-index: 0;
+  opacity: 1;
+  transform: scale(1);
+}
+
+.best-product-image
+.best-image-hover {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0;
+  transform: scale(1.045);
+  pointer-events: none;
+}
+
+/* Main image disappears */
+
+.best-product-card:hover
+.best-image-main {
+  opacity: 0;
+  transform: scale(1.035);
+}
+
+/* Second image appears */
+
+.best-product-card:hover
+.best-image-hover {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ========================================================= */
+
+.best-card-actions {
+  display: grid;
+  grid-template-columns:
+    1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.best-card-actions button {
+  min-height: 38px;
+  border-radius: 8px;
+  border:
+    1px solid
+    rgba(255,255,255,.14);
+  background: #0b0d0b;
+  color: #fff;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.1px;
+  cursor: pointer;
+
+  transition:
+    border-color .2s ease,
+    background .2s ease,
+    color .2s ease,
+    transform .2s ease;
+}
+
+.best-card-actions button:hover {
+  transform:
+    translateY(-1px);
+
+  border-color:
+    rgba(190,255,0,.7);
+}
+
+.best-card-actions
+.best-add-cart {
+  color: #c6ff13;
+
+  border-color:
+    rgba(190,255,0,.32);
+}
+
+.best-card-actions
+.best-add-cart.added {
+  background: #c6ff13;
+  border-color: #c6ff13;
+  color: #050505;
+}
+
+.best-card-actions
+.best-buy-now {
+  background: #c6ff13;
+  border-color: #c6ff13;
+  color: #050505;
+}
+
+@media (max-width: 900px) {
+  .best-people-section {
+    padding:
+      60px 18px 70px;
   }
 
   .best-people-head {
-    position: relative;
-    z-index: 2;
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 30px;
-    margin-bottom: 34px;
-  }
+    align-items:
+      flex-start;
 
-  .best-people-kicker {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
-    color: #baff00;
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 2.8px;
-  }
-
-  .best-people-kicker i {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #baff00;
-    box-shadow: 0 0 16px #baff00;
-  }
-
-  .best-people-title {
-    margin: 0;
-    color: #fff;
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: clamp(44px, 6vw, 88px);
-    line-height: .86;
-    font-weight: 500;
-    letter-spacing: -3px;
+    flex-direction:
+      column;
   }
 
   .best-people-copy {
-    max-width: 370px;
-    margin: 0 0 4px;
-    color: rgba(255,255,255,.56);
-    font-size: 13px;
-    line-height: 1.7;
-  }
-
-  .best-reel-viewport {
-    position: relative;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    cursor: grab;
-  }
-
-  .best-reel-viewport::-webkit-scrollbar {
-    display: none;
+    max-width: 520px;
   }
 
   .best-reel-track {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(235px, 20vw);
-    gap: 14px;
-    width: max-content;
-    padding: 2px 2px 10px;
+    grid-auto-columns:
+      minmax(220px, 58vw);
   }
 
   .best-reel-card {
-    position: relative;
-    height: 430px;
-    overflow: hidden;
-    border: 1px solid rgba(255,255,255,.09);
-    border-radius: 18px;
-    background: #0a0b09;
-    isolation: isolate;
+    height: 390px;
+  }
+}
+
+@media (max-width: 560px) {
+  .best-people-title {
+    font-size: 46px;
+    letter-spacing: -2px;
   }
 
-  .best-reel-card::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    background:
-      linear-gradient(180deg, rgba(0,0,0,.08) 30%, rgba(0,0,0,.8) 100%);
-    pointer-events: none;
+  .best-reel-track {
+    grid-auto-columns:
+      76vw;
   }
 
-  .best-reel-card img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-    filter: saturate(.82) contrast(1.05) brightness(.8);
-    transform: scale(1.01);
-    transition: transform .65s cubic-bezier(.2,.8,.2,1),
-                filter .65s ease;
-  }
-
-  .best-reel-card:hover img {
-    transform: scale(1.07);
-    filter: saturate(1) contrast(1.04) brightness(.92);
-  }
-
-  .best-reel-number,
-  .best-reel-social {
-    position: absolute;
-    z-index: 4;
-    top: 16px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 28px;
-    padding: 0 10px;
-    border: 1px solid rgba(255,255,255,.16);
-    border-radius: 999px;
-    background: rgba(5,6,5,.55);
-    backdrop-filter: blur(10px);
-    color: rgba(255,255,255,.9);
-    font-size: 9px;
-    letter-spacing: 1.3px;
-  }
-
-  .best-reel-number {
-    left: 16px;
-  }
-
-  .best-reel-social {
-    right: 16px;
-    width: 30px;
-    padding: 0;
-  }
-
-  .best-reel-play {
-    position: absolute;
-    z-index: 5;
-    left: 50%;
-    top: 48%;
-    width: 58px;
-    height: 58px;
-    transform: translate(-50%, -50%);
-    display: grid;
-    place-items: center;
-    border: 1px solid rgba(190,255,0,.72);
-    border-radius: 50%;
-    background: rgba(5,7,4,.58);
-    color: #c6ff13;
-    box-shadow: 0 0 0 8px rgba(190,255,0,.04), 0 0 34px rgba(190,255,0,.14);
-    backdrop-filter: blur(10px);
-    transition: transform .25s ease, background .25s ease;
-  }
-
-  .best-reel-card:hover .best-reel-play {
-    transform: translate(-50%, -50%) scale(1.08);
-    background: rgba(190,255,0,.13);
-  }
-
-  .best-reel-info {
-    position: absolute;
-    z-index: 4;
-    left: 18px;
-    right: 18px;
-    bottom: 18px;
-  }
-
-  .best-reel-handle {
-    display: block;
-    margin-bottom: 5px;
-    color: #baff00;
-    font-size: 9px;
-    font-weight: 800;
-    letter-spacing: 1.2px;
-  }
-
-  .best-reel-name {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    color: #fff;
-    font-size: 17px;
-    font-weight: 800;
-    letter-spacing: -.2px;
-  }
-
-  .best-reel-meta {
-    display: block;
-    margin-top: 6px;
-    color: rgba(255,255,255,.55);
-    font-size: 9px;
-    letter-spacing: 1.4px;
-  }
-
-  .best-reel-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    margin-top: 22px;
-    color: rgba(255,255,255,.42);
-    font-size: 9px;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-  }
-
-  .best-reel-footer strong {
-    color: #baff00;
-    font-weight: 700;
-  }
-
-  @media (max-width: 900px) {
-    .best-people-section {
-      padding: 60px 18px 70px;
-    }
-
-    .best-people-head {
-      align-items: flex-start;
-      flex-direction: column;
-    }
-
-    .best-people-copy {
-      max-width: 520px;
-    }
-
-    .best-reel-track {
-      grid-auto-columns: minmax(220px, 58vw);
-    }
-
-    .best-reel-card {
-      height: 390px;
-    }
-  }
-
-  @media (max-width: 560px) {
-    .best-people-title {
-      font-size: 46px;
-      letter-spacing: -2px;
-    }
-
-    .best-reel-track {
-      grid-auto-columns: 76vw;
-    }
-
-    .best-reel-card {
-      height: 410px;
-    }
-  }
-
-  .best-product-image {
-    cursor: pointer;
-  }
-
-  .best-product-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
+  .best-reel-card {
+    height: 410px;
   }
 
   .best-card-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-top: 12px;
+    grid-template-columns:
+      1fr;
   }
-
-  .best-card-actions button {
-    min-height: 38px;
-    border-radius: 8px;
-    border: 1px solid rgba(255,255,255,.14);
-    background: #0b0d0b;
-    color: #fff;
-    font: inherit;
-    font-size: 9px;
-    font-weight: 800;
-    letter-spacing: 1.1px;
-    cursor: pointer;
-    transition:
-      border-color .2s ease,
-      background .2s ease,
-      color .2s ease,
-      transform .2s ease;
-  }
-
-  .best-card-actions button:hover {
-    transform: translateY(-1px);
-    border-color: rgba(190,255,0,.7);
-  }
-
-  .best-card-actions .best-add-cart {
-    color: #c6ff13;
-    border-color: rgba(190,255,0,.32);
-  }
-
-  .best-card-actions .best-add-cart.added {
-    background: #c6ff13;
-    border-color: #c6ff13;
-    color: #050505;
-  }
-
-  .best-card-actions .best-buy-now {
-    background: #c6ff13;
-    border-color: #c6ff13;
-    color: #050505;
-  }
-
-  @media (max-width: 560px) {
-    .best-card-actions {
-      grid-template-columns: 1fr;
-    }
-  }
+}
 `;
+
+/* =========================================================
+   COMMUNITY VIDEO CARD
+========================================================= */
+
+function CommunityVideoCard({ reel, index, soundActive, onToggleSound }) {
+  const videoRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(true);
+
+  useEffect(() => {
+    const video = videoRef.current;
+
+    if (!video) return;
+
+    video.muted = !soundActive;
+
+    if (isPlaying) {
+      const playPromise = video.play();
+
+      if (playPromise?.catch) {
+        playPromise.catch(() => setIsPlaying(false));
+      }
+    }
+  }, [soundActive, isPlaying]);
+
+  const togglePlayback = (event) => {
+    event.stopPropagation();
+
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.paused) {
+      video
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch(() => setIsPlaying(false));
+    } else {
+      video.pause();
+      setIsPlaying(false);
+    }
+  };
+
+  const toggleSound = (event) => {
+    event.stopPropagation();
+
+    const video = videoRef.current;
+
+    if (video) {
+      const turningSoundOn = !soundActive;
+
+      video.muted = !turningSoundOn;
+      video.volume = 1;
+
+      if (video.paused) {
+        video.play().catch(() => {});
+        setIsPlaying(true);
+      }
+    }
+
+    onToggleSound(reel.id);
+  };
+
+  return (
+    <article
+      className={isPlaying ? "best-reel-card" : "best-reel-card is-paused"}
+    >
+      <video
+        ref={videoRef}
+        className="best-reel-video"
+        src={reel.video}
+        autoPlay
+        muted={!soundActive}
+        loop
+        playsInline
+        preload="metadata"
+        aria-label={`Community reel ${index + 1}`}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+      />
+
+      <span className="best-reel-number">
+        REEL / {String(index + 1).padStart(2, "0")}
+      </span>
+
+      <div className="best-reel-controls">
+        <button
+          type="button"
+          className={
+            soundActive ? "best-reel-control active" : "best-reel-control"
+          }
+          onClick={toggleSound}
+          aria-label={
+            soundActive ? `Mute reel ${index + 1}` : `Unmute reel ${index + 1}`
+          }
+          title={soundActive ? "Mute" : "Sound on"}
+        >
+          {soundActive ? (
+            <Volume2 size={16} strokeWidth={1.8} />
+          ) : (
+            <VolumeX size={16} strokeWidth={1.8} />
+          )}
+        </button>
+
+        <button
+          type="button"
+          className="best-reel-control"
+          onClick={togglePlayback}
+          aria-label={
+            isPlaying ? `Pause reel ${index + 1}` : `Play reel ${index + 1}`
+          }
+          title={isPlaying ? "Pause video" : "Play video"}
+        >
+          {isPlaying ? (
+            <Pause size={16} fill="currentColor" />
+          ) : (
+            <Play size={16} fill="currentColor" />
+          )}
+        </button>
+      </div>
+
+      <div className="best-reel-center-play" aria-hidden="true">
+        <Play size={22} fill="currentColor" />
+      </div>
+    </article>
+  );
+}
 
 /* =========================================================
    COMPONENT
@@ -883,8 +1156,14 @@ function BestSellers() {
 
   const [productsError, setProductsError] = useState("");
 
+  const reelViewportRef = useRef(null);
+
+  const [isReelSliderPaused, setIsReelSliderPaused] = useState(false);
+
+  const [activeSoundId, setActiveSoundId] = useState(null);
+
   /* =======================================================
-     LOAD REAL MONGODB PRODUCTS + REAL ORDER SALES
+     LOAD PRODUCTS
   ======================================================= */
 
   useEffect(() => {
@@ -895,10 +1174,6 @@ function BestSellers() {
         setProductsLoading(true);
         setProductsError("");
 
-        /*
-          Same source used by your category pages:
-          GET ALL MongoDB catalog products.
-        */
         const catalogResponse = await fetch(
           `${API_BASE}/api/catalog/products`,
           {
@@ -916,11 +1191,6 @@ function BestSellers() {
 
         const allProducts = extractProducts(catalogData);
 
-        /*
-          Load actual order sales too.
-          Use 50 rather than 8 because we need to find
-          the winner INSIDE every category.
-        */
         let sales = [];
 
         try {
@@ -944,11 +1214,6 @@ function BestSellers() {
             );
           }
         } catch (salesError) {
-          /*
-            Catalog should still render even if there
-            are no orders yet or the sales endpoint
-            temporarily fails.
-          */
           console.warn("Sales data could not load:", salesError);
         }
 
@@ -992,7 +1257,46 @@ function BestSellers() {
   }, []);
 
   /* =======================================================
-     RANK EVERY REAL PRODUCT INSIDE ITS OWN CATEGORY
+     AUTO VIDEO SLIDER
+
+     Increasing scrollLeft makes the cards move visually
+     from right to left. Hover/touch pauses the rail.
+  ======================================================= */
+
+  useEffect(() => {
+    const viewport = reelViewportRef.current;
+
+    if (!viewport) return;
+
+    let animationFrame = 0;
+    let previousTime = performance.now();
+
+    const moveSlider = (time) => {
+      const delta = Math.min(64, time - previousTime) / 1000;
+      previousTime = time;
+
+      if (!isReelSliderPaused) {
+        const maxScroll = viewport.scrollWidth - viewport.clientWidth;
+
+        if (maxScroll > 0) {
+          const mobile = window.innerWidth <= 560;
+          const speed = mobile ? 28 : 38;
+          const next = viewport.scrollLeft + speed * delta;
+
+          viewport.scrollLeft = next >= maxScroll - 1 ? 0 : next;
+        }
+      }
+
+      animationFrame = requestAnimationFrame(moveSlider);
+    };
+
+    animationFrame = requestAnimationFrame(moveSlider);
+
+    return () => cancelAnimationFrame(animationFrame);
+  }, [isReelSliderPaused]);
+
+  /* =======================================================
+     RANK PRODUCTS
   ======================================================= */
 
   const rankedProducts = useMemo(() => {
@@ -1002,13 +1306,6 @@ function BestSellers() {
       const categoryProducts = catalogProducts
         .filter((product) => product.category === category)
         .sort((a, b) => {
-          /*
-                1. Actual order quantity
-                2. Product model soldCount
-                3. manually marked bestSeller
-                4. featured
-                5. rating
-              */
           if (b.realOrderSold !== a.realOrderSold) {
             return b.realOrderSold - a.realOrderSold;
           }
@@ -1029,6 +1326,7 @@ function BestSellers() {
         })
         .map((product, index) => ({
           ...product,
+
           rank: index + 1,
         }));
 
@@ -1039,14 +1337,10 @@ function BestSellers() {
   }, [catalogProducts]);
 
   /* =======================================================
-     PRODUCTS TO DISPLAY
+     VISIBLE PRODUCTS
   ======================================================= */
 
   const visibleProducts = useMemo(() => {
-    /*
-      ALL CATEGORIES:
-      exactly ONE real winning product from each Explore category.
-    */
     if (activeCategory === "ALL CATEGORIES") {
       return allCategoryOrder
         .map((category) =>
@@ -1057,10 +1351,6 @@ function BestSellers() {
         .filter(Boolean);
     }
 
-    /*
-      CATEGORY FILTER:
-      Show real MongoDB products from the selected category.
-    */
     let result = rankedProducts.filter(
       (product) => product.category === activeCategory,
     );
@@ -1097,39 +1387,55 @@ function BestSellers() {
   };
 
   /* =======================================================
-     PRODUCT ACTIONS
+     OPEN PRODUCT
   ======================================================= */
 
   const openProduct = (product) => {
     navigate(`/product/${product.id}`);
   };
 
+  /* =======================================================
+     ADD CART
+  ======================================================= */
+
   const addBestSellerToCart = async (product) => {
     try {
       const sizes = getBestSellerSizes(product);
+
       const size = sizes[0] || "ONE SIZE";
 
       let cartId = localStorage.getItem("axiee-cart-id");
 
       if (!cartId) {
         cartId = crypto.randomUUID();
+
         localStorage.setItem("axiee-cart-id", cartId);
       }
 
       const response = await fetch(`${API_BASE}/api/cart/add`, {
         method: "POST",
+
         headers: {
           "Content-Type": "application/json",
+
           Accept: "application/json",
         },
+
         body: JSON.stringify({
           cartId,
+
           productId: product.id,
+
           name: product.name,
+
           category: product.category,
+
           price: Number(product.price || 0),
+
           image: getBestSellerImage(product),
+
           size,
+
           quantity: 1,
         }),
       });
@@ -1153,17 +1459,23 @@ function BestSellers() {
       }, 1500);
     } catch (error) {
       console.error("BEST SELLER ADD TO CART ERROR:", error);
+
       alert(error.message || "Unable to add product to cart.");
     }
   };
 
+  /* =======================================================
+     BUY NOW
+  ======================================================= */
+
   const buyBestSeller = (product) => {
     localStorage.removeItem("axiee-buy-now");
+
     navigate(`/product/${product.id}`);
   };
 
   /* =======================================================
-     SCROLL TO PRODUCTS
+     SCROLL
   ======================================================= */
 
   const scrollToProducts = () => {
@@ -1180,14 +1492,13 @@ function BestSellers() {
   return (
     <main className="best-page">
       <style>{peopleReelStyles}</style>
-      {/* ===================================================
+
+      {/* =============================
           HERO
-      =================================================== */}
+      ============================= */}
 
       <section className="best-hero">
-        <div className="best-hero-grid"></div>
-
-        {/* LEFT */}
+        <div className="best-hero-grid" />
 
         <div className="best-hero-left">
           <span className="best-eyebrow">FASHION LIVES HERE</span>
@@ -1216,26 +1527,22 @@ function BestSellers() {
           </div>
         </div>
 
-        {/* =================================================
-            HERO IMAGE
-        ================================================= */}
-
         <div className="best-hero-collage">
           <div className="best-main-image best-main-image-full">
             <img src={Best} alt="Best selling fashion" />
 
-            <div className="best-hero-image-overlay"></div>
+            <div className="best-hero-image-overlay" />
 
             <div className="best-hero-image-number">01 / BEST SELLERS</div>
           </div>
 
-          <div className="best-collage-line"></div>
+          <div className="best-collage-line" />
         </div>
       </section>
 
-      {/* ===================================================
+      {/* =============================
           STATS
-      =================================================== */}
+      ============================= */}
 
       <section className="best-stats">
         {stats.map((stat) => {
@@ -1261,9 +1568,9 @@ function BestSellers() {
         })}
       </section>
 
-      {/* ===================================================
+      {/* =============================
           CATEGORY FILTER
-      =================================================== */}
+      ============================= */}
 
       <section className="best-filter-section">
         <div className="best-category-list">
@@ -1282,8 +1589,6 @@ function BestSellers() {
             </button>
           ))}
         </div>
-
-        {/* SORT */}
 
         <div className="best-sort">
           <span>SORT BY:</span>
@@ -1307,13 +1612,11 @@ function BestSellers() {
         </div>
       </section>
 
-      {/* ===================================================
+      {/* =============================
           PRODUCTS
-      =================================================== */}
+      ============================= */}
 
       <section className="best-products">
-        {/* HEADER */}
-
         <div className="best-products-head">
           <div>
             <span className="best-products-category">{activeCategory}</span>
@@ -1327,11 +1630,9 @@ function BestSellers() {
             <p>Real products from your store, ranked by sales.</p>
           </div>
 
-          {/* PERIOD */}
-
           <div className="best-period-wrapper">
             <div className="best-live-update">
-              <i></i>
+              <i />
               RECENT ACTIVITY
             </div>
 
@@ -1350,16 +1651,15 @@ function BestSellers() {
           </div>
         </div>
 
-        {/* =================================================
-            PRODUCT GRID
-        ================================================= */}
-
         {productsLoading && (
           <div
             style={{
               padding: "34px 0",
+
               color: "rgba(255,255,255,.55)",
+
               fontSize: "11px",
+
               letterSpacing: "1.4px",
             }}
           >
@@ -1371,8 +1671,11 @@ function BestSellers() {
           <div
             style={{
               padding: "34px 0",
+
               color: "#ff7777",
+
               fontSize: "11px",
+
               letterSpacing: "1px",
             }}
           >
@@ -1384,8 +1687,11 @@ function BestSellers() {
           <div
             style={{
               padding: "34px 0",
+
               color: "rgba(255,255,255,.55)",
+
               fontSize: "11px",
+
               letterSpacing: "1.2px",
             }}
           >
@@ -1393,21 +1699,16 @@ function BestSellers() {
           </div>
         )}
 
+        {/* =============================
+            PRODUCT GRID
+        ============================= */}
+
         <div className="best-product-grid best-eight-grid">
           {visibleProducts.map((product, index) => {
-            /* ===========================================
-                 RANK
-
-                 ALL:
-                 index controls:
-                 #1 - #8
-
-                 CATEGORY:
-                 original product rank
-              =========================================== */
-
             const displayRank =
               activeCategory === "ALL CATEGORIES" ? index + 1 : product.rank;
+
+            const hoverImage = getProductHoverImage(product);
 
             return (
               <article
@@ -1418,9 +1719,9 @@ function BestSellers() {
                     : "best-product-card"
                 }
               >
-                {/* =======================================
-                      IMAGE
-                  ======================================= */}
+                {/* =============================
+                      PRODUCT IMAGE
+                  ============================= */}
 
                 <div
                   className="best-product-image"
@@ -1430,12 +1731,16 @@ function BestSellers() {
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
+
                       openProduct(product);
                     }
                   }}
                   aria-label={`View ${product.name}`}
                 >
+                  {/* MAIN IMAGE */}
+
                   <img
+                    className="best-image-main"
                     src={getBestSellerImage(product)}
                     alt={product.name}
                     loading="lazy"
@@ -1446,19 +1751,33 @@ function BestSellers() {
                         getBestSellerImage(product),
                       );
 
-                      event.currentTarget.style.opacity = "0";
+                      event.currentTarget.style.visibility = "hidden";
                     }}
                   />
 
-                  {/* RANK */}
+                  {/* ⭐ SECOND IMAGE ON HOVER */}
+
+                  {hoverImage && (
+                    <img
+                      className="best-image-hover"
+                      src={hoverImage}
+                      alt={`${product.name} alternate view`}
+                      loading="lazy"
+                      onError={(event) => {
+                        console.error(
+                          "Product hover image failed:",
+                          product.name,
+                          hoverImage,
+                        );
+
+                        event.currentTarget.style.display = "none";
+                      }}
+                    />
+                  )}
 
                   <div className="best-rank">#{displayRank}</div>
 
-                  {/* CROWN */}
-
                   {displayRank === 1 && <div className="best-crown">♛</div>}
-
-                  {/* HEART */}
 
                   <button
                     type="button"
@@ -1469,6 +1788,7 @@ function BestSellers() {
                     }
                     onClick={(event) => {
                       event.stopPropagation();
+
                       toggleLike(product.id);
                     }}
                     aria-label="Add to wishlist"
@@ -1481,23 +1801,17 @@ function BestSellers() {
                     />
                   </button>
 
-                  <div className="best-image-shade"></div>
+                  <div className="best-image-shade" />
                 </div>
 
-                {/* =======================================
+                {/* =============================
                       CONTENT
-                  ======================================= */}
+                  ============================= */}
 
                 <div className="best-product-content">
-                  {/* CATEGORY */}
-
                   <span className="best-card-category">{product.category}</span>
 
-                  {/* NAME */}
-
                   <h3>{product.name}</h3>
-
-                  {/* RATING */}
 
                   <div className="best-rating">
                     <Star size={11} fill="currentColor" />
@@ -1507,13 +1821,9 @@ function BestSellers() {
                     <span>({product.reviews})</span>
                   </div>
 
-                  {/* SOLD */}
-
                   <div className="best-sold">
                     {product.sold.toLocaleString("en-IN")}+ sold
                   </div>
-
-                  {/* PRICE */}
 
                   <div className="best-price-row">
                     <div>
@@ -1529,10 +1839,9 @@ function BestSellers() {
                     )}
                   </div>
 
-                  {/* ACTIVITY */}
-
                   <div className="best-activity">
                     <span>⚡</span>
+
                     {product.recentActivity}
                   </div>
 
@@ -1564,16 +1873,16 @@ function BestSellers() {
         </div>
       </section>
 
-      {/* ===================================================
-          PEOPLE / REELS
-      =================================================== */}
+      {/* =============================
+          PEOPLE / VIDEO REELS
+      ============================= */}
 
       <section className="best-people-section">
         <div className="best-people-head">
           <div>
             <span className="best-people-kicker">
-              <i></i>
-              COMMUNITY / REELS
+              <i />
+              COMMUNITY / 10 VIDEO REELS
             </span>
 
             <h2 className="best-people-title">
@@ -1584,144 +1893,51 @@ function BestSellers() {
           </div>
 
           <p className="best-people-copy">
-            Street fits, daily rotation and UNBOUND pieces in motion. Scroll
-            through the community and discover how the collection lives outside
-            the studio.
+            Ten community videos play automatically while the reel rail moves
+            from right to left. Hover the rail to pause the movement, or use the
+            sound and play controls on any reel.
           </p>
         </div>
 
-        <div className="best-reel-viewport">
+        <div
+          ref={reelViewportRef}
+          className={
+            isReelSliderPaused
+              ? "best-reel-viewport is-paused"
+              : "best-reel-viewport"
+          }
+          onMouseEnter={() => setIsReelSliderPaused(true)}
+          onMouseLeave={() => setIsReelSliderPaused(false)}
+          onTouchStart={() => setIsReelSliderPaused(true)}
+          onTouchEnd={() => setIsReelSliderPaused(false)}
+          onTouchCancel={() => setIsReelSliderPaused(false)}
+          aria-label="Auto moving community video reels"
+        >
           <div className="best-reel-track">
             {peopleReels.map((reel, index) => (
-              <article key={reel.id} className="best-reel-card">
-                <img
-                  src={reel.image}
-                  alt={`${reel.name} street style`}
-                  loading="lazy"
-                />
-
-                <span className="best-reel-number">
-                  REEL / {String(index + 1).padStart(2, "0")}
-                </span>
-
-                <span className="best-reel-social" aria-hidden="true">
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <rect
-                      x="3"
-                      y="3"
-                      width="18"
-                      height="18"
-                      rx="5"
-                      stroke="currentColor"
-                      strokeWidth="1.7"
-                    />
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="4.2"
-                      stroke="currentColor"
-                      strokeWidth="1.7"
-                    />
-                    <circle cx="17.4" cy="6.8" r="1.1" fill="currentColor" />
-                  </svg>
-                </span>
-
-                <button
-                  type="button"
-                  className="best-reel-play"
-                  aria-label={`Play ${reel.name} reel`}
-                >
-                  <Play size={20} fill="currentColor" />
-                </button>
-
-                <div className="best-reel-info">
-                  <span className="best-reel-handle">{reel.handle}</span>
-
-                  <div className="best-reel-name">
-                    <span>{reel.name}</span>
-                    <ArrowRight size={16} strokeWidth={1.5} />
-                  </div>
-
-                  <span className="best-reel-meta">{reel.meta}</span>
-                </div>
-              </article>
+              <CommunityVideoCard
+                key={reel.id}
+                reel={reel}
+                index={index}
+                soundActive={activeSoundId === reel.id}
+                onToggleSound={(id) => {
+                  setActiveSoundId((current) => (current === id ? null : id));
+                }}
+              />
             ))}
           </div>
         </div>
 
         <div className="best-reel-footer">
-          <span>DRAG / SCROLL TO EXPLORE</span>
+
           <strong>#UNBOUNDPEOPLE</strong>
         </div>
       </section>
 
-      {/* ===================================================
+      {/* =============================
           BOTTOM INSIGHTS
-      =================================================== */}
+      ============================= */}
 
-      <section className="best-insights">
-        {/* CARD 1 */}
-
-        <article className="best-insight-card">
-          <Flame size={31} strokeWidth={1.3} />
-
-          <div>
-            <span>FASTEST SELLING RIGHT NOW</span>
-
-            <strong>VOID HOODIE</strong>
-
-            <p>20,120+ units sold</p>
-          </div>
-        </article>
-
-        {/* CARD 2 */}
-
-        <article className="best-insight-card">
-          <TrendingUp size={31} strokeWidth={1.3} />
-
-          <div>
-            <span>TODAY&apos;S SALES</span>
-
-            <strong>₹2,46,890+</strong>
-
-            <p>↑ 32% from yesterday</p>
-          </div>
-        </article>
-
-        {/* CARD 3 */}
-
-        <article className="best-insight-card">
-          <MapPin size={31} strokeWidth={1.3} />
-
-          <div>
-            <span>MOST POPULAR CITY</span>
-
-            <strong>Mumbai</strong>
-
-            <p>18% of total sales</p>
-          </div>
-        </article>
-
-        {/* CARD 4 */}
-
-        <article className="best-insight-card">
-          <Tag size={31} strokeWidth={1.3} />
-
-          <div>
-            <span>TRENDING CATEGORY</span>
-
-            <strong>Hoodies</strong>
-
-            <p>Highest selling category</p>
-          </div>
-        </article>
-      </section>
     </main>
   );
 }

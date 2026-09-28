@@ -28,22 +28,24 @@ const getGridFSBucket = () => {
 };
 
 /* =========================================================
-   IMAGE URL
+   GRIDFS IMAGE URL
 ========================================================= */
 
 const imageUrl = (id) => {
-  if (!id) return "";
+  if (!id) {
+    return "";
+  }
 
   return `/api/catalog/images/${String(id)}`;
 };
 
 /* =========================================================
    CATEGORY FILTER
-
-   Supports:
-   Pants
-   TRACK PANTS
 ========================================================= */
+
+const escapeRegex = (value = "") => {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+};
 
 const buildCategoryFilter = (category) => {
   if (!category) {
@@ -51,17 +53,41 @@ const buildCategoryFilter = (category) => {
   }
 
   const cleanCategory = String(category).trim();
-
   const lowerCategory = cleanCategory.toLowerCase();
 
-  if (lowerCategory === "pants" || lowerCategory === "track pants") {
+  /* =======================================================
+     TRACK PANTS / OLD PANTS SUPPORT
+  ======================================================= */
+
+  if (
+    lowerCategory === "pants" ||
+    lowerCategory === "track pants" ||
+    lowerCategory === "track pant" ||
+    lowerCategory === "trackpants"
+  ) {
     return {
-      $regex: "^(pants|track pants)$",
+      $regex: "^(pants|pant|track pants|track pant|trackpants)$",
       $options: "i",
     };
   }
 
-  const safeCategory = cleanCategory.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  /* =======================================================
+     T-SHIRTS SUPPORT
+  ======================================================= */
+
+  if (
+    lowerCategory === "t-shirts" ||
+    lowerCategory === "t-shirt" ||
+    lowerCategory === "tshirts" ||
+    lowerCategory === "tshirt"
+  ) {
+    return {
+      $regex: "^(t-shirts|t-shirt|tshirts|tshirt)$",
+      $options: "i",
+    };
+  }
+
+  const safeCategory = escapeRegex(cleanCategory);
 
   return {
     $regex: `^${safeCategory}$`,
@@ -70,108 +96,349 @@ const buildCategoryFilter = (category) => {
 };
 
 /* =========================================================
-   GET ALL PRODUCT IMAGES
+   NORMALIZE IMAGE PATH
+
+   OLD:
+   /api/images/ID
+
+   NEW:
+   /api/catalog/images/ID
+
+   FULL URL:
+   http://localhost:5000/api/catalog/images/ID
+
+   STORED / RETURNED:
+   /api/catalog/images/ID
 ========================================================= */
 
-const getProductImages = (product) => {
-  const images = [];
+const normalizeImagePath = (value) => {
+  if (!value) {
+    return "";
+  }
 
   /* =======================================================
-     imageFiles
+     IMAGE OBJECT
+  ======================================================= */
+
+  if (typeof value === "object") {
+    const fileId = value?.fileId || value?._id || value?.id;
+
+    if (fileId) {
+      return imageUrl(fileId);
+    }
+
+    value = value?.url || value?.src || value?.path || "";
+  }
+
+  let text = String(value).trim().replace(/\\/g, "/");
+
+  if (!text) {
+    return "";
+  }
+
+  /* =======================================================
+     OLD GRIDFS ROUTE
+  ======================================================= */
+
+  if (text.startsWith("/api/images/")) {
+    text = text.replace("/api/images/", "/api/catalog/images/");
+  }
+
+  if (text.startsWith("api/images/")) {
+    text = `/${text.replace("api/images/", "api/catalog/images/")}`;
+  }
+
+  /* =======================================================
+     FULL GRIDFS URL
 
      Example:
 
-     imageFiles: [
-       {
-         fileId: ObjectId(...),
-         url: "/api/images/..."
-       }
-     ]
+     http://localhost:5000/api/catalog/images/abc123
+
+     becomes:
+
+     /api/catalog/images/abc123
   ======================================================= */
 
-  if (Array.isArray(product?.imageFiles)) {
-    const sorted = [...product.imageFiles].sort(
-      (a, b) => Number(a?.order || 0) - Number(b?.order || 0),
+  const gridMatch = text.match(/\/api\/catalog\/images\/([a-f\d]{24})/i);
+
+  if (gridMatch?.[1]) {
+    return imageUrl(gridMatch[1]);
+  }
+
+  return text;
+};
+
+/* =========================================================
+   IS GRIDFS IMAGE
+========================================================= */
+
+const isGridFsImage = (value) => {
+  return /\/api\/catalog\/images\/[a-f\d]{24}/i.test(String(value || ""));
+};
+
+/* =========================================================
+   IS RELIABLE IMAGE
+
+   These image types are usually safe to use immediately.
+========================================================= */
+
+const isReliableImage = (value) => {
+  const text = String(value || "").trim();
+
+  if (!text) {
+    return false;
+  }
+
+  return (
+    isGridFsImage(text) ||
+    text.startsWith("http://") ||
+    text.startsWith("https://") ||
+    text.startsWith("data:") ||
+    text.startsWith("blob:") ||
+    text.startsWith("/uploads/") ||
+    text.startsWith("uploads/")
+  );
+};
+
+/* =========================================================
+   REMOVE DUPLICATE IMAGES
+========================================================= */
+
+const uniqueImages = (images = []) => {
+  const seen = new Set();
+
+  return images
+    .map(normalizeImagePath)
+    .filter(Boolean)
+    .filter((image) => {
+      const key = image.toLowerCase();
+
+      if (seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+
+      return true;
+    });
+};
+
+/* =========================================================
+   STANDARD images ARRAY
+
+   This is the NEW system.
+
+   images[0] = MAIN
+========================================================= */
+
+const getStandardImages = (product) => {
+  if (!Array.isArray(product?.images)) {
+    return [];
+  }
+
+  return uniqueImages(product.images);
+};
+
+/* =========================================================
+   LEGACY imageFiles
+
+   This is important for your OLD MongoDB products.
+
+   imageFiles: [
+     {
+       fileId: ObjectId(...),
+       order: 0
+     }
+   ]
+========================================================= */
+
+const getLegacyImageFiles = (product) => {
+  if (!Array.isArray(product?.imageFiles) || product.imageFiles.length === 0) {
+    return [];
+  }
+
+  const sorted = [...product.imageFiles].sort(
+    (a, b) => Number(a?.order || 0) - Number(b?.order || 0),
+  );
+
+  const images = [];
+
+  sorted.forEach((item) => {
+    const fileId = item?.fileId || item?._id || item?.id;
+
+    if (fileId) {
+      images.push(imageUrl(fileId));
+      return;
+    }
+
+    const itemUrl = normalizeImagePath(
+      item?.url || item?.src || item?.path || "",
     );
 
-    sorted.forEach((item) => {
-      const fileId = item?.fileId || item?._id || item?.id;
-
-      if (fileId) {
-        images.push(imageUrl(fileId));
-      }
-    });
-  }
-
-  /* =======================================================
-     imageIds FALLBACK
-  ======================================================= */
-
-  if (images.length === 0 && Array.isArray(product?.imageIds)) {
-    product.imageIds.forEach((id) => {
-      if (id) {
-        images.push(imageUrl(id));
-      }
-    });
-  }
-
-  /* =======================================================
-     EXISTING images ARRAY FALLBACK
-  ======================================================= */
-
-  if (images.length === 0 && Array.isArray(product?.images)) {
-    product.images.forEach((item) => {
-      if (!item) return;
-
-      const value = String(item);
-
-      /*
-        OLD:
-        /api/images/ID
-
-        NEW:
-        /api/catalog/images/ID
-      */
-
-      if (value.startsWith("/api/images/")) {
-        images.push(value.replace("/api/images/", "/api/catalog/images/"));
-      } else {
-        images.push(value);
-      }
-    });
-  }
-
-  /* =======================================================
-     SINGLE imageId
-  ======================================================= */
-
-  if (images.length === 0 && product?.imageId) {
-    images.push(imageUrl(product.imageId));
-  }
-
-  /* =======================================================
-     SINGLE image
-  ======================================================= */
-
-  if (images.length === 0 && product?.image) {
-    const value = String(product.image);
-
-    if (value.startsWith("/api/images/")) {
-      images.push(value.replace("/api/images/", "/api/catalog/images/"));
-    } else {
-      images.push(value);
+    if (itemUrl) {
+      images.push(itemUrl);
     }
+  });
+
+  return uniqueImages(images);
+};
+
+/* =========================================================
+   LEGACY imageIds
+========================================================= */
+
+const getLegacyImageIds = (product) => {
+  if (!Array.isArray(product?.imageIds) || product.imageIds.length === 0) {
+    return [];
+  }
+
+  return uniqueImages(
+    product.imageIds.filter(Boolean).map((id) => imageUrl(id)),
+  );
+};
+
+/* =========================================================
+   SINGLE LEGACY imageId
+========================================================= */
+
+const getSingleImageId = (product) => {
+  if (!product?.imageId) {
+    return [];
+  }
+
+  return [imageUrl(product.imageId)];
+};
+
+/* =========================================================
+   MAIN / IMAGE FIELDS
+========================================================= */
+
+const getSingleImageFields = (product) => {
+  return uniqueImages([product?.mainImage, product?.image]);
+};
+
+/* =========================================================
+   ⭐ GET BEST PRODUCT IMAGES
+
+   IMPORTANT LOGIC:
+
+   NEW ADMIN PRODUCT:
+   images[0] is GridFS
+   => use images[].
+
+   OLD PRODUCT:
+   images[] may contain old/broken path,
+   but imageFiles contains real GridFS files
+   => use imageFiles.
+
+   AFTER YOU EDIT AN OLD PRODUCT:
+   Admin saves its selected images into images[] as GridFS URLs
+   => images[] becomes the new source automatically.
+========================================================= */
+
+const getProductImages = (product) => {
+  const standardImages = getStandardImages(product);
+
+  const legacyImageFiles = getLegacyImageFiles(product);
+
+  const legacyImageIds = getLegacyImageIds(product);
+
+  const singleImageId = getSingleImageId(product);
+
+  const singleFields = getSingleImageFields(product);
+
+  /* =======================================================
+     1. NEW ADMIN / GRIDFS images ARRAY
+
+     If images[] already contains real GridFS images,
+     its exact order must win.
+
+     This makes "MAKE MAIN" work.
+  ======================================================= */
+
+  if (standardImages.length > 0 && standardImages.some(isGridFsImage)) {
+    return standardImages;
   }
 
   /* =======================================================
-     REMOVE DUPLICATES
+     2. mainImage / image IS GRIDFS
+
+     Useful if a product was partly migrated.
   ======================================================= */
 
-  return [...new Set(images.filter(Boolean))];
+  const reliableSingle = singleFields.filter(isGridFsImage);
+
+  if (reliableSingle.length > 0) {
+    return uniqueImages([
+      ...reliableSingle,
+      ...standardImages,
+      ...legacyImageFiles,
+      ...legacyImageIds,
+    ]);
+  }
+
+  /* =======================================================
+     3. OLD PRODUCT imageFiles
+
+     This fixes the many broken product images you're seeing.
+  ======================================================= */
+
+  if (legacyImageFiles.length > 0) {
+    return legacyImageFiles;
+  }
+
+  /* =======================================================
+     4. OLD imageIds
+  ======================================================= */
+
+  if (legacyImageIds.length > 0) {
+    return legacyImageIds;
+  }
+
+  /* =======================================================
+     5. SINGLE imageId
+  ======================================================= */
+
+  if (singleImageId.length > 0) {
+    return singleImageId;
+  }
+
+  /* =======================================================
+     6. MODERN EXTERNAL / UPLOAD images
+  ======================================================= */
+
+  if (standardImages.length > 0 && standardImages.some(isReliableImage)) {
+    return standardImages;
+  }
+
+  /* =======================================================
+     7. ANY images ARRAY
+
+     Example:
+     /products/tshirt-1.jpg
+  ======================================================= */
+
+  if (standardImages.length > 0) {
+    return standardImages;
+  }
+
+  /* =======================================================
+     8. SINGLE image / mainImage
+  ======================================================= */
+
+  if (singleFields.length > 0) {
+    return singleFields;
+  }
+
+  return [];
 };
 
 /* =========================================================
    FORMAT PRODUCT
+
+   Whatever getProductImages returns at [0]
+   becomes main everywhere.
 ========================================================= */
 
 const formatProduct = (product) => {
@@ -181,6 +448,12 @@ const formatProduct = (product) => {
 
   const images = getProductImages(product);
 
+  const mainImage =
+    images[0] ||
+    normalizeImagePath(product?.mainImage) ||
+    normalizeImagePath(product?.image) ||
+    "";
+
   return {
     ...product,
 
@@ -188,9 +461,9 @@ const formatProduct = (product) => {
 
     id: String(product._id),
 
-    image: images[0] || product.image || "",
+    image: mainImage,
 
-    mainImage: images[0] || product.mainImage || product.image || "",
+    mainImage,
 
     images,
   };
@@ -200,10 +473,6 @@ const formatProduct = (product) => {
    GET ALL PRODUCTS
 
    GET /api/catalog/products
-
-   GET /api/catalog/products?category=Pants
-
-   GET /api/catalog/products?category=TRACK%20PANTS
 ========================================================= */
 
 router.get("/products", async (req, res) => {
@@ -217,7 +486,7 @@ router.get("/products", async (req, res) => {
       });
     }
 
-    const { category } = req.query;
+    const { category, search, limit } = req.query;
 
     const filter = {
       isActive: {
@@ -237,14 +506,53 @@ router.get("/products", async (req, res) => {
       }
     }
 
-    const products = await db
-      .collection("products")
-      .find(filter)
-      .sort({
-        createdAt: -1,
-        _id: -1,
-      })
-      .toArray();
+    /* =====================================================
+       SEARCH
+    ===================================================== */
+
+    if (search) {
+      const safeSearch = escapeRegex(search);
+
+      filter.$or = [
+        {
+          name: {
+            $regex: safeSearch,
+            $options: "i",
+          },
+        },
+
+        {
+          sku: {
+            $regex: safeSearch,
+            $options: "i",
+          },
+        },
+
+        {
+          category: {
+            $regex: safeSearch,
+            $options: "i",
+          },
+        },
+      ];
+    }
+
+    /* =====================================================
+       QUERY
+    ===================================================== */
+
+    let query = db.collection("products").find(filter).sort({
+      createdAt: -1,
+      _id: -1,
+    });
+
+    const numericLimit = Number(limit);
+
+    if (Number.isFinite(numericLimit) && numericLimit > 0) {
+      query = query.limit(numericLimit);
+    }
+
+    const products = await query.toArray();
 
     const formattedProducts = products.map(formatProduct);
 
@@ -256,7 +564,7 @@ router.get("/products", async (req, res) => {
       products: formattedProducts,
     });
   } catch (error) {
-    console.error("❌ Get catalog products error:", error);
+    console.error("❌ GET CATALOG PRODUCTS ERROR:", error);
 
     return res.status(500).json({
       success: false,
@@ -269,80 +577,10 @@ router.get("/products", async (req, res) => {
 });
 
 /* =========================================================
-   GET ONE PRODUCT
+   RELATED PRODUCTS
 
-   THIS WAS MISSING IN YOUR OLD FILE
-
-   GET /api/catalog/products/:id
-========================================================= */
-
-router.get("/products/:id", async (req, res) => {
-  try {
-    const db = getDatabase();
-
-    if (!db) {
-      return res.status(500).json({
-        success: false,
-        message: "Database not connected",
-      });
-    }
-
-    const { id } = req.params;
-
-    /* ===================================================
-         VALIDATE ID
-      =================================================== */
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid product ID",
-      });
-    }
-
-    const objectId = new mongoose.Types.ObjectId(id);
-
-    /* ===================================================
-         FIND PRODUCT
-      =================================================== */
-
-    const product = await db.collection("products").findOne({
-      _id: objectId,
-
-      isActive: {
-        $ne: false,
-      },
-    });
-
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: "Product not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-
-      product: formatProduct(product),
-    });
-  } catch (error) {
-    console.error("❌ Get single product error:", error);
-
-    return res.status(500).json({
-      success: false,
-
-      message: "Failed to get product",
-
-      error: error.message,
-    });
-  }
-});
-
-/* =========================================================
-   GET RELATED PRODUCTS
-
-   GET /api/catalog/products/:id/related
+   IMPORTANT:
+   Keep this route before /products/:id.
 ========================================================= */
 
 router.get("/products/:id/related", async (req, res) => {
@@ -352,19 +590,17 @@ router.get("/products/:id/related", async (req, res) => {
     if (!db) {
       return res.status(500).json({
         success: false,
+
         message: "Database not connected",
       });
     }
 
     const { id } = req.params;
 
-    /* ===================================================
-         VALIDATE ID
-      =================================================== */
-
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
+
         message: "Invalid product ID",
       });
     }
@@ -372,7 +608,7 @@ router.get("/products/:id/related", async (req, res) => {
     const objectId = new mongoose.Types.ObjectId(id);
 
     /* ===================================================
-         GET CURRENT PRODUCT
+         CURRENT PRODUCT
       =================================================== */
 
     const currentProduct = await db.collection("products").findOne({
@@ -386,15 +622,14 @@ router.get("/products/:id/related", async (req, res) => {
     if (!currentProduct) {
       return res.status(404).json({
         success: false,
+
         message: "Product not found",
       });
     }
 
     /* ===================================================
-         CATEGORY MATCH
+         RELATED FILTER
       =================================================== */
-
-    const categoryFilter = buildCategoryFilter(currentProduct.category);
 
     const filter = {
       _id: {
@@ -406,13 +641,11 @@ router.get("/products/:id/related", async (req, res) => {
       },
     };
 
+    const categoryFilter = buildCategoryFilter(currentProduct.category);
+
     if (categoryFilter) {
       filter.category = categoryFilter;
     }
-
-    /* ===================================================
-         FIND RELATED
-      =================================================== */
 
     const relatedProducts = await db
       .collection("products")
@@ -433,12 +666,76 @@ router.get("/products/:id/related", async (req, res) => {
       products: relatedProducts.map(formatProduct),
     });
   } catch (error) {
-    console.error("❌ Get related products error:", error);
+    console.error("❌ RELATED PRODUCTS ERROR:", error);
 
     return res.status(500).json({
       success: false,
 
       message: "Failed to get related products",
+
+      error: error.message,
+    });
+  }
+});
+
+/* =========================================================
+   GET ONE PRODUCT
+
+   GET /api/catalog/products/:id
+========================================================= */
+
+router.get("/products/:id", async (req, res) => {
+  try {
+    const db = getDatabase();
+
+    if (!db) {
+      return res.status(500).json({
+        success: false,
+
+        message: "Database not connected",
+      });
+    }
+
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+
+        message: "Invalid product ID",
+      });
+    }
+
+    const objectId = new mongoose.Types.ObjectId(id);
+
+    const product = await db.collection("products").findOne({
+      _id: objectId,
+
+      isActive: {
+        $ne: false,
+      },
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+
+        message: "Product not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+
+      product: formatProduct(product),
+    });
+  } catch (error) {
+    console.error("❌ GET SINGLE PRODUCT ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+
+      message: "Failed to get product",
 
       error: error.message,
     });
@@ -478,7 +775,7 @@ router.get("/images/:id", async (req, res) => {
     }
 
     /* ===================================================
-         CHECK FILE EXISTS
+         CHECK IMAGE EXISTS
       =================================================== */
 
     const file = await db.collection("productImages.files").findOne({
@@ -494,20 +791,20 @@ router.get("/images/:id", async (req, res) => {
       =================================================== */
 
     const contentType =
-      file.metadata?.contentType || file.contentType || "image/jpeg";
+      file?.metadata?.contentType || file?.contentType || "image/jpeg";
 
     res.setHeader("Content-Type", contentType);
 
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
 
     /* ===================================================
-         STREAM IMAGE
+         STREAM
       =================================================== */
 
     const stream = bucket.openDownloadStream(objectId);
 
     stream.on("error", (error) => {
-      console.error("❌ GridFS stream error:", error);
+      console.error("❌ GRIDFS STREAM ERROR:", error);
 
       if (!res.headersSent) {
         res.status(404).send("Image not found");
@@ -518,7 +815,7 @@ router.get("/images/:id", async (req, res) => {
 
     stream.pipe(res);
   } catch (error) {
-    console.error("❌ GridFS image error:", error);
+    console.error("❌ GRIDFS IMAGE ERROR:", error);
 
     if (!res.headersSent) {
       return res.status(500).send("Failed to load image");
