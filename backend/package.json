@@ -17,6 +17,7 @@
     "mime-types": "^3.0.2",
     "mongodb": "^6.21.0",
     "mongoose": "^8.18.0",
+    "razorpay": "^2.9.8",
     "unzipper": "^0.12.5"
   },
   "devDependencies": {

@@ -195,93 +195,55 @@ const normalizeImageUrl = (value) => {
    item.imageFiles[]
 ========================================================= */
 
-const getCartItemImage = (
-  item,
-) => {
-  if (!item) {
-    return "";
-  }
+const getCartItemImage = (item) => {
+  if (!item) return "";
 
-  /* =====================================================
-     GRIDFS IMAGE FILES
-  ===================================================== */
+  const product =
+    item?.product ||
+    item?.productId ||
+    item;
 
-  if (
-    Array.isArray(
-      item.imageFiles,
-    ) &&
-    item.imageFiles.length >
-      0
-  ) {
-    const sorted =
-      [...item.imageFiles].sort(
-        (a, b) =>
-          Number(
-            a?.order ?? 0,
-          ) -
-          Number(
-            b?.order ?? 0,
-          ),
-      );
+  const imageCandidates = [
+    ...(Array.isArray(product?.imageFiles)
+      ? [...product.imageFiles].sort(
+          (a, b) =>
+            Number(a?.order ?? 0) -
+            Number(b?.order ?? 0),
+        )
+      : []),
 
-    for (
-      const imageFile of sorted
-    ) {
-      const url =
-        normalizeImageUrl(
-          imageFile,
-        );
+    ...(Array.isArray(product?.images)
+      ? product.images
+      : []),
 
-      if (url) {
-        return url;
-      }
+    product?.mainImage,
+    product?.image,
+
+    ...(Array.isArray(item?.imageFiles)
+      ? [...item.imageFiles].sort(
+          (a, b) =>
+            Number(a?.order ?? 0) -
+            Number(b?.order ?? 0),
+        )
+      : []),
+
+    ...(Array.isArray(item?.images)
+      ? item.images
+      : []),
+
+    item?.mainImage,
+    item?.image,
+  ];
+
+  for (const candidate of imageCandidates) {
+    const url = normalizeImageUrl(candidate);
+
+    if (url) {
+      return url;
     }
   }
 
-  /* =====================================================
-     IMAGES ARRAY
-  ===================================================== */
-
-  if (
-    Array.isArray(
-      item.images,
-    ) &&
-    item.images.length > 0
-  ) {
-    for (
-      const image of item.images
-    ) {
-      const url =
-        normalizeImageUrl(
-          image,
-        );
-
-      if (url) {
-        return url;
-      }
-    }
-  }
-
-  /* =====================================================
-     MAIN IMAGE
-  ===================================================== */
-
-  const main =
-    normalizeImageUrl(
-      item.mainImage,
-    );
-
-  if (main) {
-    return main;
-  }
-
-  /* =====================================================
-     IMAGE
-  ===================================================== */
-
-  return normalizeImageUrl(
-    item.image,
-  );
+  return "";
 };
 
 /* =========================================================
