@@ -1,9 +1,10 @@
 import dns from "node:dns";
-
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import connectDB from "./db.js";
 
@@ -22,6 +23,31 @@ import Cart from "./models/Cart.js";
 dotenv.config();
 
 /* =========================================================
+   PATH SETUP
+========================================================= */
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+/*
+Project:
+
+Axee/
+├── backend/
+│   └── server.js
+└── frontend/
+    └── dist/
+
+So from backend/server.js:
+../frontend/dist
+*/
+
+const frontendDistPath = path.resolve(
+  __dirname,
+  "../frontend/dist"
+);
+
+/* =========================================================
    DNS
 ========================================================= */
 
@@ -30,7 +56,7 @@ try {
 } catch (error) {
   console.log(
     "DNS override skipped:",
-    error.message,
+    error.message
   );
 }
 
@@ -53,9 +79,12 @@ app.use(
   cors({
     origin(origin, callback) {
       /*
-        Allow:
+        Requests from the frontend on the SAME domain
+        do not need cross-origin CORS.
+
+        This also allows:
         - Postman
-        - server-to-server requests
+        - server-to-server
         - requests without Origin
       */
 
@@ -63,9 +92,9 @@ app.use(
         return callback(null, true);
       }
 
-      /* ===============================================
+      /* ===============================
          LOCAL DEVELOPMENT
-      =============================================== */
+      =============================== */
 
       const localhostPattern =
         /^http:\/\/localhost:\d+$/;
@@ -80,25 +109,20 @@ app.use(
         return callback(null, true);
       }
 
-      /* ===============================================
-         PRODUCTION FRONTEND
-      =============================================== */
+      /* ===============================
+         PRODUCTION DOMAIN
+      =============================== */
 
-      if (
-        allowedOrigins.includes(origin)
-      ) {
+      if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
-      console.log(
-        "❌ CORS blocked:",
-        origin,
-      );
+      console.log("❌ CORS blocked:", origin);
 
       return callback(
         new Error(
-          `CORS blocked origin: ${origin}`,
-        ),
+          `CORS blocked origin: ${origin}`
+        )
       );
     },
 
@@ -117,7 +141,7 @@ app.use(
       "Content-Type",
       "Authorization",
     ],
-  }),
+  })
 );
 
 /* =========================================================
@@ -127,94 +151,174 @@ app.use(
 app.use(
   express.json({
     limit: "10mb",
-  }),
+  })
 );
 
 app.use(
   express.urlencoded({
     extended: true,
     limit: "10mb",
-  }),
+  })
 );
 
 /* =========================================================
-   HEALTH CHECK
+   API HEALTH CHECK
 ========================================================= */
 
-app.get("/", (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "AXIEE API is running",
-    environment:
-      process.env.NODE_ENV ||
-      "development",
-    database:
-      mongoose.connection.readyState === 1
-        ? "connected"
-        : "not connected",
-  });
-});
+/*
+IMPORTANT:
 
-/* =========================================================
-   OPTIONAL DB HEALTH CHECK
-========================================================= */
+Do not use "/" for backend health anymore.
+
+"/" belongs to the React frontend.
+
+Backend health is now:
+
+/api/health
+*/
 
 app.get(
   "/api/health",
   (req, res) => {
     res.status(200).json({
       success: true,
+      message: "AXIEE API is running",
+
+      environment:
+        process.env.NODE_ENV ||
+        "development",
 
       server: "running",
 
       mongodb:
-        mongoose.connection.readyState ===
-        1
+        mongoose.connection.readyState === 1
           ? "connected"
           : "not connected",
     });
-  },
+  }
 );
 
 /* =========================================================
-   ROUTES
+   API ROUTES
 ========================================================= */
 
 app.use(
   "/api/products",
-  productRoutes,
+  productRoutes
 );
 
 app.use(
   "/api/cart",
-  cartRoutes,
+  cartRoutes
 );
 
 app.use(
   "/api/catalog",
-  catalogRoutes,
+  catalogRoutes
 );
 
 app.use(
   "/api/categories",
-  categoryRoutes,
+  categoryRoutes
 );
 
 app.use(
   "/api/orders",
-  orderRoutes,
+  orderRoutes
 );
 
 /* =========================================================
-   404
+   STATIC REACT FRONTEND
 ========================================================= */
 
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: "API route not found",
-  });
-});
+/*
+After:
+
+cd frontend
+npm run build
+
+Vite creates:
+
+frontend/dist
+*/
+
+app.use(
+  express.static(frontendDistPath)
+);
+
+/* =========================================================
+   API 404
+========================================================= */
+
+/*
+If the URL starts with /api and no API route matched,
+return JSON.
+
+Example:
+
+/api/something-that-does-not-exist
+*/
+
+app.use(
+  "/api",
+  (req, res) => {
+    res.status(404).json({
+      success: false,
+      message: "API route not found",
+    });
+  }
+);
+
+/* =========================================================
+   REACT ROUTER FALLBACK
+========================================================= */
+
+/*
+Examples:
+
+/
+ /shop
+ /cart
+ /checkout
+ /product/123
+ /profile
+
+All of those should return React index.html.
+
+Using middleware instead of app.get("*")
+also avoids wildcard-routing issues with Express 5.
+*/
+
+app.use(
+  (req, res, next) => {
+    if (req.method !== "GET") {
+      return next();
+    }
+
+    res.sendFile(
+      path.join(
+        frontendDistPath,
+        "index.html"
+      ),
+      (error) => {
+        if (error) {
+          console.error(
+            "❌ Frontend file error:",
+            error.message
+          );
+
+          if (!res.headersSent) {
+            res.status(500).json({
+              success: false,
+              message:
+                "Frontend build not found. Run npm run build.",
+            });
+          }
+        }
+      }
+    );
+  }
+);
 
 /* =========================================================
    ERROR HANDLER
@@ -223,14 +327,18 @@ app.use((req, res) => {
 app.use(
   (error, req, res, next) => {
     console.error(
-      "❌ SERVER ERROR:",
+      "❌ SERVER ERROR:"
     );
 
     console.error(error);
 
+    if (res.headersSent) {
+      return next(error);
+    }
+
     res
       .status(
-        error.status || 500,
+        error.status || 500
       )
       .json({
         success: false,
@@ -239,7 +347,7 @@ app.use(
           error.message ||
           "Internal server error",
       });
-  },
+  }
 );
 
 /* =========================================================
@@ -249,28 +357,27 @@ app.use(
 async function fixCartIndexes() {
   try {
     /*
-      Only run this when MongoDB
+      Only run when MongoDB
       is actually connected.
     */
 
     if (
-      mongoose.connection
-        .readyState !== 1
+      mongoose.connection.readyState !== 1
     ) {
       console.log(
-        "⚠️ Cart index fix skipped - MongoDB not connected",
+        "⚠️ Cart index fix skipped - MongoDB not connected"
       );
 
       return;
     }
 
     console.log(
-      "🔍 Checking cart indexes...",
+      "🔍 Checking cart indexes..."
     );
 
     const collection =
       mongoose.connection.db.collection(
-        "carts",
+        "carts"
       );
 
     const indexes =
@@ -281,28 +388,27 @@ async function fixCartIndexes() {
     console.log(
       "📦 Current cart indexes:",
       indexes.map(
-        (index) => index.name,
-      ),
+        (index) => index.name
+      )
     );
 
     const oldUserIndex =
       indexes.find(
         (index) =>
-          index.name ===
-          "userId_1",
+          index.name === "userId_1"
       );
 
     if (oldUserIndex) {
       console.log(
-        "🗑 Removing old userId_1 index...",
+        "🗑 Removing old userId_1 index..."
       );
 
       await collection.dropIndex(
-        "userId_1",
+        "userId_1"
       );
 
       console.log(
-        "✅ Old userId_1 index removed",
+        "✅ Old userId_1 index removed"
       );
     }
 
@@ -314,17 +420,15 @@ async function fixCartIndexes() {
     console.log(
       "✅ Cart indexes:",
       updatedIndexes.map(
-        (index) => index.name,
-      ),
+        (index) => index.name
+      )
     );
   } catch (error) {
     console.error(
-      "❌ Cart index fix error:",
+      "❌ Cart index fix error:"
     );
 
-    console.error(
-      error,
-    );
+    console.error(error);
   }
 }
 
@@ -340,10 +444,11 @@ const PORT =
 ========================================================= */
 
 /*
-  IMPORTANT FOR HOSTINGER:
+IMPORTANT FOR HOSTINGER:
 
-  app.listen() must run immediately.
-  Do NOT wait for MongoDB before listen().
+app.listen() runs immediately.
+
+We don't wait for MongoDB before starting Express.
 */
 
 const server = app.listen(
@@ -352,50 +457,54 @@ const server = app.listen(
     console.log("");
 
     console.log(
-      "================================",
+      "================================"
     );
 
     console.log(
-      `✅ AXIEE Server running on port ${PORT}`,
+      `✅ AXIEE Server running on port ${PORT}`
     );
 
     console.log(
       `✅ Environment: ${
         process.env.NODE_ENV ||
         "development"
-      }`,
+      }`
     );
 
     console.log(
-      `✅ Health: /`,
+      `✅ Frontend: /`
     );
 
     console.log(
-      `✅ Products: /api/products`,
+      `✅ API Health: /api/health`
     );
 
     console.log(
-      `✅ Cart: /api/cart`,
+      `✅ Products: /api/products`
     );
 
     console.log(
-      `✅ Catalog: /api/catalog`,
+      `✅ Cart: /api/cart`
     );
 
     console.log(
-      `✅ Categories: /api/categories`,
+      `✅ Catalog: /api/catalog`
     );
 
     console.log(
-      `✅ Orders: /api/orders`,
+      `✅ Categories: /api/categories`
     );
 
     console.log(
-      "================================",
+      `✅ Orders: /api/orders`
+    );
+
+    console.log(
+      "================================"
     );
 
     console.log("");
-  },
+  }
 );
 
 /* =========================================================
@@ -405,38 +514,29 @@ const server = app.listen(
 async function initializeDatabase() {
   try {
     console.log(
-      "🔌 Connecting to MongoDB...",
+      "🔌 Connecting to MongoDB..."
     );
 
     await connectDB();
 
     console.log(
-      "✅ MongoDB connected",
+      "✅ MongoDB connected"
     );
-
-    /*
-      Run index cleanup after DB
-      connection succeeds.
-    */
 
     await fixCartIndexes();
   } catch (error) {
     /*
-      IMPORTANT:
       Do NOT process.exit(1).
 
-      If MongoDB is temporarily slow,
-      keep Express alive so Hostinger
-      does not return 503.
+      Keep Express running if MongoDB
+      is temporarily slow/unavailable.
     */
 
     console.error(
-      "❌ MongoDB startup error:",
+      "❌ MongoDB startup error:"
     );
 
-    console.error(
-      error,
-    );
+    console.error(error);
   }
 }
 
@@ -454,9 +554,9 @@ mongoose.connection.on(
   "connected",
   () => {
     console.log(
-      "✅ Mongoose connection active",
+      "✅ Mongoose connection active"
     );
-  },
+  }
 );
 
 mongoose.connection.on(
@@ -464,60 +564,55 @@ mongoose.connection.on(
   (error) => {
     console.error(
       "❌ Mongoose connection error:",
-      error.message,
+      error.message
     );
-  },
+  }
 );
 
 mongoose.connection.on(
   "disconnected",
   () => {
     console.log(
-      "⚠️ MongoDB disconnected",
+      "⚠️ MongoDB disconnected"
     );
-  },
+  }
 );
 
 /* =========================================================
    GRACEFUL SHUTDOWN
 ========================================================= */
 
-async function shutdown(
-  signal,
-) {
+async function shutdown(signal) {
   console.log(
-    `⚠️ ${signal} received. Shutting down...`,
+    `⚠️ ${signal} received. Shutting down...`
   );
 
   server.close(
     async () => {
       try {
         if (
-          mongoose.connection
-            .readyState !== 0
+          mongoose.connection.readyState !== 0
         ) {
           await mongoose.connection.close();
         }
       } catch (error) {
         console.error(
           "MongoDB shutdown error:",
-          error,
+          error
         );
       }
 
       process.exit(0);
-    },
+    }
   );
 }
 
 process.on(
   "SIGTERM",
-  () =>
-    shutdown("SIGTERM"),
+  () => shutdown("SIGTERM")
 );
 
 process.on(
   "SIGINT",
-  () =>
-    shutdown("SIGINT"),
+  () => shutdown("SIGINT")
 );
