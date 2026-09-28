@@ -2583,98 +2583,319 @@ function CategoryPage({
   };
 
   /* =======================================================
-     ADD TO CART
-  ======================================================= */
-  const addToCart = async (product) => {
-    try {
-      const productId = getProductId(product);
-      const sizes = getProductSizes(product);
-      const size = selectedSizes[productId];
-      const quantity = getQuantity(productId);
+   GET PRODUCT IMAGE FOR CART
+======================================================= */
 
-      if (sizes.length === 0) {
-        alert("Sizes are not configured for this product yet.");
-        return;
-      }
+const getCartProductImage = (product) => {
+  if (!product) {
+    return "";
+  }
 
-      if (!size) {
-        alert("Please select a size first.");
-        return;
-      }
+  /* ================================================
+     GRIDFS IMAGE FILES
+  ================================================ */
 
-      if (quantity <= 0) {
-        alert("Please select quantity first.");
-        return;
+  if (
+    Array.isArray(product?.imageFiles) &&
+    product.imageFiles.length > 0
+  ) {
+    const sortedImageFiles = [...product.imageFiles].sort(
+      (a, b) =>
+        Number(a?.order ?? 0) -
+        Number(b?.order ?? 0),
+    );
+
+    const firstImageFile = sortedImageFiles[0];
+
+    if (firstImageFile) {
+      /*
+        If backend already gave us a valid URL,
+        use the URL first.
+      */
+      if (firstImageFile?.url) {
+        return firstImageFile.url;
       }
 
       /*
-        One cart system for every product.
-        The Cart page reads axiee-cart-id and loads the cart from /api/cart/:cartId,
-        so every ADD TO CART action must use the backend cart API.
+        Otherwise create GridFS URL
+        from file ID.
       */
-      let cartId = localStorage.getItem("axiee-cart-id");
+      const fileId =
+        firstImageFile?.fileId ||
+        firstImageFile?._id ||
+        firstImageFile?.id;
 
-      if (!cartId) {
-        cartId = crypto.randomUUID();
-        localStorage.setItem("axiee-cart-id", cartId);
+      if (fileId) {
+        return `/api/catalog/images/${String(fileId)}`;
       }
+    }
+  }
 
-      const productImage =
-        product?.image || product?.mainImage || product?.images?.[0] || "";
+  /* ================================================
+     IMAGES ARRAY
+  ================================================ */
 
-      const response = await fetch(`${API_BASE}/api/cart/add`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          cartId,
-          productId,
-          size,
-          quantity,
-          name: product?.name || "AXIEE Product",
-          price: Number(product?.price || 0),
-          image: productImage,
-          category: product?.category || category || "",
-        }),
-      });
+  if (
+    Array.isArray(product?.images) &&
+    product.images.length > 0
+  ) {
+    const firstImage =
+      product.images.find(Boolean);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Unable to add to cart");
-      }
-
-      console.log("✅ CART SAVED:", data.cart);
-
+    if (firstImage) {
       /*
-        Tell Navbar / Cart that the backend cart changed.
+        Image might itself be an object.
       */
-      window.dispatchEvent(
-        new CustomEvent("axiee-cart-updated", {
-          detail: data.cart,
-        }),
+      if (
+        typeof firstImage === "object"
+      ) {
+        if (firstImage?.url) {
+          return firstImage.url;
+        }
+
+        const fileId =
+          firstImage?.fileId ||
+          firstImage?._id ||
+          firstImage?.id;
+
+        if (fileId) {
+          return `/api/catalog/images/${String(
+            fileId,
+          )}`;
+        }
+
+        return "";
+      }
+
+      return String(firstImage);
+    }
+  }
+
+  /* ================================================
+     MAIN IMAGE
+  ================================================ */
+
+  if (product?.mainImage) {
+    return String(product.mainImage);
+  }
+
+  /* ================================================
+     NORMAL IMAGE
+  ================================================ */
+
+  if (product?.image) {
+    return String(product.image);
+  }
+
+  return "";
+};
+
+/* =======================================================
+   ADD TO CART
+======================================================= */
+
+const addToCart = async (product) => {
+  try {
+    /* ================================================
+       PRODUCT DETAILS
+    ================================================ */
+
+    const productId =
+      getProductId(product);
+
+    const sizes =
+      getProductSizes(product);
+
+    const size =
+      selectedSizes[productId];
+
+    const quantity =
+      getQuantity(productId);
+
+    /* ================================================
+       VALIDATION
+    ================================================ */
+
+    if (sizes.length === 0) {
+      alert(
+        "Sizes are not configured for this product yet.",
       );
 
-      /*
-        Premium visual confirmation.
-      */
-      setCartToast({
-        name: product?.name || "AXIEE Product",
-        size,
-        quantity,
-      });
-
-      setAddedProductId(productId);
-
-      window.setTimeout(() => {
-        setAddedProductId((current) => (current === productId ? "" : current));
-      }, 1400);
-    } catch (error) {
-      console.error("❌ Add to cart error:", error);
-      alert(error.message || "Unable to add to cart");
+      return;
     }
-  };
+
+    if (!size) {
+      alert(
+        "Please select a size first.",
+      );
+
+      return;
+    }
+
+    if (quantity <= 0) {
+      alert(
+        "Please select quantity first.",
+      );
+
+      return;
+    }
+
+    /* ================================================
+       CART ID
+    ================================================ */
+
+    let cartId =
+      localStorage.getItem(
+        "axiee-cart-id",
+      );
+
+    if (!cartId) {
+      cartId =
+        crypto.randomUUID();
+
+      localStorage.setItem(
+        "axiee-cart-id",
+        cartId,
+      );
+    }
+
+    /* ================================================
+       PRODUCT IMAGE
+    ================================================ */
+
+    const productImage =
+      getCartProductImage(product);
+
+    console.log(
+      "🛒 ADDING TO CART:",
+      {
+        productId,
+        name: product?.name,
+        image: productImage,
+        imageFiles:
+          product?.imageFiles,
+        images:
+          product?.images,
+        mainImage:
+          product?.mainImage,
+        originalImage:
+          product?.image,
+      },
+    );
+
+    /* ================================================
+       SEND TO BACKEND
+    ================================================ */
+
+    const response = await fetch(
+      `${API_BASE}/api/cart/add`,
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+
+        body: JSON.stringify({
+          cartId,
+
+          productId,
+
+          size,
+
+          quantity,
+
+          name:
+            product?.name ||
+            "AXIEE Product",
+
+          price: Number(
+            product?.price || 0,
+          ),
+
+          image:
+            productImage,
+
+          category:
+            product?.category ||
+            category ||
+            "",
+        }),
+      },
+    );
+
+    /* ================================================
+       RESPONSE
+    ================================================ */
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.message ||
+          "Unable to add to cart",
+      );
+    }
+
+    console.log(
+      "✅ CART SAVED:",
+      data.cart,
+    );
+
+    /* ================================================
+       UPDATE NAVBAR / CART
+    ================================================ */
+
+    window.dispatchEvent(
+      new CustomEvent(
+        "axiee-cart-updated",
+        {
+          detail:
+            data.cart,
+        },
+      ),
+    );
+
+    /* ================================================
+       SUCCESS TOAST
+    ================================================ */
+
+    setCartToast({
+      name:
+        product?.name ||
+        "AXIEE Product",
+
+      size,
+
+      quantity,
+    });
+
+    setAddedProductId(
+      productId,
+    );
+
+    window.setTimeout(() => {
+      setAddedProductId(
+        (current) =>
+          current === productId
+            ? ""
+            : current,
+      );
+    }, 1400);
+  } catch (error) {
+    console.error(
+      "❌ Add to cart error:",
+      error,
+    );
+
+    alert(
+      error?.message ||
+        "Unable to add to cart",
+    );
+  }
+};
 
   /* =======================================================
      BUY NOW

@@ -13,6 +13,7 @@ import cartRoutes from "./routes/cartRoutes.js";
 import catalogRoutes from "./routes/catalogRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
 
 import Cart from "./models/Cart.js";
 
@@ -159,6 +160,10 @@ app.use(
     extended: true,
     limit: "10mb",
   })
+);
+app.use(
+  "/api/payments",
+  paymentRoutes,
 );
 
 /* =========================================================
