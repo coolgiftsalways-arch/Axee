@@ -80,7 +80,7 @@ function Footer() {
 
             <div className="ax-footer-socials">
               <a
-                href="https://wa.me/91XXXXXXXXXX"
+                href="https://wa.me/message/MTMKUTQPP62XB1"
                 target="_blank"
                 rel="noreferrer"
                 aria-label="WhatsApp"
@@ -99,7 +99,11 @@ function Footer() {
                 <FaInstagram />
               </a>
 
-              <a href="mailto:your@email.com" aria-label="Email" title="Email">
+              <a
+                href="mailto:unboundclothing.uc@gmail.com"
+                aria-label="Email"
+                title="Email"
+              >
                 <FaEnvelope />
               </a>
             </div>

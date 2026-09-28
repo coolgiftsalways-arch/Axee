@@ -17,9 +17,17 @@ import "locomotive-scroll/dist/locomotive-scroll.css";
 
 gsap.registerPlugin(ScrollTrigger);
 
+/* =========================================================
+   COMPONENTS
+========================================================= */
+
 import Loader from "./components/Loader.jsx";
 import Navbar from "./components/Navbar.jsx";
 import Footer from "./components/Footer.jsx";
+
+/* =========================================================
+   WEBSITE PAGES
+========================================================= */
 
 import Home from "./pages/Home.jsx";
 import Shop from "./pages/Shop.jsx";
@@ -37,6 +45,10 @@ import TrackOrder from "./pages/TrackOrder.jsx";
 import ProductDetails from "./pages/ProductDetails.jsx";
 import Checkout from "./pages/Checkout.jsx";
 
+/* =========================================================
+   ADMIN
+========================================================= */
+
 import AdminLayout from "./Admin/AdminLayout.jsx";
 
 import Dashboard from "./Admin/Dashboard.jsx";
@@ -49,7 +61,22 @@ import Sliders from "./Admin/Sliders.jsx";
 import Banners from "./Admin/Banners.jsx";
 import Settings from "./Admin/Settings.jsx";
 
+/* =========================================================
+   ADMIN LOGIN
+========================================================= */
+
+import AdminLogin from "./Admin/AdminLogin.jsx";
+import ProtectedDashboard from "./Admin/ProtectedDashboard.jsx";
+
+/* =========================================================
+   STYLE
+========================================================= */
+
 import "./styles/pageTransition.css";
+
+/* =========================================================
+   LAYOUT
+========================================================= */
 
 function Layout() {
   const location = useLocation();
@@ -62,6 +89,10 @@ function Layout() {
 
   const isAdminRoute =
     pathnameLower === "/admin" || pathnameLower.startsWith("/admin/");
+
+  /* =======================================================
+     STATE
+  ======================================================= */
 
   const [loadingComplete, setLoadingComplete] = useState(false);
 
@@ -97,7 +128,7 @@ function Layout() {
   }, []);
 
   /* =========================================================
-     GET CURRENT SCROLL POSITION
+     CURRENT SCROLL POSITION
   ========================================================= */
 
   const getCurrentScrollY = useCallback(() => {
@@ -117,7 +148,6 @@ function Layout() {
       locomotive?.lenisInstance?.animatedScroll,
 
       locomotive?.scroll?.y,
-
       locomotive?.scroll?.instance?.scroll?.y,
     ]
       .map((value) => Number(value))
@@ -132,11 +162,6 @@ function Layout() {
 
   /* =========================================================
      SCROLL TO POSITION
-
-     Works with:
-     - browser scroll
-     - Locomotive
-     - Lenis
   ========================================================= */
 
   const scrollToPosition = useCallback((position = 0) => {
@@ -148,7 +173,7 @@ function Layout() {
       console.warn("ScrollTrigger scroll memory error:", error);
     }
 
-    /* NORMAL BROWSER */
+    /* BROWSER */
 
     document.documentElement.scrollTop = top;
 
@@ -204,8 +229,6 @@ function Layout() {
 
   /* =========================================================
      FORCE TOP
-
-     Still used when required, for example admin.
   ========================================================= */
 
   const forceScrollToTop = useCallback(() => {
@@ -214,15 +237,6 @@ function Layout() {
 
   /* =========================================================
      SAVE PAGE POSITION
-
-     Example:
-
-     Jeans:
-     scroll = 3470px
-
-     Open product.
-
-     Before Jeans disappears we store 3470.
   ========================================================= */
 
   useEffect(() => {
@@ -241,12 +255,6 @@ function Layout() {
 
   /* =========================================================
      ROUTE SCROLL HANDLING
-
-     PUSH:
-     Normal new page -> TOP
-
-     POP:
-     Back / Forward -> RESTORE PREVIOUS POSITION
   ========================================================= */
 
   useEffect(() => {
@@ -262,16 +270,11 @@ function Layout() {
     const targetPosition = shouldRestore ? savedPosition : 0;
 
     let frameOne = null;
-
     let frameTwo = null;
 
     let cancelled = false;
 
     const timers = [];
-
-    /* =====================================================
-       APPLY POSITION
-    ===================================================== */
 
     const applyPosition = () => {
       if (cancelled) {
@@ -287,8 +290,6 @@ function Layout() {
       });
     };
 
-    /* FIRST RESTORE */
-
     frameOne = requestAnimationFrame(() => {
       applyPosition();
 
@@ -297,15 +298,6 @@ function Layout() {
       });
     });
 
-    /* =====================================================
-       ASYNC PRODUCT PAGE SUPPORT
-
-       Product/category images may load after React render,
-       changing the page height.
-
-       So when going BACK we retry restoration.
-    ===================================================== */
-
     const delays = shouldRestore ? [120, 350, 700, 1100] : [120];
 
     delays.forEach((delay) => {
@@ -313,10 +305,6 @@ function Layout() {
 
       timers.push(timer);
     });
-
-    /* =====================================================
-       IF USER STARTS SCROLLING, STOP AUTOMATIC RESTORE
-    ===================================================== */
 
     const cancelPendingRestore = () => {
       cancelled = true;
@@ -489,7 +477,7 @@ function Layout() {
   }, [isAdminRoute, forceScrollToTop]);
 
   /* =========================================================
-     LOCOMOTIVE SCROLL
+     LOCOMOTIVE
   ========================================================= */
 
   useEffect(() => {
@@ -539,19 +527,6 @@ function Layout() {
       });
 
       locomotiveRef.current = locomotiveScroll;
-
-      /*
-        IMPORTANT:
-
-        DO NOT put:
-
-        forceScrollToTop();
-
-        here.
-
-        That was one of the reasons BACK navigation
-        always returned to the top.
-      */
     } catch (error) {
       console.warn("Locomotive Scroll error:", error);
     }
@@ -582,7 +557,7 @@ function Layout() {
   }, [heroComplete, isHomePage, isAdminRoute, pathname]);
 
   /* =========================================================
-     SCROLLTRIGGER REFRESH
+     SCROLLTRIGGER
   ========================================================= */
 
   useEffect(() => {
@@ -601,15 +576,43 @@ function Layout() {
 
   /* =========================================================
      ADMIN ROUTES
+
+     LOGIN REQUIRED ONLY:
+     /admin
+     /admin/dashboard
   ========================================================= */
 
   if (isAdminRoute) {
     return (
       <Routes>
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<Dashboard />} />
+        {/* LOGIN */}
 
-          <Route path="dashboard" element={<Dashboard />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
+
+        {/* ADMIN LAYOUT */}
+
+        <Route path="/admin" element={<AdminLayout />}>
+          {/* DASHBOARD - PROTECTED */}
+
+          <Route
+            index
+            element={
+              <ProtectedDashboard>
+                <Dashboard />
+              </ProtectedDashboard>
+            }
+          />
+
+          <Route
+            path="dashboard"
+            element={
+              <ProtectedDashboard>
+                <Dashboard />
+              </ProtectedDashboard>
+            }
+          />
+
+          {/* OTHER ADMIN PAGES */}
 
           <Route path="orders" element={<Orders />} />
 
@@ -627,7 +630,10 @@ function Layout() {
 
           <Route path="settings" element={<Settings />} />
 
-          <Route path="*" element={<Navigate to="/admin" replace />} />
+          <Route
+            path="*"
+            element={<Navigate to="/admin/dashboard" replace />}
+          />
         </Route>
       </Routes>
     );
@@ -670,7 +676,7 @@ function Layout() {
 
           <Route path="/shop" element={<Shop />} />
 
-          {/* PRODUCT DETAILS */}
+          {/* PRODUCT */}
 
           <Route path="/product/:id" element={<ProductDetails />} />
 
@@ -704,7 +710,7 @@ function Layout() {
 
           <Route path="/jackets" element={<Jackets />} />
 
-          {/* CO-ORD SETS */}
+          {/* CO-ORD */}
 
           <Route path="/co-ord-sets" element={<CoOrdSets />} />
 

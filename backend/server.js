@@ -7,11 +7,20 @@ import mongoose from "mongoose";
 
 import connectDB from "./db.js";
 
+/* =========================================================
+   ROUTES
+========================================================= */
+
 import productRoutes from "./routes/productRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import catalogRoutes from "./routes/catalogRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
+import adminAuthRoutes from "./routes/adminAuthRoutes.js";
+
+/* =========================================================
+   MODELS
+========================================================= */
 
 import Cart from "./models/Cart.js";
 
@@ -22,35 +31,14 @@ import Cart from "./models/Cart.js";
 dotenv.config();
 
 /* =========================================================
-   SMTP DEBUG CHECK
-   DOES NOT PRINT PASSWORD
-========================================================= */
-
-console.log("");
-
-console.log("================================");
-console.log("📧 SMTP CONFIG CHECK");
-
-console.log("SMTP HOST:", process.env.SMTP_HOST || "NOT SET");
-
-console.log("SMTP PORT:", process.env.SMTP_PORT || "NOT SET");
-
-console.log("SMTP USER:", process.env.SMTP_USER || "NOT SET");
-
-console.log("SMTP PASSWORD LOADED:", Boolean(process.env.SMTP_PASS));
-
-console.log("SMTP PASSWORD LENGTH:", process.env.SMTP_PASS?.length || 0);
-
-console.log("ADMIN ORDER EMAIL:", process.env.ADMIN_ORDER_EMAIL || "NOT SET");
-
-console.log("================================");
-console.log("");
-
-/* =========================================================
    DNS
 ========================================================= */
 
-dns.setServers(["8.8.8.8", "8.8.4.4"]);
+try {
+  dns.setServers(["8.8.8.8", "8.8.4.4"]);
+} catch (error) {
+  console.log("DNS override skipped:", error.message);
+}
 
 /* =========================================================
    APP
@@ -62,26 +50,25 @@ const app = express();
    CORS
 ========================================================= */
 
+const allowedOrigins = [
+  "https://unboundclothing.in",
+  "https://www.unboundclothing.in",
+];
+
 app.use(
   cors({
     origin(origin, callback) {
-      /*
-       * Allow Postman / backend calls
-       * where no Origin is supplied.
-       */
+      /* ===============================================
+         POSTMAN / SERVER REQUEST
+      =============================================== */
 
       if (!origin) {
         return callback(null, true);
       }
 
-      /*
-       * Allow localhost Vite ports:
-       *
-       * http://localhost:5173
-       * http://localhost:5174
-       * http://localhost:5178
-       * etc.
-       */
+      /* ===============================================
+         LOCALHOST
+      =============================================== */
 
       const localhostPattern = /^http:\/\/localhost:\d+$/;
 
@@ -91,14 +78,9 @@ app.use(
         return callback(null, true);
       }
 
-      /*
-       * Production website
-       */
-
-      const allowedOrigins = [
-        "https://unboundclothing.in",
-        "https://www.unboundclothing.in",
-      ];
+      /* ===============================================
+         PRODUCTION
+      =============================================== */
 
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
@@ -130,91 +112,82 @@ app.use(
 app.use(
   express.urlencoded({
     extended: true,
+
     limit: "10mb",
   }),
 );
 
 /* =========================================================
-   HEALTH CHECK
+   HEALTH
 ========================================================= */
 
-app.get("/", (req, res) => {
-  return res.status(200).json({
-    success: true,
+app.get(
+  "/",
 
-    message: "UNBOUND API is running",
-  });
-});
+  (req, res) => {
+    res.status(200).json({
+      success: true,
+
+      message: "AXIEE API is running",
+
+      environment: process.env.NODE_ENV || "development",
+
+      database:
+        mongoose.connection.readyState === 1 ? "connected" : "not connected",
+    });
+  },
+);
+
+/* =========================================================
+   DATABASE HEALTH
+========================================================= */
+
+app.get(
+  "/api/health",
+
+  (req, res) => {
+    res.status(200).json({
+      success: true,
+
+      server: "running",
+
+      mongodb:
+        mongoose.connection.readyState === 1 ? "connected" : "not connected",
+    });
+  },
+);
 
 /* =========================================================
    ROUTES
 ========================================================= */
 
-/*
- * Products
- *
- * Example:
- * /api/products
- */
-
 app.use("/api/products", productRoutes);
-
-/*
- * Cart
- *
- * Example:
- * /api/cart
- */
 
 app.use("/api/cart", cartRoutes);
 
-/*
- * Catalog
- *
- * Example:
- * /api/catalog/products
- */
-
 app.use("/api/catalog", catalogRoutes);
 
-/*
- * Categories
- *
- * Example:
- * /api/categories
- */
-
 app.use("/api/categories", categoryRoutes);
-
-/*
- * Orders
- *
- * POST:
- * /api/orders
- *
- * All orders:
- * /api/orders
- *
- * Best sellers:
- * /api/orders/best-sellers?limit=8
- *
- * Track:
- * /api/orders/track/ORDER_NUMBER
- */
 
 app.use("/api/orders", orderRoutes);
 
 /* =========================================================
+   ADMIN LOGIN ROUTE
+========================================================= */
+
+app.use("/api/admin-auth", adminAuthRoutes);
+
+/* =========================================================
    404
+
+   KEEP AFTER ALL ROUTES
 ========================================================= */
 
 app.use((req, res) => {
-  return res.status(404).json({
+  res.status(404).json({
     success: false,
 
     message: "API route not found",
-
-    path: req.originalUrl,
   });
 });
 
@@ -227,7 +200,7 @@ app.use((error, req, res, next) => {
 
   console.error(error);
 
-  return res.status(error.status || 500).json({
+  res.status(error.status || 500).json({
     success: false,
 
     message: error.message || "Internal server error",
@@ -240,6 +213,16 @@ app.use((error, req, res, next) => {
 
 async function fixCartIndexes() {
   try {
+    /* ===============================================
+       DATABASE CHECK
+    =============================================== */
+
+    if (mongoose.connection.readyState !== 1) {
+      console.log("⚠️ Cart index fix skipped - MongoDB not connected");
+
+      return;
+    }
+
     console.log("🔍 Checking cart indexes...");
 
     const collection = mongoose.connection.db.collection("carts");
@@ -251,10 +234,9 @@ async function fixCartIndexes() {
       indexes.map((index) => index.name),
     );
 
-    /*
-     * Remove an old userId index
-     * if it still exists.
-     */
+    /* ===============================================
+       REMOVE OLD INDEX
+    =============================================== */
 
     const oldUserIndex = indexes.find((index) => index.name === "userId_1");
 
@@ -266,9 +248,9 @@ async function fixCartIndexes() {
       console.log("✅ Old userId_1 index removed");
     }
 
-    /*
-     * Sync indexes from current Cart model.
-     */
+    /* ===============================================
+       SYNC CURRENT CART INDEXES
+    =============================================== */
 
     await Cart.syncIndexes();
 
@@ -292,67 +274,133 @@ async function fixCartIndexes() {
 const PORT = process.env.PORT || 5000;
 
 /* =========================================================
-   START SERVER
+   START EXPRESS
+
+   START FIRST SO HOSTINGER DOES NOT WAIT FOR MONGODB.
 ========================================================= */
 
-async function startServer() {
+const server = app.listen(
+  PORT,
+
+  () => {
+    console.log("");
+
+    console.log("================================");
+
+    console.log(`✅ AXIEE Server running on port ${PORT}`);
+
+    console.log(`✅ Environment: ${process.env.NODE_ENV || "development"}`);
+
+    console.log("✅ Health: /");
+
+    console.log("✅ Products: /api/products");
+
+    console.log("✅ Cart: /api/cart");
+
+    console.log("✅ Catalog: /api/catalog");
+
+    console.log("✅ Categories: /api/categories");
+
+    console.log("✅ Orders: /api/orders");
+
+    console.log("✅ Admin Login: /api/admin-auth/login");
+
+    console.log("✅ Admin Verify: /api/admin-auth/verify");
+
+    console.log("================================");
+
+    console.log("");
+  },
+);
+
+/* =========================================================
+   CONNECT DATABASE
+========================================================= */
+
+async function initializeDatabase() {
   try {
-    /* =====================================================
-       CONNECT MONGODB
-    ===================================================== */
+    console.log("🔌 Connecting to MongoDB...");
 
     await connectDB();
 
     console.log("✅ MongoDB connected");
 
-    /* =====================================================
-       FIX CART INDEX
-    ===================================================== */
-
     await fixCartIndexes();
-
-    /* =====================================================
-       START EXPRESS
-    ===================================================== */
-
-    app.listen(PORT, () => {
-      console.log("");
-
-      console.log("================================");
-
-      console.log(`✅ UNBOUND Server running on port ${PORT}`);
-
-      console.log(`✅ API: http://localhost:${PORT}`);
-
-      console.log(`✅ Products: http://localhost:${PORT}/api/products`);
-
-      console.log(`✅ Cart: http://localhost:${PORT}/api/cart`);
-
-      console.log(`✅ Catalog: http://localhost:${PORT}/api/catalog`);
-
-      console.log(`✅ Categories: http://localhost:${PORT}/api/categories`);
-
-      console.log(`✅ Orders: http://localhost:${PORT}/api/orders`);
-
-      console.log(
-        `✅ Best Sellers: http://localhost:${PORT}/api/orders/best-sellers?limit=8`,
-      );
-
-      console.log("================================");
-
-      console.log("");
-    });
   } catch (error) {
-    console.error("❌ Server startup error:");
+    /*
+      Do not stop Express.
+      Hostinger can continue running
+      while MongoDB reconnects.
+    */
+
+    console.error("❌ MongoDB startup error:");
 
     console.error(error);
-
-    process.exit(1);
   }
 }
 
 /* =========================================================
-   START
+   INITIALIZE DATABASE
 ========================================================= */
 
-startServer();
+initializeDatabase();
+
+/* =========================================================
+   MONGOOSE EVENTS
+========================================================= */
+
+mongoose.connection.on(
+  "connected",
+
+  () => {
+    console.log("✅ Mongoose connection active");
+  },
+);
+
+mongoose.connection.on(
+  "error",
+
+  (error) => {
+    console.error("❌ Mongoose connection error:", error.message);
+  },
+);
+
+mongoose.connection.on(
+  "disconnected",
+
+  () => {
+    console.log("⚠️ MongoDB disconnected");
+  },
+);
+
+/* =========================================================
+   SHUTDOWN
+========================================================= */
+
+async function shutdown(signal) {
+  console.log(`⚠️ ${signal} received. Shutting down...`);
+
+  server.close(async () => {
+    try {
+      if (mongoose.connection.readyState !== 0) {
+        await mongoose.connection.close();
+      }
+    } catch (error) {
+      console.error("MongoDB shutdown error:", error);
+    }
+
+    process.exit(0);
+  });
+}
+
+process.on(
+  "SIGTERM",
+
+  () => shutdown("SIGTERM"),
+);
+
+process.on(
+  "SIGINT",
+
+  () => shutdown("SIGINT"),
+);

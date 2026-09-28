@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Search,
   ShoppingBag,
+  Trash2,
   UserRound,
   X,
 } from "lucide-react";
@@ -438,6 +439,8 @@ const Customers = () => {
 
   const [error, setError] = useState("");
 
+  const [deletingCustomerId, setDeletingCustomerId] = useState("");
+
   /* =======================================================
      LOAD
   ======================================================= */
@@ -778,6 +781,113 @@ const Customers = () => {
 
   const closeCustomer = () => {
     setSelectedCustomerId(null);
+  };
+
+  /* =======================================================
+     DELETE CUSTOMER + ALL CUSTOMER ORDERS
+  ======================================================= */
+
+  const deleteCustomer = async (customer) => {
+    if (!customer) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete "${customer.name}"?\n\nThis permanently deletes this customer AND all orders belonging to this exact customer.\n\nOrders and dashboard totals will update from MongoDB.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeletingCustomerId(customer.id);
+      setError("");
+
+      const response = await fetch(`${API_BASE}/api/orders/customer`, {
+        method: "DELETE",
+
+        cache: "no-store",
+
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+
+        body: JSON.stringify({
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message || data?.error || `Delete failed: ${response.status}`,
+        );
+      }
+
+      /*
+        Close drawer if the deleted customer is currently open.
+      */
+
+      if (selectedCustomerId === customer.id) {
+        setSelectedCustomerId(null);
+      }
+
+      /*
+        Remove deleted orders immediately from this page.
+      */
+
+      const deletedIds = new Set(
+        Array.isArray(data?.deletedOrderIds)
+          ? data.deletedOrderIds.map(String)
+          : [],
+      );
+
+      if (deletedIds.size > 0) {
+        setOrders((currentOrders) =>
+          currentOrders.filter(
+            (order) => !deletedIds.has(String(order?._id || order?.id || "")),
+          ),
+        );
+      } else {
+        await loadCustomers(false);
+      }
+
+      /*
+        Other admin pages can listen to this event.
+        Once you send Orders.jsx + Dashboard.jsx,
+        we can make them refresh immediately while already open too.
+      */
+
+      window.dispatchEvent(
+        new CustomEvent("axiee-orders-updated", {
+          detail: {
+            source: "customer-delete",
+            customerId: customer.id,
+            deletedOrders: Number(data?.deletedOrders || 0),
+          },
+        }),
+      );
+
+      /*
+        Re-read MongoDB to guarantee Customers page is in sync.
+      */
+
+      await loadCustomers(false);
+    } catch (deleteError) {
+      console.error("Delete customer error:", deleteError);
+
+      setError(
+        deleteError?.message ||
+          "Could not delete customer and customer orders.",
+      );
+    } finally {
+      setDeletingCustomerId("");
+    }
   };
 
   /* =======================================================
@@ -1165,6 +1275,26 @@ const Customers = () => {
                               <Phone size={16} />
                             </a>
                           )}
+
+                          <button
+                            type="button"
+                            className="admin-action-button"
+                            title="Delete customer and all orders"
+                            disabled={deletingCustomerId === customer.id}
+                            onClick={() => deleteCustomer(customer)}
+                            style={{
+                              color: "#d83f3f",
+                              borderColor: "#f0caca",
+                              opacity:
+                                deletingCustomerId === customer.id ? 0.55 : 1,
+                              cursor:
+                                deletingCustomerId === customer.id
+                                  ? "not-allowed"
+                                  : "pointer",
+                            }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1335,6 +1465,28 @@ const Customers = () => {
                       Send Email
                     </a>
                   )}
+
+                  <button
+                    type="button"
+                    className="admin-customer-contact-button"
+                    disabled={deletingCustomerId === selectedCustomer.id}
+                    onClick={() => deleteCustomer(selectedCustomer)}
+                    style={{
+                      color: "#d83f3f",
+                      borderColor: "#f0caca",
+                      cursor:
+                        deletingCustomerId === selectedCustomer.id
+                          ? "not-allowed"
+                          : "pointer",
+                      opacity:
+                        deletingCustomerId === selectedCustomer.id ? 0.55 : 1,
+                    }}
+                  >
+                    <Trash2 size={16} />
+                    {deletingCustomerId === selectedCustomer.id
+                      ? "Deleting..."
+                      : "Delete Customer"}
+                  </button>
                 </div>
               </section>
 

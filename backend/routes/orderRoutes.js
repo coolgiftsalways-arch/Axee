@@ -66,6 +66,46 @@ const getItemImage = (item) => {
 };
 
 /* =========================================================
+   CUSTOMER NORMALIZATION
+
+   Customers page identifies a customer using:
+
+   NAME + EMAIL + PHONE
+
+   So deletion uses the same rule.
+========================================================= */
+
+const normalizeText = (value = "") => {
+  return String(value ?? "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+};
+
+const normalizeEmail = (value = "") => {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase();
+};
+
+const normalizePhone = (value = "") => {
+  return String(value ?? "")
+    .replace(/\D/g, "")
+    .trim();
+};
+
+const getCustomerFullName = (order) => {
+  return [order?.customer?.firstName, order?.customer?.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+};
+
+const normalizeCustomerName = (order) => {
+  return normalizeText(getCustomerFullName(order));
+};
+
+/* =========================================================
    ORDER NUMBER
 ========================================================= */
 
@@ -100,7 +140,6 @@ router.post("/", async (req, res) => {
     if (mongoose.connection.readyState !== 1) {
       return res.status(503).json({
         success: false,
-
         message: "Database is not connected.",
       });
     }
@@ -126,7 +165,6 @@ router.post("/", async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-
         message: "Customer details are incomplete.",
       });
     }
@@ -143,7 +181,6 @@ router.post("/", async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-
         message: "Delivery address is incomplete.",
       });
     }
@@ -155,7 +192,6 @@ router.post("/", async (req, res) => {
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
         success: false,
-
         message: "Your bag is empty.",
       });
     }
@@ -167,7 +203,6 @@ router.post("/", async (req, res) => {
     if (!["upi", "card", "cod"].includes(paymentMethod)) {
       return res.status(400).json({
         success: false,
-
         message: "Invalid payment method.",
       });
     }
@@ -211,16 +246,12 @@ router.post("/", async (req, res) => {
     if (invalidPrice) {
       return res.status(400).json({
         success: false,
-
         message: "One or more products have an invalid price.",
       });
     }
 
     /* =====================================================
        PRODUCT ID VALIDATION
-
-       Product ID is important because Best Sellers
-       groups sales using this value.
     ===================================================== */
 
     const invalidProduct = normalizedItems.some(
@@ -230,7 +261,6 @@ router.post("/", async (req, res) => {
     if (invalidProduct) {
       return res.status(400).json({
         success: false,
-
         message: "One or more products are missing product ID.",
       });
     }
@@ -250,12 +280,6 @@ router.post("/", async (req, res) => {
 
     /* =====================================================
        PAYMENT RULE
-
-       COD:
-       Order placed immediately.
-
-       UPI/CARD:
-       Payment is required before confirmation.
     ===================================================== */
 
     const paymentRequired = paymentMethod !== "cod";
@@ -312,12 +336,6 @@ router.post("/", async (req, res) => {
 
     /* =====================================================
        ORDER EMAIL
-
-       COD:
-       Send immediately.
-
-       UPI / CARD:
-       Send after successful payment confirmation.
     ===================================================== */
 
     let emailStatus = {
@@ -334,7 +352,6 @@ router.post("/", async (req, res) => {
 
         emailStatus = {
           attempted: true,
-
           ...result,
         };
       } catch (emailError) {
@@ -390,9 +407,7 @@ router.post("/", async (req, res) => {
 
     return res.status(500).json({
       success: false,
-
       message: "Failed to create order.",
-
       error: error.message,
     });
   }
@@ -412,9 +427,7 @@ router.get("/", async (req, res) => {
 
     return res.status(200).json({
       success: true,
-
       count: orders.length,
-
       orders,
     });
   } catch (error) {
@@ -422,9 +435,7 @@ router.get("/", async (req, res) => {
 
     return res.status(500).json({
       success: false,
-
       message: "Failed to load orders.",
-
       error: error.message,
     });
   }
@@ -434,20 +445,6 @@ router.get("/", async (req, res) => {
    REAL BEST SELLERS
 
    GET /api/orders/best-sellers
-   GET /api/orders/best-sellers?limit=8
-
-   This reads REAL customer orders.
-
-   It counts:
-   placed
-   confirmed
-   processing
-   shipped
-   delivered
-
-   It does NOT count:
-   pending_payment
-   cancelled
 ========================================================= */
 
 router.get(
@@ -455,21 +452,12 @@ router.get(
 
   async (req, res) => {
     try {
-      /* ===================================================
-         DATABASE CHECK
-      =================================================== */
-
       if (mongoose.connection.readyState !== 1) {
         return res.status(503).json({
           success: false,
-
           message: "Database is not connected.",
         });
       }
-
-      /* ===================================================
-         LIMIT
-      =================================================== */
 
       const requestedLimit = Number(req.query.limit || 8);
 
@@ -477,15 +465,7 @@ router.get(
         ? Math.min(50, Math.max(1, Math.floor(requestedLimit)))
         : 8;
 
-      /* ===================================================
-         AGGREGATION
-      =================================================== */
-
       const bestSellers = await Order.aggregate([
-        /* ===============================================
-             COUNT ONLY REAL / ACTIVE ORDERS
-          =============================================== */
-
         {
           $match: {
             orderStatus: {
@@ -500,51 +480,25 @@ router.get(
           },
         },
 
-        /* ===============================================
-             NEWEST ORDER FIRST
-
-             This means $first below uses the newest
-             saved product name/image/price.
-          =============================================== */
-
         {
           $sort: {
             createdAt: -1,
           },
         },
 
-        /* ===============================================
-             EACH PRODUCT BECOMES ITS OWN DOCUMENT
-          =============================================== */
-
         {
           $unwind: "$items",
         },
-
-        /* ===============================================
-             PRODUCT MUST HAVE PRODUCT ID
-          =============================================== */
 
         {
           $match: {
             "items.productId": {
               $exists: true,
+
               $nin: ["", null],
             },
           },
         },
-
-        /* ===============================================
-             GROUP SAME PRODUCT
-
-             Example:
-
-             jean-1 quantity 2
-             jean-1 quantity 1
-             jean-1 quantity 4
-
-             totalSold = 7
-          =============================================== */
 
         {
           $group: {
@@ -580,10 +534,6 @@ router.get(
           },
         },
 
-        /* ===============================================
-             COUNT UNIQUE ORDERS
-          =============================================== */
-
         {
           $addFields: {
             orderCount: {
@@ -592,31 +542,17 @@ router.get(
           },
         },
 
-        /* ===============================================
-             HIGHEST SOLD FIRST
-          =============================================== */
-
         {
           $sort: {
             totalSold: -1,
-
             totalRevenue: -1,
-
             lastSoldAt: -1,
           },
         },
 
-        /* ===============================================
-             LIMIT
-          =============================================== */
-
         {
           $limit: limit,
         },
-
-        /* ===============================================
-             CLEAN RESPONSE
-          =============================================== */
 
         {
           $project: {
@@ -641,10 +577,6 @@ router.get(
         },
       ]);
 
-      /* ===================================================
-         ADD RANK
-      =================================================== */
-
       const rankedBestSellers = bestSellers.map((product, index) => ({
         rank: index + 1,
 
@@ -665,6 +597,175 @@ router.get(
         success: false,
 
         message: "Failed to load best sellers.",
+
+        error: error.message,
+      });
+    }
+  },
+);
+
+/* =========================================================
+   DELETE CUSTOMER + ALL THEIR ORDERS
+
+   DELETE /api/orders/customer
+
+   BODY:
+   {
+     "name": "Ahmed Khan",
+     "email": "example@gmail.com",
+     "phone": "9191379609"
+   }
+
+   IMPORTANT:
+   Keep this BEFORE /:id.
+========================================================= */
+
+router.delete(
+  "/customer",
+
+  async (req, res) => {
+    try {
+      /* ===================================================
+         DATABASE
+      =================================================== */
+
+      if (mongoose.connection.readyState !== 1) {
+        return res.status(503).json({
+          success: false,
+
+          message: "Database is not connected.",
+        });
+      }
+
+      /* ===================================================
+         CUSTOMER DATA
+      =================================================== */
+
+      const name = normalizeText(req.body?.name);
+
+      const email = normalizeEmail(req.body?.email);
+
+      const phone = normalizePhone(req.body?.phone);
+
+      if (!name || !email || !phone) {
+        return res.status(400).json({
+          success: false,
+
+          message: "Customer name, email and phone are required.",
+        });
+      }
+
+      /* ===================================================
+         LOAD CUSTOMER ORDERS
+
+         Email is already normalized/lowercase in MongoDB,
+         so use it to reduce the search first.
+      =================================================== */
+
+      const possibleOrders = await Order.find({
+        "customer.email": email,
+      }).select("_id customer orderNumber total items createdAt");
+
+      /* ===================================================
+         EXACT MATCH
+
+         Same identity rule as Customers.jsx:
+
+         NAME + EMAIL + PHONE
+      =================================================== */
+
+      const matchedOrders = possibleOrders.filter((order) => {
+        const orderName = normalizeCustomerName(order);
+
+        const orderEmail = normalizeEmail(order?.customer?.email);
+
+        const orderPhone = normalizePhone(order?.customer?.phone);
+
+        return (
+          orderName === name && orderEmail === email && orderPhone === phone
+        );
+      });
+
+      /* ===================================================
+         NOTHING FOUND
+      =================================================== */
+
+      if (matchedOrders.length === 0) {
+        return res.status(404).json({
+          success: false,
+
+          message: "Customer orders not found.",
+        });
+      }
+
+      /* ===================================================
+         IDS
+      =================================================== */
+
+      const orderIds = matchedOrders.map((order) => order._id);
+
+      /* ===================================================
+         TOTALS BEFORE DELETE
+      =================================================== */
+
+      const deletedRevenue = matchedOrders.reduce(
+        (total, order) => total + Number(order.total || 0),
+        0,
+      );
+
+      const deletedItems = matchedOrders.reduce((total, order) => {
+        const itemCount = Array.isArray(order.items)
+          ? order.items.reduce(
+              (itemTotal, item) => itemTotal + Number(item?.quantity || 1),
+              0,
+            )
+          : 0;
+
+        return total + itemCount;
+      }, 0);
+
+      /* ===================================================
+         DELETE ALL CUSTOMER ORDERS
+      =================================================== */
+
+      const result = await Order.deleteMany({
+        _id: {
+          $in: orderIds,
+        },
+      });
+
+      console.log(`🗑 Customer deleted: ${name}`);
+
+      console.log(`🗑 Orders deleted: ${result.deletedCount}`);
+
+      /* ===================================================
+         RESPONSE
+      =================================================== */
+
+      return res.status(200).json({
+        success: true,
+
+        message: "Customer and all matching orders deleted successfully.",
+
+        deletedCustomer: {
+          name,
+          email,
+          phone,
+        },
+
+        deletedOrders: Number(result.deletedCount || 0),
+
+        deletedItems,
+
+        deletedRevenue,
+      });
+    } catch (error) {
+      console.error("❌ Delete customer error:", error);
+
+      return res.status(500).json({
+        success: false,
+
+        message: "Failed to delete customer.",
 
         error: error.message,
       });
@@ -697,7 +798,6 @@ router.get(
 
       return res.status(200).json({
         success: true,
-
         order,
       });
     } catch (error) {
@@ -715,65 +815,12 @@ router.get(
 );
 
 /* =========================================================
-   GET SINGLE ORDER
-
-   GET /api/orders/:id
-
-   IMPORTANT:
-   Keep this BELOW:
-   /best-sellers
-   /track/:orderNumber
-
-   Otherwise Express can think:
-   "best-sellers" = order ID
-========================================================= */
-
-router.get(
-  "/:id",
-
-  async (req, res) => {
-    try {
-      if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-        return res.status(400).json({
-          success: false,
-
-          message: "Invalid order ID.",
-        });
-      }
-
-      const order = await Order.findById(req.params.id);
-
-      if (!order) {
-        return res.status(404).json({
-          success: false,
-
-          message: "Order not found.",
-        });
-      }
-
-      return res.status(200).json({
-        success: true,
-
-        order,
-      });
-    } catch (error) {
-      console.error("❌ Get single order error:", error);
-
-      return res.status(500).json({
-        success: false,
-
-        message: "Failed to load order.",
-
-        error: error.message,
-      });
-    }
-  },
-);
-
-/* =========================================================
    UPDATE ORDER STATUS
 
    PATCH /api/orders/:id/status
+
+   IMPORTANT:
+   Keep this before GET /:id if possible.
 ========================================================= */
 
 router.patch(
@@ -830,7 +877,6 @@ router.patch(
 
         {
           new: true,
-
           runValidators: true,
         },
       );
@@ -865,7 +911,135 @@ router.patch(
 );
 
 /* =========================================================
-   EXPORT
+   DELETE SINGLE ORDER
+
+   DELETE /api/orders/:id
+
+   This also affects:
+   Orders
+   Customers
+   Dashboard
+   Best Sellers
+
+   because all of those use the Order collection.
 ========================================================= */
+
+router.delete(
+  "/:id",
+
+  async (req, res) => {
+    try {
+      /* ===================================================
+         VALIDATE ID
+      =================================================== */
+
+      if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return res.status(400).json({
+          success: false,
+
+          message: "Invalid order ID.",
+        });
+      }
+
+      /* ===================================================
+         DELETE
+      =================================================== */
+
+      const order = await Order.findByIdAndDelete(req.params.id);
+
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+
+          message: "Order not found.",
+        });
+      }
+
+      /* ===================================================
+         RESPONSE
+      =================================================== */
+
+      return res.status(200).json({
+        success: true,
+
+        message: "Order deleted successfully.",
+
+        deletedOrder: {
+          _id: order._id,
+
+          orderNumber: order.orderNumber,
+
+          total: order.total,
+
+          customer: order.customer,
+        },
+      });
+    } catch (error) {
+      console.error("❌ Delete order error:", error);
+
+      return res.status(500).json({
+        success: false,
+
+        message: "Failed to delete order.",
+
+        error: error.message,
+      });
+    }
+  },
+);
+
+/* =========================================================
+   GET SINGLE ORDER
+
+   GET /api/orders/:id
+
+   IMPORTANT:
+   Keep below:
+   /best-sellers
+   /customer
+   /track/:orderNumber
+========================================================= */
+
+router.get(
+  "/:id",
+
+  async (req, res) => {
+    try {
+      if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return res.status(400).json({
+          success: false,
+
+          message: "Invalid order ID.",
+        });
+      }
+
+      const order = await Order.findById(req.params.id);
+
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+
+          message: "Order not found.",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+
+        order,
+      });
+    } catch (error) {
+      console.error("❌ Get single order error:", error);
+
+      return res.status(500).json({
+        success: false,
+
+        message: "Failed to load order.",
+
+        error: error.message,
+      });
+    }
+  },
+);
 
 export default router;
