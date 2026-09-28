@@ -1,163 +1,283 @@
+import crypto from "node:crypto";
 import mongoose from "mongoose";
+
 import Cart from "../models/Cart.js";
 
 /* =========================================================
-   FIND PRODUCT FROM MAIN PRODUCTS COLLECTION
+   HELPERS
 ========================================================= */
 
-const getMongoProduct = async (productId) => {
-  try {
-    if (!mongoose.Types.ObjectId.isValid(productId)) {
-      return null;
-    }
+const createCartId = () => {
+  return crypto.randomUUID();
+};
 
-    return await mongoose.connection.db
-      .collection("products")
-      .findOne({
-        _id: new mongoose.Types.ObjectId(productId),
-      });
-  } catch (error) {
-    console.error("Product lookup error:", error);
-    return null;
+const normalizeImageUrl = (image) => {
+  if (!image) return "";
+
+  let value = image;
+
+  if (Array.isArray(value)) {
+    value = value[0];
   }
+
+  if (value && typeof value === "object") {
+    value =
+      value.url ||
+      value.src ||
+      value.path ||
+      value.image ||
+      value.fileId ||
+      value._id ||
+      "";
+  }
+
+  if (!value) return "";
+
+  value = String(value).trim().replace(/\\/g, "/");
+
+  if (!value) return "";
+
+  /* =========================================
+     FULL URL
+  ========================================= */
+
+  if (
+    value.startsWith("http://") ||
+    value.startsWith("https://") ||
+    value.startsWith("data:") ||
+    value.startsWith("blob:")
+  ) {
+    return value;
+  }
+
+  /* =========================================
+     OLD GRIDFS URL
+
+     /api/images/ID
+     ->
+     /api/catalog/images/ID
+  ========================================= */
+
+  if (value.startsWith("/api/images/")) {
+    return value.replace("/api/images/", "/api/catalog/images/");
+  }
+
+  if (value.startsWith("api/images/")) {
+    return `/${value.replace("api/images/", "api/catalog/images/")}`;
+  }
+
+  /* =========================================
+     CURRENT GRIDFS URL
+  ========================================= */
+
+  if (value.startsWith("/api/catalog/images/")) {
+    return value;
+  }
+
+  if (value.startsWith("api/catalog/images/")) {
+    return `/${value}`;
+  }
+
+  /* =========================================
+     UPLOADS
+  ========================================= */
+
+  if (value.startsWith("/uploads/")) {
+    return value;
+  }
+
+  if (value.startsWith("uploads/")) {
+    return `/${value}`;
+  }
+
+  return value;
 };
 
 /* =========================================================
-   NORMALIZE IMAGE URL
-========================================================= */
-
-const normalizeImageUrl = (value) => {
-  if (!value) {
-    return "";
-  }
-
-  if (typeof value === "object") {
-    if (value?.url) {
-      return normalizeImageUrl(value.url);
-    }
-
-    const fileId =
-      value?.fileId ||
-      value?._id ||
-      value?.id;
-
-    if (fileId) {
-      return `/api/catalog/images/${String(fileId)}`;
-    }
-
-    return "";
-  }
-
-  const image = String(value).trim();
-
-  if (!image) {
-    return "";
-  }
-
-  if (image.includes("/api/images/")) {
-    const imageId =
-      image.split("/api/images/")[1];
-
-    if (imageId) {
-      return `/api/catalog/images/${imageId}`;
-    }
-  }
-
-  if (image.includes("/api/catalog/images/")) {
-    const imageId =
-      image.split("/api/catalog/images/")[1];
-
-    if (imageId) {
-      return `/api/catalog/images/${imageId}`;
-    }
-  }
-
-  return image;
-};
-
-/* =========================================================
-   GET BEST PRODUCT IMAGE
+   GET PRODUCT IMAGE
 ========================================================= */
 
 const getProductImage = (product) => {
-  if (!product) {
-    return "";
-  }
+  if (!product) return "";
 
-  /* =====================================================
-     GRIDFS IMAGE FILES
-  ===================================================== */
+  /* =========================================
+     1. imageFiles
+  ========================================= */
 
-  if (
-    Array.isArray(product.imageFiles) &&
-    product.imageFiles.length > 0
-  ) {
-    const sortedImages =
-      [...product.imageFiles].sort(
-        (a, b) =>
-          Number(a?.order ?? 0) -
-          Number(b?.order ?? 0),
-      );
+  if (Array.isArray(product.imageFiles) && product.imageFiles.length > 0) {
+    const sorted = [...product.imageFiles].sort(
+      (a, b) => Number(a?.order || 0) - Number(b?.order || 0),
+    );
 
-    for (const imageFile of sortedImages) {
-      const imageUrl =
-        normalizeImageUrl(imageFile);
+    for (const item of sorted) {
+      if (!item) continue;
 
-      if (imageUrl) {
-        return imageUrl;
+      const fileId = item.fileId || item._id || item.id;
+
+      if (fileId) {
+        return `/api/catalog/images/${String(fileId)}`;
+      }
+
+      if (item.url) {
+        return normalizeImageUrl(item.url);
       }
     }
   }
 
-  /* =====================================================
-     IMAGES ARRAY
-  ===================================================== */
+  /* =========================================
+     2. imageIds
+  ========================================= */
 
-  if (
-    Array.isArray(product.images) &&
-    product.images.length > 0
-  ) {
-    for (const imageItem of product.images) {
-      const imageUrl =
-        normalizeImageUrl(imageItem);
+  if (Array.isArray(product.imageIds) && product.imageIds.length > 0) {
+    const id = product.imageIds[0];
 
-      if (imageUrl) {
-        return imageUrl;
-      }
+    if (id) {
+      return `/api/catalog/images/${String(id)}`;
     }
   }
 
-  /* =====================================================
-     MAIN IMAGE
-  ===================================================== */
+  /* =========================================
+     3. images
+  ========================================= */
 
-  const mainImage =
-    normalizeImageUrl(
-      product.mainImage,
-    );
+  if (Array.isArray(product.images) && product.images.length > 0) {
+    const firstImage = product.images[0];
 
-  if (mainImage) {
-    return mainImage;
+    if (firstImage) {
+      if (typeof firstImage === "object") {
+        const fileId = firstImage.fileId || firstImage._id || firstImage.id;
+
+        if (fileId) {
+          return `/api/catalog/images/${String(fileId)}`;
+        }
+
+        return normalizeImageUrl(
+          firstImage.url ||
+            firstImage.src ||
+            firstImage.path ||
+            firstImage.image ||
+            "",
+        );
+      }
+
+      return normalizeImageUrl(firstImage);
+    }
   }
 
-  /* =====================================================
-     NORMAL IMAGE
-  ===================================================== */
+  /* =========================================
+     4. imageId
+  ========================================= */
 
-  const image =
-    normalizeImageUrl(
-      product.image,
-    );
+  if (product.imageId) {
+    return `/api/catalog/images/${String(product.imageId)}`;
+  }
 
-  if (image) {
-    return image;
+  /* =========================================
+     5. mainImage
+  ========================================= */
+
+  if (product.mainImage) {
+    return normalizeImageUrl(product.mainImage);
+  }
+
+  /* =========================================
+     6. image
+  ========================================= */
+
+  if (product.image) {
+    return normalizeImageUrl(product.image);
   }
 
   return "";
 };
 
 /* =========================================================
+   FIND PRODUCT IN MONGODB
+========================================================= */
+
+const findProduct = async (productId) => {
+  try {
+    if (!productId) return null;
+
+    if (!mongoose.connection.db) {
+      return null;
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(String(productId))) {
+      return null;
+    }
+
+    const objectId = new mongoose.Types.ObjectId(String(productId));
+
+    const product = await mongoose.connection.db
+      .collection("products")
+      .findOne({
+        _id: objectId,
+      });
+
+    return product || null;
+  } catch (error) {
+    console.error("❌ Find cart product error:", error);
+
+    return null;
+  }
+};
+
+/* =========================================================
+   REPAIR OLD CART IMAGES
+========================================================= */
+
+const repairCartImages = async (cart) => {
+  if (!cart || !Array.isArray(cart.items)) {
+    return cart;
+  }
+
+  let changed = false;
+
+  for (const item of cart.items) {
+    /* =========================================
+       NORMALIZE EXISTING IMAGE
+    ========================================= */
+
+    if (item.image) {
+      const normalized = normalizeImageUrl(item.image);
+
+      if (normalized !== item.image) {
+        item.image = normalized;
+        changed = true;
+      }
+
+      continue;
+    }
+
+    /* =========================================
+       IMAGE MISSING
+    ========================================= */
+
+    const product = await findProduct(item.productId);
+
+    if (!product) {
+      continue;
+    }
+
+    const image = getProductImage(product);
+
+    if (image) {
+      item.image = image;
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    await cart.save();
+  }
+
+  return cart;
+};
+
+/* =========================================================
    GET CART
+
    GET /api/cart/:cartId
 ========================================================= */
 
@@ -172,17 +292,30 @@ export const getCart = async (req, res) => {
       });
     }
 
-    let cart =
-      await Cart.findOne({
-        cartId,
-      });
+    let cart = await Cart.findOne({
+      cartId,
+    });
+
+    /* =========================================
+       CART DOES NOT EXIST
+    ========================================= */
 
     if (!cart) {
-      cart = await Cart.create({
-        cartId,
-        items: [],
+      return res.status(200).json({
+        success: true,
+
+        cart: {
+          cartId,
+          items: [],
+        },
       });
     }
+
+    /* =========================================
+       FIX OLD IMAGES
+    ========================================= */
+
+    cart = await repairCartImages(cart);
 
     return res.status(200).json({
       success: true,
@@ -196,14 +329,15 @@ export const getCart = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message:
-        "Failed to get cart",
+      message: "Failed to get cart",
+      error: error.message,
     });
   }
 };
 
 /* =========================================================
    ADD TO CART
+
    POST /api/cart/add
 ========================================================= */
 
@@ -213,29 +347,30 @@ export const addToCart = async (
 ) => {
   try {
     const {
-      cartId,
-      productId,
-      size,
-      quantity = 1,
+      cartId: incomingCartId,
 
-      // Fallback information for local products.
-      name,
-      price,
-      image,
-      category,
+      productId,
+
+      name: incomingName,
+
+      category: incomingCategory,
+
+      price: incomingPrice,
+
+      image: incomingImage,
+
+      size: incomingSize,
+
+      quantity: incomingQuantity = 1,
     } = req.body;
 
     /* =====================================================
        VALIDATION
     ===================================================== */
 
-    if (!cartId) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Cart ID is required",
-      });
-    }
+    /* =========================================
+       VALIDATION
+    ========================================= */
 
     if (!productId) {
       return res.status(400).json({
@@ -245,132 +380,66 @@ export const addToCart = async (
       });
     }
 
-    if (!size) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Please select a size",
-      });
-    }
+    /* =========================================
+       GET PRODUCT
+    ========================================= */
 
-    const safeQuantity =
-      Math.min(
-        10,
-        Math.max(
-          1,
-          Number(quantity) || 1,
-        ),
-      );
+    const product = await findProduct(productId);
 
-    /* =====================================================
-       GET PRODUCT FROM MONGODB
-    ===================================================== */
+    /* =========================================
+       NAME
+    ========================================= */
 
-    const mongoProduct =
-      await getMongoProduct(
-        productId,
-      );
+    const name =
+      product?.name || product?.title || incomingName || "AXIEE Product";
 
-    /*
-      Mongo ObjectId products must actually exist.
-      Local/string IDs are still allowed.
-    */
+    /* =========================================
+       CATEGORY
+    ========================================= */
 
-    if (
-      mongoose.Types.ObjectId.isValid(
-        productId,
-      ) &&
-      !mongoProduct
-    ) {
-      return res.status(404).json({
-        success: false,
-        message:
-          "Product not found in MongoDB",
-      });
-    }
+    const category = product?.category || incomingCategory || "";
 
-    /* =====================================================
-       PRODUCT DETAILS
-    ===================================================== */
+    /* =========================================
+       PRICE
+    ========================================= */
 
-    const productName =
-      mongoProduct?.name ||
-      name ||
-      "AXIEE Product";
-
-    const productPrice =
-      Number(
-        mongoProduct?.price ??
-          price ??
-          0,
-      );
-
-    /*
-      MongoDB image first.
-
-      If MongoDB product has no usable image,
-      use the image sent by the frontend.
-    */
-
-    const mongoProductImage =
-      getProductImage(
-        mongoProduct,
-      );
-
-    const frontendImage =
-      normalizeImageUrl(
-        image,
-      );
-
-    const productImage =
-      mongoProductImage ||
-      frontendImage ||
-      "";
-
-    const productCategory =
-      mongoProduct?.category ||
-      category ||
-      "";
-
-    /* =====================================================
-       DEBUG IMAGE
-    ===================================================== */
-
-    console.log(
-      "🖼 CART PRODUCT IMAGE:",
-      {
-        productId,
-        name:
-          productName,
-
-        frontendImage:
-          image,
-
-        mongoImageFiles:
-          mongoProduct?.imageFiles,
-
-        mongoImages:
-          mongoProduct?.images,
-
-        mongoMainImage:
-          mongoProduct?.mainImage,
-
-        mongoImage:
-          mongoProduct?.image,
-
-        finalImage:
-          productImage,
-      },
+    const price = Number(
+      product?.price ?? product?.salePrice ?? incomingPrice ?? 0,
     );
 
-    /* =====================================================
-       GET / CREATE CART
-    ===================================================== */
+    /* =========================================
+       IMAGE
+    ========================================= */
 
-    let cart =
-      await Cart.findOne({
-        cartId,
-      });
+    const productImage = getProductImage(product);
+
+    const image = productImage || normalizeImageUrl(incomingImage) || "";
+
+    /* =========================================
+       SIZE
+    ========================================= */
+
+    const size = incomingSize || product?.size || "ONE SIZE";
+
+    /* =========================================
+       QUANTITY
+    ========================================= */
+
+    const quantity = Math.min(10, Math.max(1, Number(incomingQuantity || 1)));
+
+    /* =========================================
+       CART ID
+    ========================================= */
+
+    const cartId = String(incomingCartId || "").trim() || createCartId();
+
+    /* =========================================
+       FIND / CREATE CART
+    ========================================= */
+
+    let cart = await Cart.findOne({
+      cartId,
+    });
 
     if (!cart) {
       cart = new Cart({
@@ -379,82 +448,59 @@ export const addToCart = async (
       });
     }
 
-    /* =====================================================
-       FIND EXISTING ITEM
-    ===================================================== */
+    /* =========================================
+       CHECK SAME PRODUCT + SIZE
+    ========================================= */
 
-    const existingItem =
-      cart.items.find(
-        (item) =>
-          String(
-            item.productId,
-          ) ===
-            String(
-              productId,
-            ) &&
-          String(
-            item.size,
-          ) ===
-            String(
-              size,
-            ),
-      );
-
-    /* =====================================================
-       UPDATE EXISTING ITEM
-    ===================================================== */
+    const existingItem = cart.items.find(
+      (item) =>
+        String(item.productId) === String(productId) &&
+        String(item.size || "")
+          .trim()
+          .toLowerCase() ===
+          String(size || "")
+            .trim()
+            .toLowerCase(),
+    );
 
     if (existingItem) {
-      existingItem.quantity =
-        Math.min(
-          10,
-          Number(
-            existingItem.quantity ||
-              0,
-          ) +
-            safeQuantity,
-        );
+      /* =======================================
+         UPDATE EXISTING ITEM
+      ======================================= */
 
-      /*
-        Always refresh product information.
-      */
+      existingItem.quantity = Math.min(
+        10,
+        Number(existingItem.quantity || 1) + quantity,
+      );
 
-      existingItem.name =
-        productName;
+      existingItem.name = name;
 
-      existingItem.price =
-        productPrice;
+      existingItem.category = category;
 
-      existingItem.image =
-        productImage;
+      existingItem.price = price;
 
-      existingItem.category =
-        productCategory;
+      if (image) {
+        existingItem.image = image;
+      }
     } else {
-      /* ===================================================
+      /* =======================================
          ADD NEW ITEM
-      =================================================== */
+      ======================================= */
 
       cart.items.push({
-        productId:
-          String(productId),
+        productId: String(productId),
 
-        name:
-          productName,
+        name,
 
-        category:
-          productCategory,
+        category,
 
-        price:
-          productPrice,
+        price,
 
-        image:
-          productImage,
+        image,
 
         size,
 
-        quantity:
-          safeQuantity,
+        quantity,
       });
     }
 
@@ -466,27 +512,29 @@ export const addToCart = async (
 
     return res.status(200).json({
       success: true,
-      message:
-        "Added to cart",
+
+      message: "Product added to cart",
+
+      cartId: cart.cartId,
+
       cart,
     });
   } catch (error) {
-    console.error(
-      "❌ Add cart error:",
-      error,
-    );
+    console.error("❌ Add to cart error:", error);
 
     return res.status(500).json({
       success: false,
-      message:
-        error.message ||
-        "Failed to add product to cart",
+
+      message: "Failed to add product to cart",
+
+      error: error.message,
     });
   }
 };
 
 /* =========================================================
    UPDATE CART ITEM
+
    PATCH /api/cart/:cartId/item/:itemId
 ========================================================= */
 
@@ -495,19 +543,13 @@ export const updateCartItem = async (
   res,
 ) => {
   try {
-    const {
+    const { cartId, itemId } = req.params;
+
+    const { quantity, size } = req.body;
+
+    const cart = await Cart.findOne({
       cartId,
-      itemId,
-    } = req.params;
-
-    const {
-      quantity,
-    } = req.body;
-
-    const cart =
-      await Cart.findOne({
-        cartId,
-      });
+    });
 
     if (!cart) {
       return res.status(404).json({
@@ -517,10 +559,9 @@ export const updateCartItem = async (
       });
     }
 
-    const item =
-      cart.items.id(
-        itemId,
-      );
+    const item = cart.items.find(
+      (cartItem) => String(cartItem._id) === String(itemId),
+    );
 
     if (!item) {
       return res.status(404).json({
@@ -530,37 +571,96 @@ export const updateCartItem = async (
       });
     }
 
-    item.quantity =
-      Math.min(
-        10,
-        Math.max(
-          1,
-          Number(quantity) || 1,
-        ),
-      );
+    /* =========================================
+       QUANTITY
+    ========================================= */
+
+    if (quantity !== undefined && quantity !== null) {
+      const nextQuantity = Number(quantity);
+
+      if (!Number.isFinite(nextQuantity)) {
+        return res.status(400).json({
+          success: false,
+          message: "Quantity must be a valid number",
+        });
+      }
+
+      /* =======================================
+         IMPORTANT FIX
+
+         Quantity 0 = REMOVE PRODUCT
+      ======================================= */
+
+      if (nextQuantity <= 0) {
+        cart.items = cart.items.filter(
+          (cartItem) => String(cartItem._id) !== String(itemId),
+        );
+
+        await cart.save();
+
+        return res.status(200).json({
+          success: true,
+
+          message: "Item removed from cart",
+
+          cart,
+        });
+      }
+
+      /* =======================================
+         QUANTITY 1 - 10
+      ======================================= */
+
+      item.quantity = Math.min(10, nextQuantity);
+    }
+
+    /* =========================================
+       SIZE
+    ========================================= */
+
+    if (size) {
+      item.size = String(size).trim();
+    }
+
+    /* =========================================
+       REPAIR IMAGE
+    ========================================= */
+
+    if (!item.image) {
+      const product = await findProduct(item.productId);
+
+      const image = getProductImage(product);
+
+      if (image) {
+        item.image = image;
+      }
+    }
 
     await cart.save();
 
     return res.status(200).json({
       success: true,
+
+      message: "Cart item updated",
+
       cart,
     });
   } catch (error) {
-    console.error(
-      "❌ Update cart error:",
-      error,
-    );
+    console.error("❌ Update cart item error:", error);
 
     return res.status(500).json({
       success: false,
-      message:
-        "Failed to update cart",
+
+      message: "Failed to update cart item",
+
+      error: error.message,
     });
   }
 };
 
 /* =========================================================
    REMOVE CART ITEM
+
    DELETE /api/cart/:cartId/item/:itemId
 ========================================================= */
 
@@ -574,10 +674,9 @@ export const removeCartItem = async (
       itemId,
     } = req.params;
 
-    const cart =
-      await Cart.findOne({
-        cartId,
-      });
+    const cart = await Cart.findOne({
+      cartId,
+    });
 
     if (!cart) {
       return res.status(404).json({
@@ -587,21 +686,26 @@ export const removeCartItem = async (
       });
     }
 
-    cart.items =
-      cart.items.filter(
-        (item) =>
-          String(
-            item._id,
-          ) !==
-          String(
-            itemId,
-          ),
-      );
+    const before = cart.items.length;
+
+    cart.items = cart.items.filter(
+      (item) => String(item._id) !== String(itemId),
+    );
+
+    if (cart.items.length === before) {
+      return res.status(404).json({
+        success: false,
+        message: "Cart item not found",
+      });
+    }
 
     await cart.save();
 
     return res.status(200).json({
       success: true,
+
+      message: "Item removed from cart",
+
       cart,
     });
   } catch (error) {
@@ -612,14 +716,17 @@ export const removeCartItem = async (
 
     return res.status(500).json({
       success: false,
-      message:
-        "Failed to remove item",
+
+      message: "Failed to remove cart item",
+
+      error: error.message,
     });
   }
 };
 
 /* =========================================================
    CLEAR CART
+
    DELETE /api/cart/:cartId/clear
 ========================================================= */
 
@@ -632,24 +739,21 @@ export const clearCart = async (
       cartId,
     } = req.params;
 
-    let cart =
-      await Cart.findOne({
-        cartId,
-      });
+    const cart = await Cart.findOne({
+      cartId,
+    });
 
     if (!cart) {
-      cart =
-        await Cart.create({
+      return res.status(200).json({
+        success: true,
+
+        message: "Cart is already empty",
+
+        cart: {
           cartId,
           items: [],
-        });
-
-      return res
-        .status(200)
-        .json({
-          success: true,
-          cart,
-        });
+        },
+      });
     }
 
     cart.items = [];
@@ -658,6 +762,9 @@ export const clearCart = async (
 
     return res.status(200).json({
       success: true,
+
+      message: "Cart cleared",
+
       cart,
     });
   } catch (error) {
@@ -668,8 +775,10 @@ export const clearCart = async (
 
     return res.status(500).json({
       success: false,
-      message:
-        "Failed to clear cart",
+
+      message: "Failed to clear cart",
+
+      error: error.message,
     });
   }
 };

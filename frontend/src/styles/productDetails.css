@@ -2300,3 +2300,600 @@
           padding: 42px 8px 56px;
      }
 }
+
+/* =========================================================
+   UNBOUND - EXPANDING SIZE CHART
+   ADD THIS AT THE END OF productDetails.css
+========================================================= */
+
+.pd-size-chart {
+     width: 100%;
+     margin-top: 10px;
+
+     overflow: hidden;
+
+     border: 1px solid rgba(255, 255, 255, 0.1);
+
+     background:
+          linear-gradient(180deg,
+               rgba(255, 255, 255, 0.025),
+               rgba(255, 255, 255, 0.008));
+
+     transition:
+          border-color 0.35s ease,
+          background 0.35s ease,
+          box-shadow 0.35s ease;
+}
+
+.pd-size-chart.open {
+     border-color: rgba(199, 255, 19, 0.45);
+
+     background:
+          linear-gradient(180deg,
+               rgba(199, 255, 19, 0.035),
+               rgba(255, 255, 255, 0.008));
+
+     box-shadow:
+          inset 0 0 0 1px rgba(199, 255, 19, 0.02),
+          0 12px 35px rgba(0, 0, 0, 0.3);
+}
+
+/* =========================================================
+   SIZE CHART BUTTON
+========================================================= */
+
+.pd-size-chart-toggle {
+     width: 100%;
+     min-height: 54px;
+
+     display: flex;
+     align-items: center;
+     justify-content: space-between;
+
+     gap: 15px;
+
+     padding: 11px 14px;
+
+     border: 0;
+
+     background: transparent;
+
+     color: #ffffff;
+
+     cursor: pointer;
+
+     font-family: inherit;
+
+     text-align: left;
+
+     transition:
+          background 0.3s ease,
+          color 0.3s ease;
+}
+
+.pd-size-chart-toggle:hover {
+     background:
+          rgba(199, 255, 19, 0.035);
+}
+
+.pd-size-chart-toggle-copy {
+     min-width: 0;
+
+     display: flex;
+     flex-direction: column;
+
+     gap: 5px;
+}
+
+.pd-size-chart-toggle-copy span {
+     color: #ffffff;
+
+     font-size: 7px;
+     font-weight: 500;
+
+     letter-spacing: 0.2em;
+}
+
+.pd-size-chart-toggle-copy small {
+     color:
+          rgba(255, 255, 255, 0.27);
+
+     font-size: 5px;
+     font-weight: 400;
+
+     letter-spacing: 0.17em;
+
+     transition:
+          color 0.3s ease;
+}
+
+.pd-size-chart.open .pd-size-chart-toggle-copy small {
+     color:
+          rgba(199, 255, 19, 0.55);
+}
+
+/* =========================================================
+   ARROW
+========================================================= */
+
+.pd-size-chart-arrow {
+     width: 32px;
+     height: 32px;
+
+     flex: 0 0 32px;
+
+     display: grid;
+     place-items: center;
+
+     border: 1px solid rgba(255, 255, 255, 0.1);
+
+     color:
+          rgba(255, 255, 255, 0.65);
+
+     transition:
+          transform 0.45s cubic-bezier(0.22,
+               1,
+               0.36,
+               1),
+          color 0.3s ease,
+          border-color 0.3s ease,
+          background 0.3s ease;
+}
+
+.pd-size-chart-toggle:hover .pd-size-chart-arrow {
+     border-color:
+          rgba(199, 255, 19, 0.5);
+
+     color: #c7ff13;
+}
+
+.pd-size-chart.open .pd-size-chart-arrow {
+     transform: rotate(180deg);
+
+     border-color: #c7ff13;
+
+     background:
+          rgba(199, 255, 19, 0.08);
+
+     color: #c7ff13;
+}
+
+/* =========================================================
+   COLLAPSIBLE PANEL
+========================================================= */
+
+.pd-size-chart-panel {
+     max-height: 0;
+
+     opacity: 0;
+
+     visibility: hidden;
+
+     overflow: hidden;
+
+     transform: translateY(-8px);
+
+     transition:
+          max-height 0.65s cubic-bezier(0.22,
+               1,
+               0.36,
+               1),
+          opacity 0.35s ease,
+          transform 0.45s ease,
+          visibility 0.45s ease;
+}
+
+.pd-size-chart-panel.open {
+     max-height: 720px;
+
+     opacity: 1;
+
+     visibility: visible;
+
+     transform: translateY(0);
+}
+
+/* =========================================================
+   SIZE CHART INNER
+========================================================= */
+
+.pd-size-chart-inner {
+     padding:
+          5px 14px 16px;
+
+     border-top:
+          1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* =========================================================
+   BIG HEADING
+========================================================= */
+
+.pd-size-chart-top {
+     display: flex;
+     align-items: flex-end;
+     justify-content: space-between;
+
+     gap: 20px;
+
+     padding:
+          18px 0 15px;
+
+     border-bottom:
+          1px solid rgba(255, 255, 255, 0.07);
+}
+
+.pd-size-chart-top>div {
+     min-width: 0;
+}
+
+.pd-size-chart-top>div>span {
+     display: block;
+
+     margin-bottom: 8px;
+
+     color: #c7ff13;
+
+     font-size: 5px;
+
+     letter-spacing: 0.24em;
+}
+
+.pd-size-chart-top h3 {
+     margin: 0;
+
+     max-width: 300px;
+
+     color: #ffffff;
+
+     font-size:
+          clamp(17px,
+               1.5vw,
+               24px);
+
+     font-weight: 400;
+
+     line-height: 0.95;
+
+     letter-spacing: -0.035em;
+}
+
+.pd-size-chart-top p {
+     max-width: 150px;
+
+     margin: 0;
+
+     color:
+          rgba(255, 255, 255, 0.32);
+
+     font-size: 6px;
+
+     line-height: 1.7;
+
+     text-align: right;
+
+     letter-spacing: 0.08em;
+}
+
+/* =========================================================
+   NOTE
+========================================================= */
+
+.pd-size-chart-note {
+     display: flex;
+     align-items: center;
+     justify-content: space-between;
+
+     gap: 10px;
+
+     padding: 12px 0;
+}
+
+.pd-size-chart-note span {
+     color:
+          rgba(255, 255, 255, 0.72);
+
+     font-size: 6px;
+
+     letter-spacing: 0.17em;
+}
+
+.pd-size-chart-note small {
+     color:
+          rgba(255, 255, 255, 0.24);
+
+     font-size: 5px;
+
+     letter-spacing: 0.14em;
+}
+
+/* =========================================================
+   TABLE WRAPPER
+========================================================= */
+
+.pd-size-chart-table-wrap {
+     width: 100%;
+
+     overflow-x: auto;
+
+     border-top:
+          1px solid rgba(255, 255, 255, 0.1);
+
+     border-left:
+          1px solid rgba(255, 255, 255, 0.1);
+
+     scrollbar-width: thin;
+
+     scrollbar-color:
+          #c7ff13 #111111;
+}
+
+.pd-size-chart-table-wrap::-webkit-scrollbar {
+     height: 4px;
+}
+
+.pd-size-chart-table-wrap::-webkit-scrollbar-track {
+     background: #0d0d0d;
+}
+
+.pd-size-chart-table-wrap::-webkit-scrollbar-thumb {
+     background: #c7ff13;
+}
+
+/* =========================================================
+   TABLE
+========================================================= */
+
+.pd-size-chart-table {
+     width: 100%;
+
+     min-width: 390px;
+
+     border-collapse: collapse;
+
+     table-layout: fixed;
+
+     background: #050505;
+}
+
+.pd-size-chart-table th,
+.pd-size-chart-table td {
+     height: 40px;
+
+     padding:
+          8px 7px;
+
+     border-right:
+          1px solid rgba(255, 255, 255, 0.08);
+
+     border-bottom:
+          1px solid rgba(255, 255, 255, 0.08);
+
+     text-align: center;
+
+     transition:
+          background 0.25s ease,
+          color 0.25s ease;
+}
+
+/* HEADER */
+
+.pd-size-chart-table th {
+     background: #0a0a0a;
+
+     color:
+          rgba(255, 255, 255, 0.35);
+
+     font-size: 5px;
+     font-weight: 400;
+
+     letter-spacing: 0.17em;
+}
+
+/* VALUES */
+
+.pd-size-chart-table td {
+     color:
+          rgba(255, 255, 255, 0.7);
+
+     font-size: 7px;
+
+     letter-spacing: 0.06em;
+}
+
+.pd-size-chart-table td:first-child {
+     color: #ffffff;
+
+     font-weight: 500;
+
+     letter-spacing: 0.12em;
+}
+
+/* =========================================================
+   ROW HOVER
+========================================================= */
+
+.pd-size-chart-table tbody tr:hover td {
+     background:
+          rgba(255, 255, 255, 0.025);
+
+     color: #ffffff;
+}
+
+/* =========================================================
+   SELECTED SIZE GREEN HIGHLIGHT
+========================================================= */
+
+.pd-size-chart-table tbody tr.active td {
+     background:
+          rgba(199, 255, 19, 0.075);
+
+     color: #c7ff13;
+
+     border-bottom-color:
+          rgba(199, 255, 19, 0.32);
+}
+
+.pd-size-chart-table tbody tr.active td:first-child {
+     background: #c7ff13;
+
+     color: #050505;
+
+     font-weight: 700;
+}
+
+/* =========================================================
+   FIT TIP
+========================================================= */
+
+.pd-size-chart-footer {
+     display: grid;
+
+     grid-template-columns:
+          auto 1fr;
+
+     gap: 13px;
+
+     align-items: start;
+
+     margin-top: 13px;
+
+     padding: 11px 12px;
+
+     border:
+          1px solid rgba(199, 255, 19, 0.14);
+
+     background:
+          rgba(199, 255, 19, 0.025);
+}
+
+.pd-size-chart-footer span {
+     color: #c7ff13;
+
+     font-size: 5px;
+
+     letter-spacing: 0.18em;
+
+     white-space: nowrap;
+}
+
+.pd-size-chart-footer p {
+     margin: 0;
+
+     color:
+          rgba(255, 255, 255, 0.38);
+
+     font-size: 6px;
+
+     line-height: 1.65;
+
+     letter-spacing: 0.04em;
+}
+
+/* =========================================================
+   MOBILE SIZE CHART
+========================================================= */
+
+@media (max-width: 768px) {
+     .pd-size-chart {
+          margin-top: 9px;
+     }
+
+     .pd-size-chart-toggle {
+          min-height: 58px;
+
+          padding:
+               11px 12px;
+     }
+
+     .pd-size-chart-toggle-copy span {
+          font-size: 8px;
+     }
+
+     .pd-size-chart-toggle-copy small {
+          font-size: 5px;
+     }
+
+     .pd-size-chart-arrow {
+          width: 34px;
+          height: 34px;
+
+          flex-basis: 34px;
+     }
+
+     .pd-size-chart-inner {
+          padding:
+               4px 11px 14px;
+     }
+
+     .pd-size-chart-top {
+          align-items: flex-start;
+
+          flex-direction: column;
+
+          gap: 8px;
+     }
+
+     .pd-size-chart-top p {
+          max-width: 100%;
+
+          text-align: left;
+     }
+
+     .pd-size-chart-note {
+          padding:
+               11px 0;
+     }
+
+     .pd-size-chart-table {
+          min-width: 370px;
+     }
+
+     .pd-size-chart-table th,
+     .pd-size-chart-table td {
+          height: 42px;
+
+          padding:
+               8px 6px;
+     }
+
+     .pd-size-chart-table td {
+          font-size: 7px;
+     }
+
+     .pd-size-chart-footer {
+          grid-template-columns:
+               1fr;
+
+          gap: 6px;
+     }
+}
+
+/* =========================================================
+   VERY SMALL MOBILE
+========================================================= */
+
+@media (max-width: 480px) {
+     .pd-size-chart-toggle {
+          min-height: 56px;
+     }
+
+     .pd-size-chart-table-wrap {
+          margin-bottom: 2px;
+     }
+
+     .pd-size-chart-table {
+          min-width: 350px;
+     }
+
+     .pd-size-chart-table th,
+     .pd-size-chart-table td {
+          height: 40px;
+
+          font-size: 6px;
+     }
+
+     .pd-size-chart-top h3 {
+          font-size: 19px;
+     }
+}

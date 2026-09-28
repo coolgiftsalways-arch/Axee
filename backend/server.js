@@ -8,6 +8,10 @@ import { fileURLToPath } from "node:url";
 
 import connectDB from "./db.js";
 
+/* =========================================================
+   ROUTES
+========================================================= */
+
 import productRoutes from "./routes/productRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import catalogRoutes from "./routes/catalogRoutes.js";
@@ -16,7 +20,7 @@ import orderRoutes from "./routes/orderRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 
 import Cart from "./models/Cart.js";
-
+import adminAuthRoutes from "./routes/adminAuthRoutes.js";
 /* =========================================================
    ENV
 ========================================================= */
@@ -76,6 +80,8 @@ const allowedOrigins = [
   "https://www.unboundclothing.in",
 ];
 
+
+
 app.use(
   cors({
     origin(origin, callback) {
@@ -129,14 +135,7 @@ app.use(
 
     credentials: true,
 
-    methods: [
-      "GET",
-      "POST",
-      "PUT",
-      "PATCH",
-      "DELETE",
-      "OPTIONS",
-    ],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 
     allowedHeaders: [
       "Content-Type",
@@ -158,12 +157,17 @@ app.use(
 app.use(
   express.urlencoded({
     extended: true,
+
     limit: "10mb",
   })
 );
 app.use(
   "/api/payments",
   paymentRoutes,
+);
+app.use(
+  "/api/admin-auth",
+  adminAuthRoutes
 );
 
 /* =========================================================
@@ -385,10 +389,7 @@ async function fixCartIndexes() {
         "carts"
       );
 
-    const indexes =
-      await collection
-        .indexes()
-        .catch(() => []);
+    const indexes = await collection.indexes().catch(() => []);
 
     console.log(
       "📦 Current cart indexes:",
@@ -396,6 +397,10 @@ async function fixCartIndexes() {
         (index) => index.name
       )
     );
+
+    /* ===============================================
+       REMOVE OLD INDEX
+    =============================================== */
 
     const oldUserIndex =
       indexes.find(
@@ -417,10 +422,13 @@ async function fixCartIndexes() {
       );
     }
 
+    /* ===============================================
+       SYNC CURRENT CART INDEXES
+    =============================================== */
+
     await Cart.syncIndexes();
 
-    const updatedIndexes =
-      await collection.indexes();
+    const updatedIndexes = await collection.indexes();
 
     console.log(
       "✅ Cart indexes:",
@@ -441,8 +449,14 @@ async function fixCartIndexes() {
    PORT
 ========================================================= */
 
-const PORT =
-  process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000;
+
+/* =========================================================
+   START EXPRESS
+
+   START FIRST SO HOSTINGER DOES NOT WAIT FOR MONGODB.
+========================================================= */
+
 
 /* =========================================================
    START EXPRESS FIRST

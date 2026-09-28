@@ -1,10 +1,15 @@
 import mongoose from "mongoose";
 
+/* =========================================================
+   SIZE
+========================================================= */
+
 const sizeSchema = new mongoose.Schema(
   {
     size: {
       type: String,
       required: true,
+      trim: true,
     },
 
     stock: {
@@ -18,8 +23,55 @@ const sizeSchema = new mongoose.Schema(
   },
 );
 
+/* =========================================================
+   LEGACY / GRIDFS IMAGE INFO
+
+   Keeps compatibility with your older MongoDB products.
+========================================================= */
+
+const imageFileSchema = new mongoose.Schema(
+  {
+    fileId: {
+      type: mongoose.Schema.Types.ObjectId,
+    },
+
+    url: {
+      type: String,
+      default: "",
+    },
+
+    order: {
+      type: Number,
+      default: 0,
+    },
+  },
+  {
+    _id: false,
+    strict: false,
+  },
+);
+
+/* =========================================================
+   PRODUCT
+========================================================= */
+
 const productSchema = new mongoose.Schema(
   {
+    /* =====================================================
+       SKU
+
+       Used for bulk imports and duplicate detection.
+    ===================================================== */
+
+    sku: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
+
     name: {
       type: String,
       required: true,
@@ -32,6 +84,7 @@ const productSchema = new mongoose.Schema(
       lowercase: true,
       unique: true,
       sparse: true,
+      index: true,
     },
 
     category: {
@@ -39,6 +92,7 @@ const productSchema = new mongoose.Schema(
       required: true,
       trim: true,
       uppercase: true,
+      index: true,
     },
 
     price: {
@@ -63,8 +117,43 @@ const productSchema = new mongoose.Schema(
       default: "",
     },
 
+    /* =====================================================
+       NEW STANDARD IMAGE ARRAY
+
+       First image = website main image.
+    ===================================================== */
+
     images: {
       type: [String],
+      default: [],
+    },
+
+    /* =====================================================
+       LEGACY IMAGE SUPPORT
+    ===================================================== */
+
+    image: {
+      type: String,
+      default: "",
+    },
+
+    mainImage: {
+      type: String,
+      default: "",
+    },
+
+    imageId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+
+    imageIds: {
+      type: [mongoose.Schema.Types.ObjectId],
+      default: [],
+    },
+
+    imageFiles: {
+      type: [imageFileSchema],
       default: [],
     },
 
@@ -124,16 +213,23 @@ const productSchema = new mongoose.Schema(
     reviewCount: {
       type: Number,
       default: 0,
+      min: 0,
     },
 
     soldCount: {
       type: Number,
       default: 0,
+      min: 0,
     },
 
     keywords: {
       type: [String],
       default: [],
+    },
+
+    source: {
+      type: String,
+      default: "admin",
     },
 
     isActive: {
@@ -146,30 +242,69 @@ const productSchema = new mongoose.Schema(
   },
 );
 
-/* ==========================================
-   CREATE SLUG AUTOMATICALLY
-========================================== */
+/* =========================================================
+   SLUG HELPER
+========================================================= */
+
+const makeSlug = (value = "") =>
+  String(value)
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+/* =========================================================
+   BEFORE SAVE
+========================================================= */
 
 productSchema.pre("save", function (next) {
-  if (this.isModified("name") || !this.slug) {
-    this.slug = this.name
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "");
+  /* CATEGORY */
+
+  if (this.category) {
+    this.category = String(this.category).trim().toUpperCase();
   }
 
-  /* Calculate total stock from sizes */
+  /* SKU */
 
-  if (Array.isArray(this.sizes)) {
+  if (this.sku) {
+    this.sku = String(this.sku).trim().toUpperCase();
+  }
+
+  /* UNIQUE SLUG */
+
+  if (this.isModified("name") || this.isModified("sku") || !this.slug) {
+    const namePart = makeSlug(this.name);
+
+    const uniquePart = this.sku
+      ? makeSlug(this.sku)
+      : String(this._id).slice(-8);
+
+    this.slug = `${namePart}-${uniquePart}`;
+  }
+
+  /* TOTAL STOCK */
+
+  if (Array.isArray(this.sizes) && this.sizes.length > 0) {
     this.totalStock = this.sizes.reduce(
       (total, item) => total + Number(item.stock || 0),
       0,
     );
+  } else {
+    this.totalStock = Math.max(0, Number(this.totalStock || 0));
+  }
+
+  /* MAIN IMAGE */
+
+  if (Array.isArray(this.images) && this.images.length > 0) {
+    this.image = this.images[0];
+
+    this.mainImage = this.images[0];
   }
 
   next();
 });
+
+/* ========================================================= */
 
 const Product = mongoose.model("Product", productSchema);
 

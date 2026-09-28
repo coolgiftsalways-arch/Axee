@@ -1,9 +1,14 @@
-import React, { useLayoutEffect, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { Link, useNavigate } from "react-router-dom";
 
 import gsap from "gsap";
-
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 import heroSpace from "../assets/hero-space.png";
@@ -17,220 +22,360 @@ import "../styles/home.css";
 gsap.registerPlugin(ScrollTrigger);
 
 /* =========================================================
-   PRODUCTS
+   API
 ========================================================= */
 
-const productSections = [
+const API_BASE = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000"
+).replace(/\/$/, "");
+
+/* =========================================================
+   COLLECTION CONFIG
+========================================================= */
+
+const sectionConfig = [
   {
     id: "tshirts",
+    type: "tshirts",
+    category: "T-SHIRTS",
     number: "01",
     eyebrow: "ESSENTIAL / FORM",
     title: "T-SHIRTS",
     subtitle: "Engineered silhouettes for everyday movement.",
-
-    products: [
-      {
-        id: "void-tee",
-        name: "VOID TEE",
-        price: 1499,
-        image: "/products/tshirt-1.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "signal-tee",
-        name: "SIGNAL TEE",
-        price: 1699,
-        image: "/products/tshirt-2.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "echo-tee",
-        name: "ECHO TEE",
-        price: 1599,
-        image: "/products/tshirt-3.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "unknown-tee",
-        name: "UNKNOWN TEE",
-        price: 1899,
-        image: "/products/tshirt-4.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-    ],
+    link: "/tshirts",
   },
 
   {
     id: "jeans",
+    type: "jeans",
+    category: "JEANS",
     number: "02",
     eyebrow: "DENIM / DISTORTION",
     title: "JEANS",
     subtitle: "Oversized denim built beyond convention.",
-
-    products: [
-      {
-        id: "shadow-denim",
-        name: "SHADOW DENIM",
-        price: 2899,
-        image: "/products/jean-1.jpg",
-        sizes: ["28", "30", "32", "34"],
-      },
-
-      {
-        id: "void-denim",
-        name: "VOID DENIM",
-        price: 3199,
-        image: "/products/jean-2.jpg",
-        sizes: ["28", "30", "32", "34"],
-      },
-
-      {
-        id: "fracture-jean",
-        name: "FRACTURE JEAN",
-        price: 3499,
-        image: "/products/jean-3.jpg",
-        sizes: ["28", "30", "32", "34"],
-      },
-
-      {
-        id: "raw-denim",
-        name: "RAW DENIM 01",
-        price: 2999,
-        image: "/products/jean-4.jpg",
-        sizes: ["28", "30", "32", "34"],
-      },
-    ],
+    link: "/jeans",
   },
 
   {
     id: "trackpants",
+    type: "trackpants",
+    category: "TRACK PANTS",
     number: "03",
     eyebrow: "MOTION / SYSTEM",
     title: "TRACK PANTS",
     subtitle: "Utility forms designed for unrestricted movement.",
-
-    products: [
-      {
-        id: "motion-track",
-        name: "MOTION TRACK",
-        price: 2499,
-        image: "/products/track-1.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "core-track",
-        name: "CORE TRACK",
-        price: 2699,
-        image: "/products/track-2.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "terminal-track",
-        name: "TERMINAL TRACK",
-        price: 2899,
-        image: "/products/track-3.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "phantom-track",
-        name: "PHANTOM TRACK",
-        price: 2999,
-        image: "/products/track-4.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-    ],
+    link: "/track-pants",
   },
 
   {
     id: "shirts",
+    type: "shirts",
+    category: "SHIRTS",
     number: "04",
     eyebrow: "STRUCTURE / LAYER",
     title: "SHIRTS",
     subtitle: "Dark tailoring reshaped for the next world.",
-
-    products: [
-      {
-        id: "system-shirt",
-        name: "SYSTEM SHIRT",
-        price: 2199,
-        image: "/products/shirt-1.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "signal-shirt",
-        name: "SIGNAL SHIRT",
-        price: 2399,
-        image: "/products/shirt-2.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "shadow-shirt",
-        name: "SHADOW SHIRT",
-        price: 2599,
-        image: "/products/shirt-3.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "frame-shirt",
-        name: "FRAME SHIRT",
-        price: 2299,
-        image: "/products/shirt-4.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-    ],
+    link: "/shirts",
   },
 
   {
     id: "shorts",
+    type: "shorts",
+    category: "SHORTS",
     number: "05",
     eyebrow: "UTILITY / SUMMER",
     title: "SHORTS",
     subtitle: "Reduced construction. Maximum movement.",
+    link: "/shorts",
+  },
 
-    products: [
-      {
-        id: "void-short",
-        name: "VOID SHORT",
-        price: 1799,
-        image: "/products/short-1.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
+  {
+    id: "hoodies",
+    type: "hoodies",
+    category: "HOODIES",
+    number: "06",
+    eyebrow: "HEAVY / LAYER",
+    title: "HOODIES",
+    subtitle: "Oversized layers engineered for the street.",
+    link: "/hoodies",
+  },
 
-      {
-        id: "cargo-short",
-        name: "CARGO SHORT",
-        price: 1999,
-        image: "/products/short-2.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
+  {
+    id: "coordsets",
+    type: "coordsets",
+    category: "CO-ORD SETS",
+    number: "07",
+    eyebrow: "MATCHED / SYSTEM",
+    title: "CO-ORD SETS",
+    subtitle: "Complete silhouettes designed as one system.",
+    link: "/co-ord-sets",
+  },
 
-      {
-        id: "motion-short",
-        name: "MOTION SHORT",
-        price: 1899,
-        image: "/products/short-3.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-
-      {
-        id: "utility-short",
-        name: "UTILITY SHORT",
-        price: 2199,
-        image: "/products/short-4.jpg",
-        sizes: ["S", "M", "L", "XL"],
-      },
-    ],
+  {
+    id: "jackets",
+    type: "jackets",
+    category: "JACKETS",
+    number: "08",
+    eyebrow: "OUTER / SHELL",
+    title: "JACKETS",
+    subtitle: "Outer layers built for movement beyond convention.",
+    link: "/jackets",
   },
 ];
+
+/* =========================================================
+   GET PRODUCTS ARRAY
+========================================================= */
+
+const extractProducts = (data) => {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (Array.isArray(data?.products)) {
+    return data.products;
+  }
+
+  if (Array.isArray(data?.data)) {
+    return data.data;
+  }
+
+  if (Array.isArray(data?.data?.products)) {
+    return data.data.products;
+  }
+
+  if (Array.isArray(data?.items)) {
+    return data.items;
+  }
+
+  return [];
+};
+
+/* =========================================================
+   NORMALIZE
+========================================================= */
+
+const normalizeText = (value = "") => String(value).trim().toLowerCase();
+
+/* =========================================================
+   CATEGORY MATCH
+========================================================= */
+
+const matchCategory = (product, type) => {
+  const category = normalizeText(product?.category);
+  const name = normalizeText(product?.name);
+
+  if (type === "tshirts") {
+    return (
+      category === "t-shirts" ||
+      category === "tshirt" ||
+      category === "tshirts" ||
+      category === "t-shirt" ||
+      category === "tees" ||
+      category === "tee"
+    );
+  }
+
+  if (type === "shirts") {
+    return category === "shirts" || category === "shirt";
+  }
+
+  if (type === "hoodies") {
+    return category === "hoodies" || category === "hoodie";
+  }
+
+  if (type === "shorts") {
+    return category === "shorts" || category === "short";
+  }
+
+  if (type === "jackets") {
+    return category === "jackets" || category === "jacket";
+  }
+
+  if (type === "coordsets") {
+    return (
+      category === "co-ord sets" ||
+      category === "co ord sets" ||
+      category === "coord sets" ||
+      category === "co-ord set" ||
+      category === "co ord set" ||
+      category === "coordset" ||
+      category === "coordsets"
+    );
+  }
+
+  if (type === "jeans") {
+    const directJeans =
+      category === "jeans" || category === "jean" || category === "denim";
+
+    const pantsCategory = category === "pants" || category === "pant";
+
+    const denimName =
+      name.includes("jeans") || name.includes("jean") || name.includes("denim");
+
+    return directJeans || (pantsCategory && denimName);
+  }
+
+  if (type === "trackpants") {
+    const directTrack =
+      category === "track pants" ||
+      category === "track pant" ||
+      category === "trackpants";
+
+    const pantsCategory = category === "pants" || category === "pant";
+
+    const isDenim =
+      name.includes("jeans") || name.includes("jean") || name.includes("denim");
+
+    const importedClothing = normalizeText(product?.source) === "clothing-zip";
+
+    return directTrack || (pantsCategory && !isDenim && !importedClothing);
+  }
+
+  return false;
+};
+
+/* =========================================================
+   PRODUCT ID
+========================================================= */
+
+const getProductId = (product) => {
+  return String(product?._id || product?.id || product?.slug || "");
+};
+
+/* =========================================================
+   SIZES
+========================================================= */
+
+const getProductSizes = (product) => {
+  if (!Array.isArray(product?.sizes)) {
+    return [];
+  }
+
+  return product.sizes
+    .filter((item) => {
+      if (typeof item === "string") {
+        return true;
+      }
+
+      if (item?.stock !== undefined && item?.stock !== null) {
+        return Number(item.stock) > 0;
+      }
+
+      return true;
+    })
+    .map((item) => {
+      if (typeof item === "string") {
+        return item;
+      }
+
+      return item?.size;
+    })
+    .filter(Boolean);
+};
+
+/* =========================================================
+   RESOLVE IMAGE
+========================================================= */
+
+const resolveImageValue = (imageValue) => {
+  if (!imageValue) {
+    return "";
+  }
+
+  let value = imageValue;
+
+  /* MongoDB / GridFS */
+
+  if (typeof value === "object") {
+    const fileId = value?.fileId || value?._id || value?.id;
+
+    if (fileId) {
+      return `${API_BASE}/api/catalog/images/${String(fileId)}`;
+    }
+
+    value = value?.url || value?.src || value?.path || "";
+  }
+
+  value = String(value).trim().replace(/\\/g, "/");
+
+  if (!value) {
+    return "";
+  }
+
+  /* OLD API IMAGE PATH */
+
+  if (value.startsWith("/api/images/")) {
+    value = value.replace("/api/images/", "/api/catalog/images/");
+  }
+
+  if (value.startsWith("api/images/")) {
+    value = `/${value.replace("api/images/", "api/catalog/images/")}`;
+  }
+
+  /* COMPLETE URL */
+
+  if (
+    value.startsWith("http://") ||
+    value.startsWith("https://") ||
+    value.startsWith("data:") ||
+    value.startsWith("blob:")
+  ) {
+    return value;
+  }
+
+  /* BACKEND PATH */
+
+  if (value.startsWith("/api/") || value.startsWith("/uploads/")) {
+    return `${API_BASE}${value}`;
+  }
+
+  if (value.startsWith("api/") || value.startsWith("uploads/")) {
+    return `${API_BASE}/${value}`;
+  }
+
+  /* FRONTEND PUBLIC */
+
+  return value.startsWith("/") ? value : `/${value}`;
+};
+
+/* =========================================================
+   MAIN IMAGE
+========================================================= */
+
+const getProductImage = (product) => {
+  const firstImage =
+    Array.isArray(product?.images) && product.images.length > 0
+      ? product.images[0]
+      : null;
+
+  // IMPORTANT: images[0] is always the admin-selected MAIN image.
+  const image = firstImage || product?.mainImage || product?.image || "";
+
+  return resolveImageValue(image);
+};
+
+/* =========================================================
+   HOVER IMAGE
+========================================================= */
+
+const getProductHoverImage = (product) => {
+  // Keep the MongoDB image order first.
+  const candidates = [
+    ...(Array.isArray(product?.images) ? product.images : []),
+    product?.mainImage,
+    product?.image,
+  ];
+
+  const images = candidates
+    .map((item) => resolveImageValue(item))
+    .filter(Boolean)
+    .filter((image, index, allImages) => allImages.indexOf(image) === index);
+
+  const mainImage = getProductImage(product);
+
+  return images.find((image) => image !== mainImage) || "";
+};
 
 /* =========================================================
    PRODUCT CARD
@@ -245,123 +390,199 @@ function ProductCard({
 }) {
   const navigate = useNavigate();
 
-  const selectedSize = selectedSizes[product.id];
+  const productId = getProductId(product);
 
-  const quantity = quantities[product.id] || 1;
+  const sizes = getProductSizes(product);
+
+  const productImage = getProductImage(product);
+
+  const hoverImage = getProductHoverImage(product);
+
+  const selectedSize = selectedSizes[productId];
+
+  const quantity = quantities[productId] ?? 0;
+
+  /* =======================================================
+     QUANTITY
+  ======================================================= */
 
   const changeQuantity = (amount) => {
     setQuantities((previous) => {
-      const currentQuantity = previous[product.id] || 1;
-      const nextQuantity = Math.min(10, Math.max(1, currentQuantity + amount));
+      const current = previous[productId] ?? 0;
+
+      const next = Math.min(10, Math.max(0, current + amount));
 
       return {
         ...previous,
-        [product.id]: nextQuantity,
+        [productId]: next,
       };
     });
   };
 
+  /* =======================================================
+     SELECT SIZE
+  ======================================================= */
+
   const chooseSize = (size) => {
     setSelectedSizes((previous) => ({
       ...previous,
-
-      [product.id]: size,
+      [productId]: size,
     }));
   };
 
-  /* ======================================================
+  /* =======================================================
      ADD TO CART
-  ====================================================== */
+  ======================================================= */
 
-  const addToCart = () => {
-    if (!selectedSize) {
+  const addToCart = async () => {
+    if (!productId) {
+      alert("Product ID is missing.");
+
+      return;
+    }
+
+    if (sizes.length > 0 && !selectedSize) {
       alert("Please select a size first.");
 
       return;
     }
 
-    const oldCart = JSON.parse(localStorage.getItem("axiee-cart")) || [];
+    if (quantity <= 0) {
+      alert("Please select quantity first.");
 
-    const existingIndex = oldCart.findIndex(
-      (item) => item.id === product.id && item.size === selectedSize,
-    );
+      return;
+    }
 
-    let updatedCart;
+    try {
+      let cartId = localStorage.getItem("axiee-cart-id");
 
-    if (existingIndex >= 0) {
-      updatedCart = [...oldCart];
+      if (!cartId) {
+        cartId = crypto.randomUUID();
 
-      updatedCart[existingIndex] = {
-        ...updatedCart[existingIndex],
+        localStorage.setItem("axiee-cart-id", cartId);
+      }
 
-        quantity: Number(updatedCart[existingIndex].quantity || 1) + quantity,
-      };
-    } else {
-      updatedCart = [
-        ...oldCart,
+      const response = await fetch(`${API_BASE}/api/cart/add`, {
+        method: "POST",
 
-        {
-          ...product,
+        headers: {
+          "Content-Type": "application/json",
 
-          size: selectedSize,
+          Accept: "application/json",
+        },
+
+        body: JSON.stringify({
+          cartId,
+
+          productId,
+
+          size: selectedSize || "ONE SIZE",
 
           quantity,
-        },
-      ];
+
+          name: product?.name || "UNBOUND Product",
+
+          price: Number(product?.price || 0),
+
+          image: productImage || "",
+
+          category: product?.category || "",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Unable to add to cart");
+      }
+
+      window.dispatchEvent(
+        new CustomEvent("axiee-cart-updated", {
+          detail: data?.cart,
+        }),
+      );
+
+      alert(
+        `${product.name}${
+          selectedSize ? ` - Size ${selectedSize}` : ""
+        } added to cart`,
+      );
+    } catch (error) {
+      console.error("HOME ADD CART ERROR:", error);
+
+      alert(error?.message || "Unable to add product to cart.");
     }
-
-    localStorage.setItem("axiee-cart", JSON.stringify(updatedCart));
-
-    window.dispatchEvent(new Event("axiee-cart-updated"));
-
-    alert(`${product.name} - Size ${selectedSize} added to cart`);
   };
 
-  /* ======================================================
+  /* =======================================================
      BUY NOW
-  ====================================================== */
+  ======================================================= */
 
   const buyNow = () => {
-    if (!selectedSize) {
-      alert("Please select a size first.");
+    localStorage.removeItem("axiee-buy-now");
 
-      return;
-    }
-
-    localStorage.setItem(
-      "axiee-buy-now",
-
-      JSON.stringify({
-        ...product,
-
-        size: selectedSize,
-
-        quantity,
-      }),
-    );
-
-    navigate("/checkout");
+    navigate(`/product/${productId}`);
   };
+
+  if (!productId) {
+    return null;
+  }
 
   return (
     <article className="ax-product-card">
-      {/* IMAGE */}
+      {/* ===============================================
+          IMAGE
+      =============================================== */}
 
       <Link
-        to={`/product/${product.id}`}
+        to={`/product/${productId}`}
         className="ax-product-image-wrap"
         aria-label={`View ${product.name}`}
       >
-        <img
-          src={product.image}
-          alt={product.name}
-          className="ax-product-image"
-        />
+        {productImage ? (
+          <>
+            <img
+              src={productImage}
+              alt={product.name}
+              className="ax-product-image ax-home-main-image"
+              loading="lazy"
+              onError={(event) => {
+                console.error(
+                  "Product image failed:",
+                  product.name,
+                  productImage,
+                );
+
+                event.currentTarget.style.opacity = "0";
+              }}
+            />
+
+            {hoverImage && (
+              <img
+                src={hoverImage}
+                alt={`${product.name} alternate`}
+                className="ax-product-image ax-home-hover-image"
+                loading="lazy"
+                onError={(event) => {
+                  console.error(
+                    "Hover image failed:",
+                    product.name,
+                    hoverImage,
+                  );
+
+                  event.currentTarget.style.display = "none";
+                }}
+              />
+            )}
+          </>
+        ) : (
+          <div className="ax-product-no-image">NO IMAGE</div>
+        )}
 
         <div className="ax-product-smoke" />
 
         <span className="ax-product-index">
-          AX / {product.id.slice(0, 2).toUpperCase()}
+          AX / {productId.slice(0, 2).toUpperCase()}
         </span>
 
         <button
@@ -370,7 +591,6 @@ function ProductCard({
           aria-label="Add to wishlist"
           onClick={(event) => {
             event.preventDefault();
-
             event.stopPropagation();
           }}
         >
@@ -383,39 +603,51 @@ function ProductCard({
         </span>
       </Link>
 
-      {/* PRODUCT INFO */}
+      {/* ===============================================
+          PRODUCT INFO
+      =============================================== */}
 
       <div className="ax-product-info">
         <div className="ax-product-heading">
           <div>
             <h3>{product.name}</h3>
 
-            <p>₹{product.price.toLocaleString("en-IN")}</p>
+            <p>₹{Number(product.price || 0).toLocaleString("en-IN")}</p>
           </div>
 
-          <span className="ax-card-arrow">→</span>
+          <Link to={`/product/${productId}`} className="ax-card-arrow">
+            →
+          </Link>
         </div>
 
-        {/* SIZES */}
+        {/* ===============================================
+            SIZE
+        =============================================== */}
 
-        <div className="ax-size-area">
-          <span className="ax-size-label">SELECT SIZE</span>
+        {sizes.length > 0 && (
+          <div className="ax-size-area">
+            <span className="ax-size-label">SELECT SIZE</span>
 
-          <div className="ax-size-list">
-            {product.sizes.map((size) => (
-              <button
-                type="button"
-                key={size}
-                onClick={() => chooseSize(size)}
-                className={selectedSize === size ? "ax-size active" : "ax-size"}
-              >
-                {size}
-              </button>
-            ))}
+            <div className="ax-size-list">
+              {sizes.map((size) => (
+                <button
+                  type="button"
+                  key={size}
+                  className={
+                    selectedSize === size ? "ax-size active" : "ax-size"
+                  }
+                  onClick={() => chooseSize(size)}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* QUANTITY */}
+        {/* ===============================================
+            QUANTITY
+        =============================================== */}
 
         <div className="ax-quantity-area">
           <span className="ax-quantity-label">QUANTITY</span>
@@ -424,9 +656,8 @@ function ProductCard({
             <button
               type="button"
               className="ax-quantity-btn"
+              disabled={quantity <= 0}
               onClick={() => changeQuantity(-1)}
-              disabled={quantity <= 1}
-              aria-label={`Decrease ${product.name} quantity`}
             >
               −
             </button>
@@ -436,16 +667,17 @@ function ProductCard({
             <button
               type="button"
               className="ax-quantity-btn"
-              onClick={() => changeQuantity(1)}
               disabled={quantity >= 10}
-              aria-label={`Increase ${product.name} quantity`}
+              onClick={() => changeQuantity(1)}
             >
               +
             </button>
           </div>
         </div>
 
-        {/* BUTTONS */}
+        {/* ===============================================
+            ACTIONS
+        =============================================== */}
 
         <div className="ax-product-actions">
           <button type="button" className="ax-add-cart" onClick={addToCart}>
@@ -477,6 +709,10 @@ function ProductSection({
 }) {
   return (
     <section className="ax-product-section" id={section.id}>
+      {/* ===============================================
+          TITLE
+      =============================================== */}
+
       <div className="ax-product-section-top">
         <div className="ax-product-section-meta">
           <span>{section.number} / COLLECTION</span>
@@ -489,29 +725,49 @@ function ProductSection({
 
           <p>{section.subtitle}</p>
         </div>
-
-        <Link
-          to={
-            section.id === "shirts" ? "/shirts" : `/shop?category=${section.id}`
-          }
-          className="ax-view-all"
-        >
-          VIEW ALL
-          <span>↗</span>
-        </Link>
       </div>
 
+      {/* ===============================================
+          FOUR PRODUCTS
+      =============================================== */}
+
       <div className="ax-products-grid">
-        {section.products.map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            selectedSizes={selectedSizes}
-            setSelectedSizes={setSelectedSizes}
-            quantities={quantities}
-            setQuantities={setQuantities}
-          />
-        ))}
+        {section.products.map((product) => {
+          const productId = getProductId(product);
+
+          return (
+            <ProductCard
+              key={productId}
+              product={product}
+              selectedSizes={selectedSizes}
+              setSelectedSizes={setSelectedSizes}
+              quantities={quantities}
+              setQuantities={setQuantities}
+            />
+          );
+        })}
+      </div>
+
+      {/* ===============================================
+          SMALL SHOP MORE
+      =============================================== */}
+
+      <div className="ax-shop-more-wrap">
+        <Link
+          to={section.link}
+          className="ax-shop-more-btn"
+          onClick={() => {
+            window.scrollTo({
+              top: 0,
+              left: 0,
+              behavior: "auto",
+            });
+          }}
+        >
+          <span className="ax-shop-more-text">SHOP MORE {section.title}</span>
+
+          <span className="ax-shop-more-arrow">→</span>
+        </Link>
       </div>
     </section>
   );
@@ -528,51 +784,100 @@ function Home({
   onHeroComplete,
 }) {
   const homeRef = useRef(null);
-
   const heroRef = useRef(null);
-
   const spaceRef = useRef(null);
-
   const unboundWrapRef = useRef(null);
-
   const unboundRef = useRef(null);
-
   const mountainRef = useRef(null);
-
   const modelRef = useRef(null);
-
   const neonRef = useRef(null);
-
   const fogBackRef = useRef(null);
-
   const fogFrontRef = useRef(null);
-
   const leftUIRef = useRef(null);
-
   const numbersRef = useRef(null);
-
   const exploreRef = useRef(null);
-
   const engineeredRef = useRef(null);
+
+  const [catalogProducts, setCatalogProducts] = useState([]);
+
+  const [productsLoading, setProductsLoading] = useState(true);
+
+  const [productsError, setProductsError] = useState("");
 
   const [selectedSizes, setSelectedSizes] = useState({});
 
   const [quantities, setQuantities] = useState({});
 
-  /* ======================================================
+  /* =======================================================
+     LOAD PRODUCTS
+  ======================================================= */
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadProducts = async () => {
+      try {
+        setProductsLoading(true);
+        setProductsError("");
+
+        const response = await fetch(`${API_BASE}/api/catalog/products`, {
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to load products (${response.status})`);
+        }
+
+        const data = await response.json();
+
+        const loadedProducts = extractProducts(data).filter(
+          (product) => product?.isActive !== false,
+        );
+
+        if (!cancelled) {
+          setCatalogProducts(loadedProducts);
+        }
+      } catch (error) {
+        console.error("HOME PRODUCTS ERROR:", error);
+
+        if (!cancelled) {
+          setCatalogProducts([]);
+
+          setProductsError(error?.message || "Unable to load products.");
+        }
+      } finally {
+        if (!cancelled) {
+          setProductsLoading(false);
+        }
+      }
+    };
+
+    loadProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /* =======================================================
+     4 PRODUCTS PER CATEGORY
+  ======================================================= */
+
+  const productSections = useMemo(() => {
+    return sectionConfig.map((section) => ({
+      ...section,
+
+      products: catalogProducts
+        .filter((product) => matchCategory(product, section.type))
+        .slice(0, 4),
+    }));
+  }, [catalogProducts]);
+
+  /* =======================================================
      HERO INTRO
-  ====================================================== */
+  ======================================================= */
 
   useLayoutEffect(() => {
-    /* =====================================================
-       RETURNING TO HOME
-
-       Home → Shirts → Home
-
-       Intro already played,
-       so show final state instantly.
-    ===================================================== */
-
     if (heroAlreadyPlayed && !startAnimation) {
       const ctx = gsap.context(() => {
         gsap.set(heroRef.current, {
@@ -582,17 +887,13 @@ function Home({
 
         gsap.set(spaceRef.current, {
           opacity: 1,
-
           scale: 1,
-
           yPercent: 0,
         });
 
         gsap.set(unboundWrapRef.current, {
           xPercent: 0,
-
           yPercent: 0,
-
           opacity: 1,
         });
 
@@ -602,39 +903,30 @@ function Home({
 
         gsap.set(mountainRef.current, {
           yPercent: 0,
-
           opacity: 1,
         });
 
         gsap.set(modelRef.current, {
           yPercent: 0,
-
           opacity: 1,
         });
 
         gsap.set(neonRef.current, {
           opacity: 1,
-
           scale: 1,
-
           rotation: 0,
         });
 
         gsap.set(fogBackRef.current, {
           opacity: 0.72,
-
           y: 0,
-
           scale: 1,
         });
 
         gsap.set(fogFrontRef.current, {
           opacity: 0.88,
-
           y: 0,
-
           yPercent: 0,
-
           scale: 1,
         });
 
@@ -647,7 +939,6 @@ function Home({
           ],
           {
             opacity: 1,
-
             y: 0,
           },
         );
@@ -658,19 +949,9 @@ function Home({
       };
     }
 
-    /* =====================================================
-       LOADER NOT FINISHED
-    ===================================================== */
-
     if (!startAnimation) {
       return;
     }
-
-    /* =====================================================
-       FIRST OPEN / REFRESH
-
-       Full cinematic intro.
-    ===================================================== */
 
     const ctx = gsap.context(() => {
       gsap.killTweensOf([
@@ -689,31 +970,20 @@ function Home({
         engineeredRef.current,
       ]);
 
-      /* HERO */
-
       gsap.set(heroRef.current, {
         x: 0,
-
         y: 0,
       });
 
-      /* SPACE */
-
       gsap.set(spaceRef.current, {
         opacity: 0,
-
         scale: 1.08,
-
         yPercent: 0,
       });
 
-      /* UNBOUND */
-
       gsap.set(unboundWrapRef.current, {
         xPercent: 120,
-
         yPercent: 0,
-
         opacity: 0,
       });
 
@@ -721,55 +991,34 @@ function Home({
         filter: "blur(16px)",
       });
 
-      /* MOUNTAIN */
-
       gsap.set(mountainRef.current, {
         yPercent: -120,
-
         opacity: 0,
       });
-
-      /* MODEL */
 
       gsap.set(modelRef.current, {
         yPercent: -125,
-
         opacity: 0,
       });
-
-      /* NEON */
 
       gsap.set(neonRef.current, {
         opacity: 0,
-
         scale: 0.65,
-
         rotation: -15,
       });
 
-      /* BACK FOG */
-
       gsap.set(fogBackRef.current, {
         opacity: 0,
-
         y: 150,
-
         scale: 1.18,
       });
 
-      /* FRONT FOG */
-
       gsap.set(fogFrontRef.current, {
         opacity: 0,
-
         y: 160,
-
         yPercent: 0,
-
         scale: 1.2,
       });
-
-      /* FINAL UI */
 
       gsap.set(
         [
@@ -780,14 +1029,9 @@ function Home({
         ],
         {
           opacity: 0,
-
           y: 22,
         },
       );
-
-      /* ===============================================
-             TIMELINE
-          =============================================== */
 
       const tl = gsap.timeline({
         defaults: {
@@ -799,17 +1043,12 @@ function Home({
         },
       });
 
-      /* UNBOUND */
-
       tl.to(
         unboundWrapRef.current,
         {
           xPercent: 0,
-
           opacity: 1,
-
           duration: 1.25,
-
           ease: "expo.out",
         },
         0,
@@ -819,175 +1058,125 @@ function Home({
         unboundRef.current,
         {
           filter: "blur(0px)",
-
           duration: 0.9,
-
           ease: "power3.out",
         },
         0,
       );
 
-      /* SPACE */
-
       tl.to(
         spaceRef.current,
         {
           opacity: 1,
-
           scale: 1,
-
           duration: 1.1,
-
           ease: "power3.out",
         },
         0.65,
       );
 
-      /* MOUNTAIN */
-
       tl.to(
         mountainRef.current,
         {
           yPercent: 0,
-
           opacity: 1,
-
           duration: 0.9,
-
           ease: "expo.in",
         },
         1.65,
       );
 
-      /* IMPACT */
-
       tl.to(heroRef.current, {
         x: -6,
-
         duration: 0.04,
       });
 
       tl.to(heroRef.current, {
         x: 6,
-
         duration: 0.04,
       });
 
       tl.to(heroRef.current, {
         x: -3,
-
         duration: 0.04,
       });
 
       tl.to(heroRef.current, {
         x: 2,
-
         duration: 0.04,
       });
 
       tl.to(heroRef.current, {
         x: 0,
-
         duration: 0.08,
       });
-
-      /* BACK FOG */
 
       tl.to(
         fogBackRef.current,
         {
           y: 0,
-
           opacity: 0.72,
-
           scale: 1,
-
           duration: 0.7,
-
           ease: "power4.out",
         },
         "-=0.12",
       );
 
-      /* MODEL */
-
       tl.to(
         modelRef.current,
         {
           yPercent: 0,
-
           opacity: 1,
-
           duration: 0.82,
-
           ease: "expo.in",
         },
         "-=0.08",
       );
 
-      /* MODEL IMPACT */
-
       tl.to(heroRef.current, {
         y: 7,
-
         duration: 0.045,
       });
 
       tl.to(heroRef.current, {
         y: -4,
-
         duration: 0.045,
       });
 
       tl.to(heroRef.current, {
         y: 2,
-
         duration: 0.045,
       });
 
       tl.to(heroRef.current, {
         y: 0,
-
         duration: 0.08,
       });
-
-      /* FRONT FOG */
 
       tl.to(
         fogFrontRef.current,
         {
           y: 0,
-
           opacity: 0.88,
-
           scale: 1,
-
           duration: 0.68,
-
           ease: "power4.out",
         },
         "-=0.13",
       );
 
-      /* NEON */
-
       tl.to(
         neonRef.current,
         {
           opacity: 1,
-
           scale: 1,
-
           rotation: 0,
-
           duration: 0.9,
-
           ease: "expo.out",
         },
         "-=0.32",
       );
-
-      /* FINAL UI */
 
       tl.to(
         [
@@ -998,13 +1187,9 @@ function Home({
         ],
         {
           opacity: 1,
-
           y: 0,
-
           duration: 0.65,
-
           stagger: 0.09,
-
           ease: "power3.out",
         },
         "-=0.2",
@@ -1016,9 +1201,9 @@ function Home({
     };
   }, [startAnimation, heroAlreadyPlayed, onHeroComplete]);
 
-  /* ======================================================
-     HERO SCROLL PARALLAX
-  ====================================================== */
+  /* =======================================================
+     HERO PARALLAX
+  ======================================================= */
 
   useLayoutEffect(() => {
     if (!heroComplete) {
@@ -1026,13 +1211,9 @@ function Home({
     }
 
     const ctx = gsap.context(() => {
-      /* SPACE */
-
       gsap.to(spaceRef.current, {
         yPercent: 8,
-
         scale: 1.04,
-
         ease: "none",
 
         scrollTrigger: {
@@ -1046,11 +1227,8 @@ function Home({
         },
       });
 
-      /* UNBOUND */
-
       gsap.to(unboundWrapRef.current, {
         yPercent: -7,
-
         ease: "none",
 
         scrollTrigger: {
@@ -1064,11 +1242,8 @@ function Home({
         },
       });
 
-      /* MOUNTAIN */
-
       gsap.to(mountainRef.current, {
         yPercent: -17,
-
         ease: "none",
 
         scrollTrigger: {
@@ -1082,11 +1257,8 @@ function Home({
         },
       });
 
-      /* MODEL */
-
       gsap.to(modelRef.current, {
         yPercent: -6,
-
         ease: "none",
 
         scrollTrigger: {
@@ -1100,13 +1272,9 @@ function Home({
         },
       });
 
-      /* NEON */
-
       gsap.to(neonRef.current, {
         rotation: 7,
-
         scale: 1.05,
-
         ease: "none",
 
         scrollTrigger: {
@@ -1120,13 +1288,9 @@ function Home({
         },
       });
 
-      /* FRONT FOG */
-
       gsap.to(fogFrontRef.current, {
         opacity: 0,
-
         yPercent: -7,
-
         ease: "none",
 
         scrollTrigger: {
@@ -1148,118 +1312,129 @@ function Home({
     };
   }, [heroComplete]);
 
-  /* ======================================================
-     PRODUCT REVEAL
-  ====================================================== */
+  /* =======================================================
+     PRODUCT ANIMATIONS
+  ======================================================= */
 
   useLayoutEffect(() => {
-    if (!heroComplete) {
+    if (!heroComplete || catalogProducts.length === 0) {
       return;
     }
 
     const sections = gsap.utils.toArray(".ax-product-section");
 
-    const tweens = [];
+    const animations = [];
 
     sections.forEach((section) => {
       const heading = section.querySelector(".ax-product-section-top");
 
       const cards = section.querySelectorAll(".ax-product-card");
 
-      if (heading) {
-        const headingTween = gsap.fromTo(
-          heading,
+      const shopButton = section.querySelector(".ax-shop-more-wrap");
 
+      if (heading) {
+        const animation = gsap.fromTo(
+          heading,
           {
             opacity: 0,
-
-            y: 45,
+            y: 28,
           },
-
           {
             opacity: 1,
-
             y: 0,
-
-            duration: 1,
-
+            duration: 0.8,
             ease: "power3.out",
 
             scrollTrigger: {
               trigger: section,
 
-              start: "top 82%",
+              start: "top 86%",
             },
           },
         );
 
-        tweens.push(headingTween);
+        animations.push(animation);
       }
 
       if (cards.length) {
-        const cardsTween = gsap.fromTo(
+        const animation = gsap.fromTo(
           cards,
-
           {
             opacity: 0,
-
-            y: 70,
+            y: 45,
           },
-
           {
             opacity: 1,
-
             y: 0,
-
-            duration: 1,
-
-            stagger: 0.1,
-
+            duration: 0.8,
+            stagger: 0.08,
             ease: "power3.out",
 
             scrollTrigger: {
               trigger: section,
 
-              start: "top 72%",
+              start: "top 78%",
             },
           },
         );
 
-        tweens.push(cardsTween);
+        animations.push(animation);
+      }
+
+      if (shopButton) {
+        const animation = gsap.fromTo(
+          shopButton,
+          {
+            opacity: 0,
+            y: 15,
+          },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.55,
+            ease: "power3.out",
+
+            scrollTrigger: {
+              trigger: shopButton,
+
+              start: "top 96%",
+            },
+          },
+        );
+
+        animations.push(animation);
       }
     });
 
     ScrollTrigger.refresh();
 
     return () => {
-      tweens.forEach((tween) => {
-        tween?.scrollTrigger?.kill();
+      animations.forEach((animation) => {
+        animation?.scrollTrigger?.kill();
 
-        tween?.kill();
+        animation?.kill();
       });
     };
-  }, [heroComplete]);
+  }, [heroComplete, catalogProducts.length]);
+
+  /* =======================================================
+     RETURN
+  ======================================================= */
 
   return (
     <main ref={homeRef} className="ax-home">
-      {/* =================================================
+      {/* ===============================================
           HERO
-      ================================================= */}
+      =============================================== */}
 
       <section ref={heroRef} className="ax-hero" id="home">
-        {/* SPACE */}
-
         <img ref={spaceRef} src={heroSpace} className="hero-space" alt="" />
-
-        {/* UNBOUND */}
 
         <div ref={unboundWrapRef} className="hero-unbound-wrapper">
           <h1 ref={unboundRef} className="hero-unbound">
             UNBOUND
           </h1>
         </div>
-
-        {/* MOUNTAINS */}
 
         <img
           ref={mountainRef}
@@ -1268,8 +1443,6 @@ function Home({
           alt=""
         />
 
-        {/* BACK FOG */}
-
         <img
           ref={fogBackRef}
           src={heroFog}
@@ -1277,11 +1450,7 @@ function Home({
           alt=""
         />
 
-        {/* NEON */}
-
         <img ref={neonRef} src={heroNeon} className="hero-neon" alt="" />
-
-        {/* MODEL */}
 
         <img
           ref={modelRef}
@@ -1290,8 +1459,6 @@ function Home({
           alt="AXIEE Techwear"
         />
 
-        {/* FRONT FOG */}
-
         <img
           ref={fogFrontRef}
           src={heroFog}
@@ -1299,11 +1466,7 @@ function Home({
           alt=""
         />
 
-        {/* VIGNETTE */}
-
         <div className="hero-vignette" />
-
-        {/* LEFT UI */}
 
         <div ref={leftUIRef} className="hero-left-ui">
           <span>AXIEE</span>
@@ -1317,35 +1480,27 @@ function Home({
           </p>
         </div>
 
-        {/* SLIDE NUMBERS */}
-
-        <div ref={numbersRef} className="hero-numbers">
-       
-        </div>
-
-        {/* EXPLORE */}
+        <div ref={numbersRef} className="hero-numbers" />
 
         <a ref={exploreRef} href="#tshirts" className="hero-explore">
           EXPLORE DROP
           <span>→</span>
         </a>
 
-        {/* ENGINEERED */}
-
         <div ref={engineeredRef} className="hero-engineered">
           <p>
             ENGINEERED
             <br />
-            FOR WHAT'S NEXT
+            FOR WHAT&apos;S NEXT
           </p>
 
           <span>↓</span>
         </div>
       </section>
 
-      {/* =================================================
-          COLLECTION INTRO
-      ================================================= */}
+      {/* ===============================================
+          SMALL WEAR THE UNKNOWN
+      =============================================== */}
 
       <section className="ax-collection-intro">
         <div>
@@ -1367,22 +1522,38 @@ function Home({
         </p>
       </section>
 
-      {/* =================================================
-          PRODUCT COLLECTIONS
-      ================================================= */}
+      {/* ===============================================
+          PRODUCTS
+      =============================================== */}
 
-      <div className="ax-collections">
-        {productSections.map((section) => (
-          <ProductSection
-            key={section.id}
-            section={section}
-            selectedSizes={selectedSizes}
-            setSelectedSizes={setSelectedSizes}
-            quantities={quantities}
-            setQuantities={setQuantities}
-          />
-        ))}
-      </div>
+      {productsLoading && (
+        <div className="ax-home-products-status">LOADING COLLECTION...</div>
+      )}
+
+      {!productsLoading && productsError && (
+        <div className="ax-home-products-status error">{productsError}</div>
+      )}
+
+      {!productsLoading && !productsError && (
+        <div className="ax-collections">
+          {productSections.map((section) => {
+            if (section.products.length === 0) {
+              return null;
+            }
+
+            return (
+              <ProductSection
+                key={section.id}
+                section={section}
+                selectedSizes={selectedSizes}
+                setSelectedSizes={setSelectedSizes}
+                quantities={quantities}
+                setQuantities={setQuantities}
+              />
+            );
+          })}
+        </div>
+      )}
     </main>
   );
 }
