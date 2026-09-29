@@ -1,10 +1,27 @@
-import { useEffect, useState } from "react";
-
-const API_URL =
-  import.meta.env.VITE_API_URL || "";
+import { useEffect, useMemo, useState } from "react";
 
 /* =========================================================
-   GET PRODUCTS ARRAY FROM ANY API RESPONSE SHAPE
+   API BASE
+
+   PC:
+   http://localhost:5178
+   ->
+   http://localhost:5000
+
+   MOBILE ON SAME WIFI:
+   http://192.168.x.x:5178
+   ->
+   http://192.168.x.x:5000
+========================================================= */
+
+const DEV_API_BASE = `http://${window.location.hostname}:5000`;
+
+const API_BASE = (
+  import.meta.env.DEV ? DEV_API_BASE : import.meta.env.VITE_API_URL || ""
+).replace(/\/+$/, "");
+
+/* =========================================================
+   GET PRODUCTS ARRAY
 ========================================================= */
 
 const extractProducts = (data) => {
@@ -35,79 +52,67 @@ const extractProducts = (data) => {
    NORMALIZE TEXT
 ========================================================= */
 
-const normalize = (value = "") =>
-  String(value)
-    .trim()
-    .toLowerCase();
+const normalize = (value = "") => String(value).trim().toLowerCase();
 
 /* =========================================================
    CATEGORY MATCH
 ========================================================= */
 
-const matchCategory = (product, type) => {
+const matchesCategory = (product, type) => {
   const category = normalize(product?.category);
+
   const name = normalize(product?.name);
 
-  /* =======================
+  /* =========================
      T-SHIRTS
-  ======================= */
+  ========================= */
 
   if (type === "tshirts") {
     return (
       category === "t-shirts" ||
       category === "tshirts" ||
+      category === "t-shirt" ||
+      category === "tshirt" ||
       category === "tees" ||
       category === "tee"
     );
   }
 
-  /* =======================
+  /* =========================
      SHIRTS
-  ======================= */
+  ========================= */
 
   if (type === "shirts") {
-    return (
-      category === "shirts" ||
-      category === "shirt"
-    );
+    return category === "shirts" || category === "shirt";
   }
 
-  /* =======================
+  /* =========================
      HOODIES
-  ======================= */
+  ========================= */
 
   if (type === "hoodies") {
-    return (
-      category === "hoodies" ||
-      category === "hoodie"
-    );
+    return category === "hoodies" || category === "hoodie";
   }
 
-  /* =======================
+  /* =========================
      SHORTS
-  ======================= */
+  ========================= */
 
   if (type === "shorts") {
-    return (
-      category === "shorts" ||
-      category === "short"
-    );
+    return category === "shorts" || category === "short";
   }
 
-  /* =======================
+  /* =========================
      JACKETS
-  ======================= */
+  ========================= */
 
   if (type === "jackets") {
-    return (
-      category === "jackets" ||
-      category === "jacket"
-    );
+    return category === "jackets" || category === "jacket";
   }
 
-  /* =======================
+  /* =========================
      CO-ORD SETS
-  ======================= */
+  ========================= */
 
   if (type === "coordsets") {
     return (
@@ -115,76 +120,175 @@ const matchCategory = (product, type) => {
       category === "co ord sets" ||
       category === "coord sets" ||
       category === "co-ord set" ||
-      category === "co ord set"
+      category === "co ord set" ||
+      category === "coord set"
     );
   }
 
-  /* =======================
+  /* =========================
      JEANS
-
-     Your imported jeans are
-     currently category Pants.
-  ======================= */
+  ========================= */
 
   if (type === "jeans") {
     const pantsCategory =
       category === "pants" ||
-      category === "pant";
+      category === "pant" ||
+      category === "jeans" ||
+      category === "jean";
 
     const denimName =
-      name.includes("jeans") ||
-      name.includes("jean") ||
-      name.includes("denim");
+      name.includes("jeans") || name.includes("jean") || name.includes("denim");
 
-    return pantsCategory && denimName;
+    return (
+      category === "jeans" ||
+      category === "jean" ||
+      (pantsCategory && denimName)
+    );
   }
 
-  /* =======================
+  /* =========================
      TRACK PANTS
-
-     Keep old track-pants,
-     remove imported jeans/pants.
-  ======================= */
+  ========================= */
 
   if (type === "trackpants") {
     const pantsCategory =
       category === "pants" ||
       category === "pant" ||
       category === "track pants" ||
-      category === "track pant";
+      category === "track pant" ||
+      category === "trackpants" ||
+      category === "trackpant";
 
     const isDenim =
-      name.includes("jeans") ||
-      name.includes("jean") ||
-      name.includes("denim");
+      name.includes("jeans") || name.includes("jean") || name.includes("denim");
 
-    const importedClothing =
-      normalize(product?.source) ===
-      "clothing-zip";
-
-    return (
-      pantsCategory &&
-      !isDenim &&
-      !importedClothing
-    );
+    return pantsCategory && !isDenim;
   }
 
-  return false;
+  return true;
 };
 
 /* =========================================================
-   HOOK
+   READ JSON SAFELY
+
+   Fixes:
+   Unexpected token '<',
+   "<!doctype"... is not valid JSON
 ========================================================= */
 
-function useCategoryProducts(type) {
-  const [products, setProducts] =
-    useState([]);
+const readJsonResponse = async (response) => {
+  const contentType = response.headers.get("content-type") || "";
 
-  const [loading, setLoading] =
-    useState(true);
+  const text = await response.text();
 
-  const [error, setError] =
-    useState("");
+  if (!contentType.includes("application/json")) {
+    const preview = text.slice(0, 120).replace(/\s+/g, " ");
+
+    throw new Error(
+      `API returned HTML/text instead of JSON. ` +
+        `URL: ${response.url}. ` +
+        `Status: ${response.status}. ` +
+        `Response starts with: ${preview}`,
+    );
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new Error(`Backend returned invalid JSON from ${response.url}`);
+  }
+};
+
+/* =========================================================
+   NORMALIZE SIZE ARRAY
+========================================================= */
+
+const normalizeSizes = (product) => {
+  const rawSizes = Array.isArray(product?.sizes)
+    ? product.sizes
+    : Array.isArray(product?.availableSizes)
+      ? product.availableSizes
+      : [];
+
+  return rawSizes
+    .map((item) => {
+      /* STRING SIZE */
+
+      if (typeof item === "string") {
+        return item.trim();
+      }
+
+      /* OBJECT SIZE */
+
+      if (item && typeof item === "object") {
+        return {
+          ...item,
+
+          size: String(
+            item?.size ?? item?.label ?? item?.name ?? item?.value ?? "",
+          ).trim(),
+        };
+      }
+
+      return "";
+    })
+    .filter((item) => {
+      if (typeof item === "string") {
+        return Boolean(item);
+      }
+
+      return Boolean(item?.size);
+    });
+};
+
+/* =========================================================
+   NORMALIZE PRODUCT
+========================================================= */
+
+const normalizeProduct = (product) => {
+  const id = String(product?._id || product?.id || "");
+
+  const priceNumber = Number(product?.price);
+
+  const oldPriceNumber = Number(product?.oldPrice);
+
+  const ratingNumber = Number(product?.rating);
+
+  const reviewNumber = Number(product?.reviewCount ?? product?.reviews);
+
+  return {
+    ...product,
+
+    id,
+
+    _id: product?._id || id,
+
+    price: Number.isFinite(priceNumber) ? priceNumber : 0,
+
+    oldPrice: Number.isFinite(oldPriceNumber) ? oldPriceNumber : 0,
+
+    rating: Number.isFinite(ratingNumber) ? ratingNumber : 0,
+
+    reviewCount: Number.isFinite(reviewNumber) ? reviewNumber : 0,
+
+    sizes: normalizeSizes(product),
+  };
+};
+
+/* =========================================================
+   USE CATEGORY PRODUCTS
+========================================================= */
+
+export default function useCategoryProducts(type) {
+  const [allProducts, setAllProducts] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+
+  const [error, setError] = useState("");
+
+  /* =======================================================
+     FETCH PRODUCTS
+  ======================================================= */
 
   useEffect(() => {
     let cancelled = false;
@@ -192,88 +296,86 @@ function useCategoryProducts(type) {
     const loadProducts = async () => {
       try {
         setLoading(true);
+
         setError("");
 
-        /* ===============================================
-           IMPORTANT:
-           GET ALL PRODUCTS.
-           Do not filter through backend query.
-        =============================================== */
+        const url = `${API_BASE}/api/catalog/products`;
 
-        const response = await fetch(
-          `${API_URL}/api/catalog/products`
-        );
+        console.log("================================");
+
+        console.log("CATEGORY PRODUCTS API:");
+
+        console.log(url);
+
+        console.log("================================");
+
+        const response = await fetch(url, {
+          method: "GET",
+
+          cache: "no-store",
+
+          headers: {
+            Accept: "application/json",
+          },
+        });
+
+        /* =========================
+             HTTP ERROR
+          ========================= */
 
         if (!response.ok) {
-          throw new Error(
-            `Failed to load products (${response.status})`
-          );
+          throw new Error(`Products request failed (${response.status})`);
         }
 
-        const data =
-          await response.json();
+        /* =========================
+             JSON
+          ========================= */
 
-        const allProducts =
-          extractProducts(data);
+        const data = await readJsonResponse(response);
 
-        console.log(
-          "✅ ALL MONGODB PRODUCTS:",
-          allProducts.length
-        );
+        /* =========================
+             EXTRACT PRODUCTS
+          ========================= */
 
-        /* ===============================================
-           DEBUG CATEGORIES
-        =============================================== */
+        const products = extractProducts(data)
+          .filter((product) => product?.isActive !== false)
+          .map(normalizeProduct)
+          .filter((product) => Boolean(product.id));
 
-        console.log(
-          "📂 DATABASE CATEGORIES:",
-          [
-            ...new Set(
-              allProducts.map(
-                (product) =>
-                  product?.category
-              )
-            ),
-          ]
-        );
+        console.log("✅ PRODUCTS LOADED:", products.length);
 
-        /* ===============================================
-           FILTER CORRECT CATEGORY
-        =============================================== */
+        console.log("✅ API:", url);
 
-        const filteredProducts =
-          allProducts.filter(
-            (product) =>
-              matchCategory(
-                product,
-                type
-              )
-          );
+        /* =========================
+             DEBUG FIRST PRODUCT
+          ========================= */
 
-        console.log(
-          `✅ ${type.toUpperCase()} PRODUCTS:`,
-          filteredProducts.length,
-          filteredProducts
-        );
+        if (products.length > 0) {
+          console.log("✅ FIRST PRODUCT:", {
+            id: products[0]?.id,
+
+            name: products[0]?.name,
+
+            category: products[0]?.category,
+
+            price: products[0]?.price,
+
+            oldPrice: products[0]?.oldPrice,
+
+            sizes: products[0]?.sizes,
+          });
+        }
 
         if (!cancelled) {
-          setProducts(
-            filteredProducts
-          );
+          setAllProducts(products);
         }
       } catch (err) {
-        console.error(
-          "❌ PRODUCT LOAD ERROR:",
-          err
-        );
+        console.error("❌ CATEGORY PRODUCTS ERROR:", err);
 
         if (!cancelled) {
-          setProducts([]);
+          setAllProducts([]);
 
-          setError(
-            err?.message ||
-              "Unable to load products."
-          );
+          setError(err?.message || "Products could not be loaded.");
         }
       } finally {
         if (!cancelled) {
@@ -287,7 +389,25 @@ function useCategoryProducts(type) {
     return () => {
       cancelled = true;
     };
-  }, [type]);
+  }, []);
+
+  /* =======================================================
+     FILTER BY CATEGORY
+  ======================================================= */
+
+  const products = useMemo(() => {
+    const filtered = allProducts.filter((product) =>
+      matchesCategory(product, type),
+    );
+
+    console.log(`✅ ${type} PRODUCTS:`, filtered.length);
+
+    return filtered;
+  }, [allProducts, type]);
+
+  /* =======================================================
+     RETURN
+  ======================================================= */
 
   return {
     products,
@@ -295,5 +415,3 @@ function useCategoryProducts(type) {
     error,
   };
 }
-
-export default useCategoryProducts;

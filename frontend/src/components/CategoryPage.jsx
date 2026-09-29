@@ -1781,8 +1781,11 @@ function CategoryVisual({ type }) {
    Image 2 = mouse hover
 ========================================================= */
 
-const API_BASE =
-  import.meta.env.VITE_API_URL || "";
+const DEV_API_BASE = `http://${window.location.hostname}:5000`;
+
+const API_BASE = (
+  import.meta.env.DEV ? DEV_API_BASE : import.meta.env.VITE_API_URL || ""
+).replace(/\/+$/, "");
 
 const resolveProductImageUrl = (value) => {
   if (!value) return "";
@@ -2425,11 +2428,24 @@ function CategoryPage({
     String(product?._id || product?.id || product?.slug || product?.name || "");
 
   const getProductSizes = (product) => {
-    if (!Array.isArray(product?.sizes)) return [];
+    const rawSizes = Array.isArray(product?.sizes)
+      ? product.sizes
+      : Array.isArray(product?.availableSizes)
+        ? product.availableSizes
+        : [];
 
-    return product.sizes
-      .map((item) => (typeof item === "string" ? item : item?.size))
-      .filter(Boolean);
+    return rawSizes
+      .map((item) => {
+        if (typeof item === "string") {
+          return item.trim();
+        }
+
+        return String(
+          item?.size ?? item?.label ?? item?.name ?? item?.value ?? "",
+        ).trim();
+      })
+      .filter(Boolean)
+      .filter((size, index, allSizes) => allSizes.indexOf(size) === index);
   };
 
   /* =======================================================
@@ -2692,11 +2708,8 @@ function CategoryPage({
   };
 
   /*
-    If this product/size has already been added from this page,
-    keep the real MongoDB cart quantity in sync with the card controls.
-
-    2 -> 1 = PATCH cart item
-    1 -> 0 = DELETE cart item completely
+    If a product/size has already been added from this page,
+    keep the real backend cart quantity in sync with the card controls.
   */
   const syncBackendCartQuantity = async (productId, size, nextQuantity) => {
     const cartId = localStorage.getItem("axiee-cart-id");
@@ -2707,6 +2720,9 @@ function CategoryPage({
 
     const getResponse = await fetch(`${API_BASE}/api/cart/${cartId}`, {
       cache: "no-store",
+      headers: {
+        Accept: "application/json",
+      },
     });
 
     const getData = await getResponse.json();
@@ -2788,10 +2804,6 @@ function CategoryPage({
 
     const syncKey = makeCartSyncKey(productId, size);
 
-    /*
-      Before ADD TO CART has been pressed, + / - are only a selector.
-      After ADD TO CART succeeds, + / - update the real cart.
-    */
     if (!cartSyncedItemsRef.current.has(syncKey)) {
       return;
     }
@@ -2807,193 +2819,168 @@ function CategoryPage({
         cartSyncedItemsRef.current.delete(syncKey);
 
         setAddedProductId((current) => (current === productId ? "" : current));
-      } else if (!updatedCart) {
-        /*
-          The item disappeared from the backend cart somehow.
-          Stop treating this selector as cart-synced.
-        */
+
+        return;
+      }
+
+      if (!updatedCart) {
         cartSyncedItemsRef.current.delete(syncKey);
       }
     } catch (error) {
       console.error("❌ Cart quantity sync error:", error);
 
-      /*
-        Roll the visible selector back if the backend update failed,
-        so UI and cart do not show different quantities.
-      */
       setQuantities((previous) => ({
         ...previous,
         [productId]: currentQuantity,
       }));
 
-      alert(error.message || "Unable to update cart quantity.");
+      alert(error?.message || "Unable to update cart quantity.");
     }
   };
 
-/* =======================================================
-   ADD TO CART
-======================================================= */
+  /* =======================================================
+     GET PRODUCT IMAGE FOR CART
+  ======================================================= */
 
-const addToCart = async (product) => {
-  try {
-    /* ================================================
-       PRODUCT DETAILS
-    ================================================ */
-
-    const productId =
-      getProductId(product);
-
-    const sizes =
-      getProductSizes(product);
-
-    const size =
-      selectedSizes[productId];
-
-    const quantity =
-      getQuantity(productId);
-
-    /* ================================================
-       VALIDATION
-    ================================================ */
-
-    if (sizes.length === 0) {
-      alert(
-        "Sizes are not configured for this product yet.",
-      );
-
-      return;
+  const getCartProductImage = (product) => {
+    if (!product) {
+      return "";
     }
 
-    if (!size) {
-      alert(
-        "Please select a size first.",
-      );
-
-      return;
-    }
-
-    if (quantity <= 0) {
-      alert(
-        "Please select quantity first.",
-      );
-
-      return;
-    }
-
-    /* ================================================
-       CART ID
-    ================================================ */
-
-    let cartId =
-      localStorage.getItem(
-        "axiee-cart-id",
-      );
-
-    if (!cartId) {
-      cartId =
-        crypto.randomUUID();
-
-      localStorage.setItem(
-        "axiee-cart-id",
-        cartId,
-      );
-    }
-
-    /* ================================================
-       PRODUCT IMAGE
-    ================================================ */
-
-    const productImage =
-      getCartProductImage(product);
-
-    console.log(
-      "🛒 ADDING TO CART:",
-      {
-        productId,
-        name: product?.name,
-        image: productImage,
-        imageFiles:
-          product?.imageFiles,
-        images:
-          product?.images,
-        mainImage:
-          product?.mainImage,
-        originalImage:
-          product?.image,
-      },
-    );
-
-    /* ================================================
-       SEND TO BACKEND
-    ================================================ */
-
-    const response = await fetch(
-      `${API_BASE}/api/cart/add`,
-      {
-        method: "POST",
-
-        headers: {
-          "Content-Type":
-            "application/json",
-        },
-
-        body: JSON.stringify({
-          cartId,
-
-          productId,
-
-          size,
-
-          quantity,
-
-          name:
-            product?.name ||
-            "AXIEE Product",
-
-          price: Number(
-            product?.price || 0,
-          ),
-
-          image:
-            productImage,
-
-          category:
-            product?.category ||
-            category ||
-            "",
-        }),
-      },
-    );
-
-    /* ================================================
-       RESPONSE
-    ================================================ */
-
-    const data =
-      await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Unable to add to cart");
+    const resolveValue = (value) => {
+      if (!value) {
+        return "";
       }
 
-      console.log("✅ CART SAVED:", data.cart);
+      if (typeof value === "object") {
+        if (value?.url) return String(value.url);
+        if (value?.src) return String(value.src);
+        if (value?.path) return String(value.path);
 
-      const savedCart = data?.cart || {
-        items: [],
-      };
+        const fileId = value?.fileId || value?._id || value?.id;
+
+        if (fileId) {
+          return `/api/catalog/images/${String(fileId)}`;
+        }
+
+        return "";
+      }
+
+      return String(value);
+    };
+
+    if (Array.isArray(product?.imageFiles) && product.imageFiles.length > 0) {
+      const sortedImageFiles = [...product.imageFiles].sort(
+        (a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0),
+      );
+
+      const firstImage = resolveValue(sortedImageFiles[0]);
+
+      if (firstImage) {
+        return firstImage;
+      }
+    }
+
+    if (Array.isArray(product?.images) && product.images.length > 0) {
+      for (const image of product.images) {
+        const resolved = resolveValue(image);
+
+        if (resolved) {
+          return resolved;
+        }
+      }
+    }
+
+    const mainImage = resolveValue(product?.mainImage);
+
+    if (mainImage) {
+      return mainImage;
+    }
+
+    return resolveValue(product?.image);
+  };
+
+  /* =======================================================
+     ADD TO CART
+  ======================================================= */
+
+  const addToCart = async (product) => {
+    try {
+      const productId = getProductId(product);
+
+      const sizes = getProductSizes(product);
+
+      const size = selectedSizes[productId];
+
+      const quantity = getQuantity(productId);
+
+      if (!productId) {
+        alert("Product ID is missing.");
+        return;
+      }
+
+      if (sizes.length === 0) {
+        alert("Sizes are not configured for this product yet.");
+        return;
+      }
+
+      if (!size) {
+        alert("Please select a size first.");
+        return;
+      }
+
+      if (quantity <= 0) {
+        alert("Please select quantity first.");
+        return;
+      }
+
+      let cartId = localStorage.getItem("axiee-cart-id");
+
+      if (!cartId) {
+        cartId = crypto.randomUUID();
+
+        localStorage.setItem("axiee-cart-id", cartId);
+      }
+
+      const productImage = getCartProductImage(product);
+
+      const response = await fetch(`${API_BASE}/api/cart/add`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          cartId,
+          productId,
+          size,
+          quantity,
+          name: product?.name || "AXIEE Product",
+          price: Number(product?.price || 0),
+          image: productImage,
+          category: product?.category || category || "",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Unable to add to cart");
+      }
+
+      const savedCart = data?.cart ||
+        data || {
+          items: [],
+        };
 
       const savedItem = findMatchingCartItem(savedCart, productId, size);
 
-      /*
-        This product + size is now a real backend cart item.
-        From this point the + / - controls will PATCH / DELETE it.
-      */
       if (savedItem?._id) {
         const syncKey = makeCartSyncKey(productId, size);
 
         cartSyncedItemsRef.current.add(syncKey);
 
-        const savedQuantity = Number(savedItem.quantity || quantity);
+        const savedQuantity = Number(savedItem?.quantity || quantity);
 
         setQuantities((previous) => ({
           ...previous,
@@ -3001,53 +2988,29 @@ const addToCart = async (product) => {
         }));
       }
 
-      /*
-        Tell Navbar / Cart that the backend cart changed.
-      */
       window.dispatchEvent(
         new CustomEvent("axiee-cart-updated", {
           detail: savedCart,
         }),
       );
 
-    /* ================================================
-       SUCCESS TOAST
-    ================================================ */
+      setCartToast({
+        name: product?.name || "AXIEE Product",
+        size,
+        quantity: Number(savedItem?.quantity || quantity),
+      });
 
-    setCartToast({
-      name:
-        product?.name ||
-        "AXIEE Product",
+      setAddedProductId(productId);
 
-      size,
+      window.setTimeout(() => {
+        setAddedProductId((current) => (current === productId ? "" : current));
+      }, 1400);
+    } catch (error) {
+      console.error("❌ Add to cart error:", error);
 
-      quantity,
-    });
-
-    setAddedProductId(
-      productId,
-    );
-
-    window.setTimeout(() => {
-      setAddedProductId(
-        (current) =>
-          current === productId
-            ? ""
-            : current,
-      );
-    }, 1400);
-  } catch (error) {
-    console.error(
-      "❌ Add to cart error:",
-      error,
-    );
-
-    alert(
-      error?.message ||
-        "Unable to add to cart",
-    );
-  }
-};
+      alert(error?.message || "Unable to add to cart");
+    }
+  };
 
   /* =======================================================
      BUY NOW
