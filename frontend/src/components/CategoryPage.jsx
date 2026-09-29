@@ -1781,7 +1781,8 @@ function CategoryVisual({ type }) {
    Image 2 = mouse hover
 ========================================================= */
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE =
+  import.meta.env.VITE_API_URL || "";
 
 const resolveProductImageUrl = (value) => {
   if (!value) return "";
@@ -2829,64 +2830,147 @@ function CategoryPage({
     }
   };
 
-  /* =======================================================
-     ADD TO CART
-  ======================================================= */
-  const addToCart = async (product) => {
-    try {
-      const productId = getProductId(product);
-      const sizes = getProductSizes(product);
-      const size = selectedSizes[productId];
-      const quantity = getQuantity(productId);
+/* =======================================================
+   ADD TO CART
+======================================================= */
 
-      if (sizes.length === 0) {
-        alert("Sizes are not configured for this product yet.");
-        return;
-      }
+const addToCart = async (product) => {
+  try {
+    /* ================================================
+       PRODUCT DETAILS
+    ================================================ */
 
-      if (!size) {
-        alert("Please select a size first.");
-        return;
-      }
+    const productId =
+      getProductId(product);
 
-      if (quantity <= 0) {
-        alert("Please select quantity first.");
-        return;
-      }
+    const sizes =
+      getProductSizes(product);
 
-      /*
-        One cart system for every product.
-        The Cart page reads axiee-cart-id and loads the cart from /api/cart/:cartId,
-        so every ADD TO CART action must use the backend cart API.
-      */
-      let cartId = localStorage.getItem("axiee-cart-id");
+    const size =
+      selectedSizes[productId];
 
-      if (!cartId) {
-        cartId = crypto.randomUUID();
-        localStorage.setItem("axiee-cart-id", cartId);
-      }
+    const quantity =
+      getQuantity(productId);
 
-      const productImage =
-        product?.image || product?.mainImage || product?.images?.[0] || "";
+    /* ================================================
+       VALIDATION
+    ================================================ */
 
-      const response = await fetch(`${API_BASE}/api/cart/add`, {
+    if (sizes.length === 0) {
+      alert(
+        "Sizes are not configured for this product yet.",
+      );
+
+      return;
+    }
+
+    if (!size) {
+      alert(
+        "Please select a size first.",
+      );
+
+      return;
+    }
+
+    if (quantity <= 0) {
+      alert(
+        "Please select quantity first.",
+      );
+
+      return;
+    }
+
+    /* ================================================
+       CART ID
+    ================================================ */
+
+    let cartId =
+      localStorage.getItem(
+        "axiee-cart-id",
+      );
+
+    if (!cartId) {
+      cartId =
+        crypto.randomUUID();
+
+      localStorage.setItem(
+        "axiee-cart-id",
+        cartId,
+      );
+    }
+
+    /* ================================================
+       PRODUCT IMAGE
+    ================================================ */
+
+    const productImage =
+      getCartProductImage(product);
+
+    console.log(
+      "🛒 ADDING TO CART:",
+      {
+        productId,
+        name: product?.name,
+        image: productImage,
+        imageFiles:
+          product?.imageFiles,
+        images:
+          product?.images,
+        mainImage:
+          product?.mainImage,
+        originalImage:
+          product?.image,
+      },
+    );
+
+    /* ================================================
+       SEND TO BACKEND
+    ================================================ */
+
+    const response = await fetch(
+      `${API_BASE}/api/cart/add`,
+      {
         method: "POST",
+
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type":
+            "application/json",
         },
+
         body: JSON.stringify({
           cartId,
-          productId,
-          size,
-          quantity,
-          name: product?.name || "AXIEE Product",
-          price: Number(product?.price || 0),
-          image: productImage,
-          category: product?.category || category || "",
-        }),
-      });
 
-      const data = await response.json();
+          productId,
+
+          size,
+
+          quantity,
+
+          name:
+            product?.name ||
+            "AXIEE Product",
+
+          price: Number(
+            product?.price || 0,
+          ),
+
+          image:
+            productImage,
+
+          category:
+            product?.category ||
+            category ||
+            "",
+        }),
+      },
+    );
+
+    /* ================================================
+       RESPONSE
+    ================================================ */
+
+    const data =
+      await response.json();
 
       if (!response.ok) {
         throw new Error(data.message || "Unable to add to cart");
@@ -2926,25 +3010,44 @@ function CategoryPage({
         }),
       );
 
-      /*
-        Premium visual confirmation.
-      */
-      setCartToast({
-        name: product?.name || "AXIEE Product",
-        size,
-        quantity,
-      });
+    /* ================================================
+       SUCCESS TOAST
+    ================================================ */
 
-      setAddedProductId(productId);
+    setCartToast({
+      name:
+        product?.name ||
+        "AXIEE Product",
 
-      window.setTimeout(() => {
-        setAddedProductId((current) => (current === productId ? "" : current));
-      }, 1400);
-    } catch (error) {
-      console.error("❌ Add to cart error:", error);
-      alert(error.message || "Unable to add to cart");
-    }
-  };
+      size,
+
+      quantity,
+    });
+
+    setAddedProductId(
+      productId,
+    );
+
+    window.setTimeout(() => {
+      setAddedProductId(
+        (current) =>
+          current === productId
+            ? ""
+            : current,
+      );
+    }, 1400);
+  } catch (error) {
+    console.error(
+      "❌ Add to cart error:",
+      error,
+    );
+
+    alert(
+      error?.message ||
+        "Unable to add to cart",
+    );
+  }
+};
 
   /* =======================================================
      BUY NOW

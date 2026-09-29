@@ -322,7 +322,10 @@ export const getCart = async (req, res) => {
       cart,
     });
   } catch (error) {
-    console.error("❌ Get cart error:", error);
+    console.error(
+      "❌ Get cart error:",
+      error,
+    );
 
     return res.status(500).json({
       success: false,
@@ -338,7 +341,10 @@ export const getCart = async (req, res) => {
    POST /api/cart/add
 ========================================================= */
 
-export const addToCart = async (req, res) => {
+export const addToCart = async (
+  req,
+  res,
+) => {
   try {
     const {
       cartId: incomingCartId,
@@ -358,6 +364,10 @@ export const addToCart = async (req, res) => {
       quantity: incomingQuantity = 1,
     } = req.body;
 
+    /* =====================================================
+       VALIDATION
+    ===================================================== */
+
     /* =========================================
        VALIDATION
     ========================================= */
@@ -365,7 +375,8 @@ export const addToCart = async (req, res) => {
     if (!productId) {
       return res.status(400).json({
         success: false,
-        message: "Product ID is required",
+        message:
+          "Product ID is required",
       });
     }
 
@@ -493,6 +504,10 @@ export const addToCart = async (req, res) => {
       });
     }
 
+    /* =====================================================
+       SAVE
+    ===================================================== */
+
     await cart.save();
 
     return res.status(200).json({
@@ -523,7 +538,10 @@ export const addToCart = async (req, res) => {
    PATCH /api/cart/:cartId/item/:itemId
 ========================================================= */
 
-export const updateCartItem = async (req, res) => {
+export const updateCartItem = async (
+  req,
+  res,
+) => {
   try {
     const { cartId, itemId } = req.params;
 
@@ -536,7 +554,8 @@ export const updateCartItem = async (req, res) => {
     if (!cart) {
       return res.status(404).json({
         success: false,
-        message: "Cart not found",
+        message:
+          "Cart not found",
       });
     }
 
@@ -547,7 +566,8 @@ export const updateCartItem = async (req, res) => {
     if (!item) {
       return res.status(404).json({
         success: false,
-        message: "Cart item not found",
+        message:
+          "Cart item not found",
       });
     }
 
@@ -644,9 +664,15 @@ export const updateCartItem = async (req, res) => {
    DELETE /api/cart/:cartId/item/:itemId
 ========================================================= */
 
-export const removeCartItem = async (req, res) => {
+export const removeCartItem = async (
+  req,
+  res,
+) => {
   try {
-    const { cartId, itemId } = req.params;
+    const {
+      cartId,
+      itemId,
+    } = req.params;
 
     const cart = await Cart.findOne({
       cartId,
@@ -655,7 +681,8 @@ export const removeCartItem = async (req, res) => {
     if (!cart) {
       return res.status(404).json({
         success: false,
-        message: "Cart not found",
+        message:
+          "Cart not found",
       });
     }
 
@@ -682,7 +709,10 @@ export const removeCartItem = async (req, res) => {
       cart,
     });
   } catch (error) {
-    console.error("❌ Remove cart item error:", error);
+    console.error(
+      "❌ Remove cart item error:",
+      error,
+    );
 
     return res.status(500).json({
       success: false,
@@ -700,9 +730,14 @@ export const removeCartItem = async (req, res) => {
    DELETE /api/cart/:cartId/clear
 ========================================================= */
 
-export const clearCart = async (req, res) => {
+export const clearCart = async (
+  req,
+  res,
+) => {
   try {
-    const { cartId } = req.params;
+    const {
+      cartId,
+    } = req.params;
 
     const cart = await Cart.findOne({
       cartId,
@@ -733,7 +768,10 @@ export const clearCart = async (req, res) => {
       cart,
     });
   } catch (error) {
-    console.error("❌ Clear cart error:", error);
+    console.error(
+      "❌ Clear cart error:",
+      error,
+    );
 
     return res.status(500).json({
       success: false,
