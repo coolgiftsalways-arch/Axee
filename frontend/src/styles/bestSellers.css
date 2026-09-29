@@ -1234,3 +1234,401 @@
           flex-direction: column;
      }
 }
+
+
+/* =========================================================
+   PREMIUM MOBILE OVERRIDE
+   Keep this block at the VERY END of bestSellers.css
+========================================================= */
+
+@media (max-width: 768px) {
+
+     html,
+     body,
+     #root {
+          width: 100%;
+          max-width: 100%;
+          overflow-x: hidden;
+     }
+
+     .best-page {
+          width: 100%;
+          max-width: 100%;
+          overflow-x: clip;
+     }
+
+     /* HERO */
+     .best-hero {
+          min-height: auto;
+          padding: 92px 14px 24px;
+          grid-template-columns: 1fr;
+          gap: 24px;
+     }
+
+     .best-hero-left h1 {
+          font-size: clamp(56px, 17vw, 82px);
+          line-height: 0.78;
+          letter-spacing: -0.055em;
+     }
+
+     .best-hero-left p {
+          margin-top: 14px;
+          font-size: 12px;
+          line-height: 1.45;
+     }
+
+     .best-hero-actions {
+          width: 100%;
+          margin-top: 18px;
+     }
+
+     .best-main-button {
+          width: min(100%, 270px);
+          min-width: 0;
+          height: 46px;
+     }
+
+     .best-hero-collage {
+          min-height: 285px;
+          border-radius: 14px;
+          overflow: hidden;
+     }
+
+     .best-main-image {
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          border-radius: 14px;
+     }
+
+     .best-small-image,
+     .best-image-copy {
+          display: none;
+     }
+
+     .best-collage-line {
+          left: 8%;
+          top: -70px;
+          height: 390px;
+     }
+
+     /* STATS: premium 2 x 2 instead of one very tall column */
+     .best-stats {
+          margin: 14px 14px 0;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          border-radius: 14px;
+          overflow: hidden;
+     }
+
+     .best-stat-card {
+          min-width: 0;
+          min-height: 84px;
+          padding: 12px;
+          grid-template-columns: auto minmax(0, 1fr);
+          gap: 8px 10px;
+          border-right: 1px solid rgba(255, 255, 255, 0.08);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+     }
+
+     .best-stat-card:nth-child(2n) {
+          border-right: 0;
+     }
+
+     .best-stat-card:nth-last-child(-n + 2) {
+          border-bottom: 0;
+     }
+
+     .best-stat-card>svg {
+          width: 21px;
+          height: 21px;
+     }
+
+     .best-stat-card>div>strong {
+          font-size: 15px;
+     }
+
+     .best-stat-card>div>span {
+          font-size: 7px;
+     }
+
+     .best-stat-extra {
+          grid-column: 2;
+     }
+
+     /* FILTERS: one clean horizontal rail */
+     .best-filter-section {
+          padding: 15px 14px 10px;
+          gap: 12px;
+          align-items: stretch;
+     }
+
+     .best-category-list {
+          width: 100%;
+          flex-wrap: nowrap;
+          gap: 7px;
+          overflow-x: auto;
+          overflow-y: hidden;
+          padding-bottom: 4px;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+          overscroll-behavior-x: contain;
+     }
+
+     .best-category-list::-webkit-scrollbar {
+          display: none;
+     }
+
+     .best-category {
+          flex: 0 0 auto;
+          min-height: 34px;
+          padding: 0 14px;
+          white-space: nowrap;
+     }
+
+     .best-sort {
+          width: 100%;
+          gap: 10px;
+     }
+
+     .best-sort-select {
+          min-width: 0;
+          flex: 1;
+     }
+
+     .best-sort-select select {
+          height: 38px;
+     }
+
+     /* PRODUCT HEADER */
+     .best-products {
+          padding: 8px 12px 24px;
+     }
+
+     .best-products-head {
+          width: 100%;
+          gap: 14px;
+          margin-bottom: 15px;
+     }
+
+     .best-products-head h2 {
+          font-size: clamp(21px, 7vw, 28px);
+          line-height: 1;
+     }
+
+     .best-products-head p {
+          margin-top: 6px;
+          font-size: 8px;
+          line-height: 1.4;
+     }
+
+     .best-period-wrapper {
+          width: 100%;
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 9px;
+     }
+
+     .best-live-update {
+          font-size: 7px;
+          letter-spacing: 0.04em;
+     }
+
+     .best-period-buttons {
+          width: 100%;
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          border-radius: 12px;
+     }
+
+     .best-period-buttons button {
+          width: 100%;
+          min-width: 0;
+          height: 40px;
+          padding: 0 7px;
+          white-space: nowrap;
+          font-size: 7px;
+     }
+
+     .best-period-buttons button.active {
+          border-radius: 11px;
+     }
+
+     /* PRODUCT GRID */
+     .best-eight-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+     }
+
+     .best-eight-grid .best-product-card {
+          border-radius: 10px;
+     }
+
+     .best-eight-grid .best-product-image {
+          height: auto;
+          aspect-ratio: 4 / 5;
+     }
+
+     .best-eight-grid .best-product-content {
+          padding: 9px 8px 10px;
+     }
+
+     .best-eight-grid .best-product-content h3 {
+          margin-bottom: 5px;
+          font-size: 8.5px;
+     }
+
+     .best-card-category {
+          font-size: 5.5px;
+     }
+
+     .best-rating,
+     .best-sold {
+          font-size: 6.5px;
+     }
+
+     .best-price-row {
+          align-items: center !important;
+          flex-direction: row !important;
+          flex-wrap: wrap;
+          gap: 5px;
+     }
+
+     .best-price-row>div>strong {
+          font-size: 12px;
+     }
+
+     .best-discount {
+          padding: 4px 5px;
+          font-size: 5.5px;
+     }
+
+     .best-activity {
+          margin-top: 7px;
+          padding-top: 6px;
+          font-size: 5.5px;
+     }
+
+     .best-card-actions {
+          grid-template-columns: 1fr !important;
+          gap: 6px;
+          margin-top: 8px;
+     }
+
+     .best-card-actions button {
+          min-height: 36px;
+          border-radius: 7px;
+          font-size: 7.5px;
+          letter-spacing: 0.8px;
+     }
+
+     /* COMMUNITY / REELS
+        Higher specificity is intentional because reel styles are also
+        injected from BestSellers.jsx after the imported stylesheet. */
+     .best-page .best-people-section {
+          padding: 46px 0 58px;
+          overflow: hidden;
+     }
+
+     .best-page .best-people-head,
+     .best-page .best-reel-footer {
+          width: calc(100% - 28px);
+          max-width: 100%;
+     }
+
+     .best-page .best-people-head {
+          display: flex;
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 13px;
+          margin-bottom: 22px;
+     }
+
+     .best-page .best-people-kicker {
+          margin-bottom: 5px;
+          font-size: 8px;
+          letter-spacing: 2px;
+     }
+
+     .best-page .best-people-title {
+          max-width: 100%;
+          font-size: clamp(36px, 11vw, 48px);
+          line-height: 0.88;
+          letter-spacing: -1.6px;
+          overflow-wrap: normal;
+          word-break: normal;
+     }
+
+     .best-page .best-people-copy {
+          width: 100%;
+          max-width: 100%;
+          font-size: 10px;
+          line-height: 1.6;
+     }
+
+     .best-page .best-reel-viewport {
+          width: 100%;
+          max-width: 100%;
+     }
+
+     .best-page .best-reel-track {
+          grid-auto-columns: minmax(0, 82vw);
+          gap: 10px;
+          padding: 2px 14px 10px;
+     }
+
+     .best-page .best-reel-card {
+          height: min(62vh, 460px);
+          min-height: 360px;
+          border-radius: 16px;
+     }
+
+     .best-page .best-reel-number {
+          max-width: calc(100% - 112px);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+     }
+
+     .best-page .best-reel-footer {
+          margin-top: 13px;
+          font-size: 7px;
+          letter-spacing: 1px;
+     }
+}
+
+@media (max-width: 420px) {
+     .best-hero {
+          padding-left: 12px;
+          padding-right: 12px;
+     }
+
+     .best-stats {
+          margin-left: 12px;
+          margin-right: 12px;
+     }
+
+     .best-filter-section {
+          padding-left: 12px;
+          padding-right: 12px;
+     }
+
+     .best-products {
+          padding-left: 10px;
+          padding-right: 10px;
+     }
+
+     .best-page .best-people-title {
+          font-size: clamp(34px, 10.5vw, 43px);
+     }
+
+     .best-page .best-reel-track {
+          grid-auto-columns: 84vw;
+          padding-left: 12px;
+          padding-right: 12px;
+     }
+
+     .best-page .best-reel-card {
+          min-height: 340px;
+     }
+}

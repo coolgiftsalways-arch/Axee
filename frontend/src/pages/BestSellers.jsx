@@ -34,7 +34,13 @@ import reel8 from "../assets/Bestseller/reel8.mp4";
 import reel9 from "../assets/Bestseller/reel9.mp4";
 import reel10 from "../assets/Bestseller/reel10.mp4";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const DEV_API_BASE = `http://${window.location.hostname}:5000`;
+
+const API_BASE = (
+  import.meta.env.DEV ? DEV_API_BASE : import.meta.env.VITE_API_URL || ""
+).replace(/\/+$/, "");
+
+console.log("BEST SELLERS API:", API_BASE);
 
 /* =========================================================
    CATEGORY ORDER
@@ -1929,7 +1935,6 @@ function BestSellers() {
         </div>
 
         <div className="best-reel-footer">
-
           <strong>#UNBOUNDPEOPLE</strong>
         </div>
       </section>
@@ -1937,7 +1942,6 @@ function BestSellers() {
       {/* =============================
           BOTTOM INSIGHTS
       ============================= */}
-
     </main>
   );
 }

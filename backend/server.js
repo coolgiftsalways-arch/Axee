@@ -55,11 +55,75 @@ const allowedOrigins = [
   "https://www.unboundclothing.in",
 ];
 
+/*
+  Allow local development from:
+  - localhost
+  - 127.0.0.1
+  - 192.168.x.x
+  - 10.x.x.x
+  - 172.16.x.x to 172.31.x.x
+
+  This allows your phone to open the Vite frontend
+  and connect to the backend running on your PC.
+*/
+
+function isPrivateLocalOrigin(origin) {
+  try {
+    const url = new URL(origin);
+
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return false;
+    }
+
+    const host = url.hostname;
+
+    /* =========================
+       LOCALHOST
+    ========================= */
+
+    if (host === "localhost" || host === "127.0.0.1") {
+      return true;
+    }
+
+    /* =========================
+       192.168.x.x
+    ========================= */
+
+    if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(host)) {
+      return true;
+    }
+
+    /* =========================
+       10.x.x.x
+    ========================= */
+
+    if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) {
+      return true;
+    }
+
+    /* =========================
+       172.16.x.x - 172.31.x.x
+    ========================= */
+
+    const match172 = host.match(/^172\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/);
+
+    if (match172) {
+      const secondPart = Number(match172[1]);
+
+      return secondPart >= 16 && secondPart <= 31;
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 app.use(
   cors({
     origin(origin, callback) {
       /* ===============================================
-         POSTMAN / SERVER REQUEST
+         POSTMAN / CURL / SERVER REQUEST
       =============================================== */
 
       if (!origin) {
@@ -67,22 +131,22 @@ app.use(
       }
 
       /* ===============================================
-         LOCALHOST
+         PRODUCTION WEBSITE
       =============================================== */
 
-      const localhostPattern = /^http:\/\/localhost:\d+$/;
-
-      const localhostIpPattern = /^http:\/\/127\.0\.0\.1:\d+$/;
-
-      if (localhostPattern.test(origin) || localhostIpPattern.test(origin)) {
+      if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
       /* ===============================================
-         PRODUCTION
+         LOCAL DEVELOPMENT
+         PC + MOBILE ON SAME WIFI
       =============================================== */
 
-      if (allowedOrigins.includes(origin)) {
+      if (
+        process.env.NODE_ENV !== "production" &&
+        isPrivateLocalOrigin(origin)
+      ) {
         return callback(null, true);
       }
 
@@ -112,7 +176,6 @@ app.use(
 app.use(
   express.urlencoded({
     extended: true,
-
     limit: "10mb",
   }),
 );
@@ -121,41 +184,32 @@ app.use(
    HEALTH
 ========================================================= */
 
-app.get(
-  "/",
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "UNBOUND API is running",
 
-  (req, res) => {
-    res.status(200).json({
-      success: true,
+    environment: process.env.NODE_ENV || "development",
 
-      message: "AXIEE API is running",
-
-      environment: process.env.NODE_ENV || "development",
-
-      database:
-        mongoose.connection.readyState === 1 ? "connected" : "not connected",
-    });
-  },
-);
+    database:
+      mongoose.connection.readyState === 1 ? "connected" : "not connected",
+  });
+});
 
 /* =========================================================
    DATABASE HEALTH
 ========================================================= */
 
-app.get(
-  "/api/health",
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    success: true,
 
-  (req, res) => {
-    res.status(200).json({
-      success: true,
+    server: "running",
 
-      server: "running",
-
-      mongodb:
-        mongoose.connection.readyState === 1 ? "connected" : "not connected",
-    });
-  },
-);
+    mongodb:
+      mongoose.connection.readyState === 1 ? "connected" : "not connected",
+  });
+});
 
 /* =========================================================
    ROUTES
@@ -276,42 +330,44 @@ const PORT = process.env.PORT || 5000;
 /* =========================================================
    START EXPRESS
 
-   START FIRST SO HOSTINGER DOES NOT WAIT FOR MONGODB.
+   IMPORTANT:
+   0.0.0.0 allows your phone on the same WiFi
+   to access the backend through your PC IP.
 ========================================================= */
 
-const server = app.listen(
-  PORT,
+const server = app.listen(PORT, "0.0.0.0", () => {
+  console.log("");
 
-  () => {
-    console.log("");
+  console.log("================================");
 
-    console.log("================================");
+  console.log(`✅ UNBOUND Server running on port ${PORT}`);
 
-    console.log(`✅ AXIEE Server running on port ${PORT}`);
+  console.log(`✅ Environment: ${process.env.NODE_ENV || "development"}`);
 
-    console.log(`✅ Environment: ${process.env.NODE_ENV || "development"}`);
+  console.log(`✅ Local API: http://localhost:${PORT}`);
 
-    console.log("✅ Health: /");
+  console.log(`✅ Network API enabled on port ${PORT}`);
 
-    console.log("✅ Products: /api/products");
+  console.log("✅ Health: /");
 
-    console.log("✅ Cart: /api/cart");
+  console.log("✅ Products: /api/products");
 
-    console.log("✅ Catalog: /api/catalog");
+  console.log("✅ Cart: /api/cart");
 
-    console.log("✅ Categories: /api/categories");
+  console.log("✅ Catalog: /api/catalog");
 
-    console.log("✅ Orders: /api/orders");
+  console.log("✅ Categories: /api/categories");
 
-    console.log("✅ Admin Login: /api/admin-auth/login");
+  console.log("✅ Orders: /api/orders");
 
-    console.log("✅ Admin Verify: /api/admin-auth/verify");
+  console.log("✅ Admin Login: /api/admin-auth/login");
 
-    console.log("================================");
+  console.log("✅ Admin Verify: /api/admin-auth/verify");
 
-    console.log("");
-  },
-);
+  console.log("================================");
+
+  console.log("");
+});
 
 /* =========================================================
    CONNECT DATABASE
@@ -329,6 +385,7 @@ async function initializeDatabase() {
   } catch (error) {
     /*
       Do not stop Express.
+
       Hostinger can continue running
       while MongoDB reconnects.
     */
@@ -349,29 +406,17 @@ initializeDatabase();
    MONGOOSE EVENTS
 ========================================================= */
 
-mongoose.connection.on(
-  "connected",
+mongoose.connection.on("connected", () => {
+  console.log("✅ Mongoose connection active");
+});
 
-  () => {
-    console.log("✅ Mongoose connection active");
-  },
-);
+mongoose.connection.on("error", (error) => {
+  console.error("❌ Mongoose connection error:", error.message);
+});
 
-mongoose.connection.on(
-  "error",
-
-  (error) => {
-    console.error("❌ Mongoose connection error:", error.message);
-  },
-);
-
-mongoose.connection.on(
-  "disconnected",
-
-  () => {
-    console.log("⚠️ MongoDB disconnected");
-  },
-);
+mongoose.connection.on("disconnected", () => {
+  console.log("⚠️ MongoDB disconnected");
+});
 
 /* =========================================================
    SHUTDOWN
@@ -393,14 +438,6 @@ async function shutdown(signal) {
   });
 }
 
-process.on(
-  "SIGTERM",
+process.on("SIGTERM", () => shutdown("SIGTERM"));
 
-  () => shutdown("SIGTERM"),
-);
-
-process.on(
-  "SIGINT",
-
-  () => shutdown("SIGINT"),
-);
+process.on("SIGINT", () => shutdown("SIGINT"));
