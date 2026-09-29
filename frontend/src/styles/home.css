@@ -1,20 +1,51 @@
 @import url("https://fonts.googleapis.com/css2?family=Eater&display=swap");
 
 /* =========================================================
-   RESET
+   GLOBAL RESET
+   FIXES WHITE SPACE AROUND WEBSITE
 ========================================================= */
 
-.ax-home,
-.ax-home *,
-.ax-home *::before,
-.ax-home *::after {
+html,
+body,
+#root {
+     width: 100%;
+     min-width: 100%;
+     min-height: 100%;
+     margin: 0 !important;
+     padding: 0 !important;
+     background: #020202 !important;
+}
+
+html,
+body {
+     overflow-x: hidden;
+}
+
+body {
+     position: relative;
+}
+
+#root {
+     min-height: 100vh;
+     overflow-x: hidden;
+}
+
+*,
+*::before,
+*::after {
      box-sizing: border-box;
 }
+
+/* =========================================================
+   HOME
+========================================================= */
 
 .ax-home {
      position: relative;
      width: 100%;
      min-height: 100vh;
+     margin: 0;
+     padding: 0;
      overflow-x: hidden;
      background: #020202;
      color: #f4f1e9;
@@ -25,8 +56,8 @@
      max-width: 100%;
 }
 
-.ax-home a,
-.ax-home button {
+.ax-home button,
+.ax-home a {
      -webkit-tap-highlight-color: transparent;
 }
 
@@ -39,6 +70,8 @@
      width: 100%;
      height: 100svh;
      min-height: 700px;
+     margin: 0;
+     padding: 0;
      overflow: hidden;
      isolation: isolate;
      background: #020202;
@@ -51,7 +84,6 @@
 .hero-space {
      position: absolute;
      inset: 0;
-
      z-index: 1;
 
      width: 100%;
@@ -61,6 +93,8 @@
      object-position: center;
 
      opacity: 0;
+
+     transform-origin: center;
 
      pointer-events: none;
 
@@ -89,10 +123,16 @@
      opacity: 0;
 
      pointer-events: none;
+
+     will-change:
+          transform,
+          opacity;
 }
 
 .hero-unbound {
      position: relative;
+
+     top: -1vh;
 
      width: max-content;
 
@@ -115,8 +155,7 @@
 
      line-height: 0.77;
 
-     letter-spacing:
-          -0.075em;
+     letter-spacing: -0.075em;
 
      white-space: nowrap;
 
@@ -127,6 +166,10 @@
                255,
                19,
                0.05);
+
+     pointer-events: none;
+
+     will-change: filter;
 }
 
 /* =========================================================
@@ -142,6 +185,7 @@
      z-index: 4;
 
      width: 110%;
+     height: auto;
 
      max-width: none;
 
@@ -153,8 +197,10 @@
 
      object-fit: contain;
 
-     mix-blend-mode:
-          screen;
+     object-position:
+          center bottom;
+
+     mix-blend-mode: screen;
 
      filter:
           brightness(0.78) contrast(1.08);
@@ -162,6 +208,10 @@
      opacity: 0;
 
      pointer-events: none;
+
+     will-change:
+          transform,
+          opacity;
 }
 
 /* =========================================================
@@ -178,10 +228,13 @@
      transform:
           translateX(-50%);
 
-     mix-blend-mode:
-          screen;
+     mix-blend-mode: screen;
 
      pointer-events: none;
+
+     will-change:
+          transform,
+          opacity;
 }
 
 .hero-fog-back {
@@ -232,13 +285,11 @@
           translate(-50%,
                -50%);
 
-     transform-origin:
-          center;
+     transform-origin: center;
 
      object-fit: contain;
 
-     mix-blend-mode:
-          screen;
+     mix-blend-mode: screen;
 
      opacity: 0;
 
@@ -249,6 +300,10 @@
                     255,
                     19,
                     0.25));
+
+     will-change:
+          transform,
+          opacity;
 }
 
 /* =========================================================
@@ -293,37 +348,23 @@
           radial-gradient(ellipse 49% 62% at 50% 53%,
                #000 0%,
                #000 61%,
-               rgba(0,
-                    0,
-                    0,
-                    0.98) 71%,
-               rgba(0,
-                    0,
-                    0,
-                    0.72) 82%,
-               rgba(0,
-                    0,
-                    0,
-                    0.28) 92%,
+               rgba(0, 0, 0, 0.98) 71%,
+               rgba(0, 0, 0, 0.72) 82%,
+               rgba(0, 0, 0, 0.28) 92%,
                transparent 100%);
 
      mask-image:
           radial-gradient(ellipse 49% 62% at 50% 53%,
                #000 0%,
                #000 61%,
-               rgba(0,
-                    0,
-                    0,
-                    0.98) 71%,
-               rgba(0,
-                    0,
-                    0,
-                    0.72) 82%,
-               rgba(0,
-                    0,
-                    0,
-                    0.28) 92%,
+               rgba(0, 0, 0, 0.98) 71%,
+               rgba(0, 0, 0, 0.72) 82%,
+               rgba(0, 0, 0, 0.28) 92%,
                transparent 100%);
+
+     will-change:
+          transform,
+          opacity;
 }
 
 /* =========================================================
@@ -344,27 +385,27 @@
                rgba(0,
                     0,
                     0,
-                    0.38),
-               transparent 27%,
-               transparent 65%,
+                    0.4),
+               transparent 28%,
+               transparent 64%,
                rgba(0,
                     0,
                     0,
-                    0.65)),
+                    0.58)),
           radial-gradient(ellipse at center,
-               transparent 35%,
+               transparent 38%,
                rgba(0,
                     0,
                     0,
-                    0.12) 65%,
+                    0.12) 68%,
                rgba(0,
                     0,
                     0,
-                    0.6) 100%);
+                    0.58) 100%);
 }
 
 /* =========================================================
-   HERO LEFT COPY
+   HERO LEFT
 ========================================================= */
 
 .hero-left-ui {
@@ -391,8 +432,7 @@
 
      font-size: 11px;
 
-     letter-spacing:
-          0.28em;
+     letter-spacing: 0.28em;
 }
 
 .hero-left-ui p {
@@ -417,8 +457,42 @@
 
      line-height: 1.05;
 
-     letter-spacing:
-          0.08em;
+     letter-spacing: 0.08em;
+}
+
+/* =========================================================
+   HERO NUMBERS
+========================================================= */
+
+.hero-numbers {
+     position: absolute;
+
+     top: 22%;
+     right: 4.5vw;
+
+     z-index: 20;
+
+     display: flex;
+
+     flex-direction: column;
+
+     align-items: flex-end;
+
+     gap: 7px;
+
+     opacity: 0;
+}
+
+.hero-numbers span {
+     color:
+          rgba(255,
+               255,
+               255,
+               0.28);
+
+     font-size: 9px;
+
+     letter-spacing: 0.14em;
 }
 
 /* =========================================================
@@ -464,9 +538,6 @@
                0,
                0.24);
 
-     backdrop-filter:
-          blur(10px);
-
      color: #ffffff;
 
      text-decoration: none;
@@ -475,8 +546,10 @@
 
      font-weight: 700;
 
-     letter-spacing:
-          0.14em;
+     letter-spacing: 0.14em;
+
+     backdrop-filter:
+          blur(10px);
 
      opacity: 0;
 
@@ -522,8 +595,7 @@
 
      line-height: 1.5;
 
-     letter-spacing:
-          0.13em;
+     letter-spacing: 0.13em;
 
      text-align: right;
 }
@@ -549,15 +621,15 @@
 }
 
 /* =========================================================
-   HOVER
+   HERO HOVER
 ========================================================= */
 
 @media (hover: hover) {
      .hero-explore:hover {
-          border-color:
+          background:
                #c7ff13;
 
-          background:
+          border-color:
                #c7ff13;
 
           color:
@@ -572,7 +644,7 @@
 }
 
 /* =========================================================
-   WEAR THE UNKNOWN
+   COLLECTION INTRO
 ========================================================= */
 
 .ax-collection-intro {
@@ -643,8 +715,7 @@
      filter:
           blur(90px);
 
-     pointer-events:
-          none;
+     pointer-events: none;
 }
 
 .ax-collection-intro>div,
@@ -666,8 +737,7 @@
 
      font-weight: 700;
 
-     letter-spacing:
-          0.3em;
+     letter-spacing: 0.3em;
 }
 
 .ax-collection-intro h2 {
@@ -710,14 +780,13 @@
 
      line-height: 1.9;
 
-     letter-spacing:
-          0.25em;
+     letter-spacing: 0.25em;
 
      text-align: right;
 }
 
 /* =========================================================
-   LOAD / ERROR
+   PRODUCT STATUS
 ========================================================= */
 
 .ax-home-products-status {
@@ -817,8 +886,7 @@
      letter-spacing:
           0.13em;
 
-     cursor:
-          pointer;
+     cursor: pointer;
 }
 
 /* =========================================================
@@ -861,7 +929,7 @@
 }
 
 /* =========================================================
-   SECTION HEADER
+   PRODUCT HEADER
 ========================================================= */
 
 .ax-product-section-top {
@@ -875,8 +943,7 @@
      grid-template-columns:
           0.7fr 2fr;
 
-     align-items:
-          end;
+     align-items: end;
 
      gap: 24px;
 }
@@ -1017,6 +1084,10 @@
           transform 0.35s ease;
 }
 
+/* =========================================================
+   PRODUCT IMAGE
+========================================================= */
+
 .ax-product-image-wrap {
      position: relative;
 
@@ -1027,8 +1098,7 @@
      aspect-ratio:
           0.82;
 
-     overflow:
-          hidden;
+     overflow: hidden;
 
      background:
           radial-gradient(circle at 50% 55%,
@@ -1041,10 +1111,9 @@
                #111111 0%,
                #050505 100%);
 
-     color: #fff;
+     color: #ffffff;
 
-     text-decoration:
-          none;
+     text-decoration: none;
 }
 
 .ax-product-image {
@@ -1121,8 +1190,7 @@
 
      opacity: 0.35;
 
-     pointer-events:
-          none;
+     pointer-events: none;
 
      background:
           radial-gradient(ellipse at 35% 80%,
@@ -1140,6 +1208,13 @@
 
      filter:
           blur(18px);
+
+     transform:
+          translateY(8px);
+
+     transition:
+          opacity 0.5s ease,
+          transform 0.6s ease;
 }
 
 .ax-product-index {
@@ -1175,8 +1250,7 @@
 
      display: grid;
 
-     place-items:
-          center;
+     place-items: center;
 
      border:
           1px solid rgba(255,
@@ -1198,8 +1272,7 @@
 
      font-size: 18px;
 
-     cursor:
-          pointer;
+     cursor: pointer;
 
      backdrop-filter:
           blur(8px);
@@ -1216,8 +1289,7 @@
      display:
           inline-flex;
 
-     align-items:
-          center;
+     align-items: center;
 
      gap: 7px;
 
@@ -1264,16 +1336,15 @@
 }
 
 .ax-product-heading>div {
-     flex: 1;
-
      min-width: 0;
+
+     flex: 1;
 }
 
 .ax-product-heading h3 {
      margin: 0;
 
-     overflow:
-          hidden;
+     overflow: hidden;
 
      color:
           #f4f1e9;
@@ -1287,11 +1358,10 @@
      letter-spacing:
           0.06em;
 
-     white-space:
-          nowrap;
-
      text-overflow:
           ellipsis;
+
+     white-space: nowrap;
 }
 
 .ax-product-heading p {
@@ -1318,8 +1388,7 @@
 
      display: grid;
 
-     place-items:
-          center;
+     place-items: center;
 
      border:
           1px solid rgba(255,
@@ -1333,10 +1402,12 @@
      color:
           #c7ff13;
 
-     text-decoration:
-          none;
+     text-decoration: none;
 
      font-size: 14px;
+
+     transition:
+          0.25s ease;
 }
 
 /* =========================================================
@@ -1344,6 +1415,8 @@
 ========================================================= */
 
 .unbound-card-rating {
+     max-width: 100%;
+
      margin-top: 7px;
 
      min-height: 18px;
@@ -1360,13 +1433,11 @@
 .unbound-stars {
      position: relative;
 
-     width: 67px;
-     height: 15px;
-
      display:
           inline-block;
 
-     overflow: hidden;
+     width: 67px;
+     height: 15px;
 
      line-height: 15px;
 
@@ -1375,8 +1446,7 @@
      letter-spacing:
           1.5px;
 
-     white-space:
-          nowrap;
+     white-space: nowrap;
 }
 
 .unbound-stars-empty {
@@ -1402,8 +1472,7 @@
      color:
           #c7ff13;
 
-     white-space:
-          nowrap;
+     white-space: nowrap;
 }
 
 .unbound-card-rating strong {
@@ -1495,8 +1564,10 @@
 
      font-weight: 700;
 
-     cursor:
-          pointer;
+     cursor: pointer;
+
+     transition:
+          0.2s ease;
 }
 
 .ax-size.active {
@@ -1551,8 +1622,7 @@
 
      font-size: 14px;
 
-     cursor:
-          pointer;
+     cursor: pointer;
 }
 
 .ax-quantity-btn:disabled {
@@ -1584,7 +1654,7 @@
 }
 
 /* =========================================================
-   PRODUCT BUTTONS
+   ACTION BUTTONS
 ========================================================= */
 
 .ax-product-actions {
@@ -1610,8 +1680,7 @@
 
      display: flex;
 
-     align-items:
-          center;
+     align-items: center;
 
      justify-content:
           space-between;
@@ -1628,8 +1697,7 @@
      letter-spacing:
           0.08em;
 
-     cursor:
-          pointer;
+     cursor: pointer;
 
      transition:
           0.25s ease;
@@ -1689,8 +1757,7 @@
      display:
           inline-flex;
 
-     align-items:
-          center;
+     align-items: center;
 
      justify-content:
           space-between;
@@ -1706,17 +1773,17 @@
      border-radius:
           999px;
 
-     background:
-          rgba(255,
-               255,
-               255,
-               0.015);
-
      color:
           #ffffff;
 
      text-decoration:
           none;
+
+     background:
+          rgba(255,
+               255,
+               255,
+               0.015);
 
      font-size: 7px;
 
@@ -1737,7 +1804,7 @@
 }
 
 /* =========================================================
-   DESKTOP HOVERS
+   DESKTOP HOVER
 ========================================================= */
 
 @media (hover: hover) {
@@ -1772,6 +1839,13 @@
                scale(1);
      }
 
+     .ax-product-card:hover .ax-product-smoke {
+          opacity: 0.62;
+
+          transform:
+               translateY(0);
+     }
+
      .ax-card-arrow:hover,
      .ax-shop-more-btn:hover,
      .ax-home-retry-btn:hover {
@@ -1792,7 +1866,7 @@
 }
 
 /* =========================================================
-   1100
+   LAPTOP
 ========================================================= */
 
 @media (max-width: 1100px) {
@@ -1848,6 +1922,13 @@
                0.75fr 2fr;
      }
 
+     .ax-product-section-title h2 {
+          font-size:
+               clamp(40px,
+                    7vw,
+                    70px);
+     }
+
      .ax-products-grid {
           grid-template-columns:
                repeat(2,
@@ -1863,24 +1944,49 @@
 ========================================================= */
 
 @media (max-width: 768px) {
+
+     html,
+     body,
+     #root {
+          width: 100% !important;
+
+          margin:
+               0 !important;
+
+          padding:
+               0 !important;
+
+          background:
+               #020202 !important;
+     }
+
      .ax-home {
+          width: 100%;
+
+          margin: 0;
+
+          padding: 0;
+
           overflow-x:
                hidden;
      }
 
-     /*
-    IMPORTANT:
-    mobile hero has normal scrolling.
-
-    No GSAP scrub/parallax.
-  */
+     /* =======================================================
+     MOBILE HERO
+  ======================================================= */
 
      .ax-hero {
+          width: 100%;
+
           height:
                100svh;
 
           min-height:
                650px;
+
+          margin: 0;
+
+          padding: 0;
      }
 
      .hero-space {
@@ -1906,15 +2012,18 @@
 
           bottom: 3%;
 
-          width: 220%;
+          width:
+               220%;
      }
 
      .hero-model {
           bottom: -4%;
 
-          width: 88vw;
+          width:
+               88vw;
 
-          height: 78%;
+          height:
+               78%;
 
           object-position:
                center bottom;
@@ -1930,14 +2039,20 @@
      .hero-fog-back {
           bottom: -2%;
 
-          width: 210%;
+          width:
+               210%;
      }
 
      .hero-fog-front {
           bottom: -9%;
 
-          width: 220%;
+          width:
+               220%;
      }
+
+     /* =======================================================
+     MOBILE HERO TEXT
+  ======================================================= */
 
      .hero-left-ui {
           top: 21%;
@@ -1947,9 +2062,12 @@
 
      .hero-left-ui>span {
           margin-bottom:
-               34px;
+               35px;
 
           font-size: 7px;
+
+          letter-spacing:
+               0.28em;
      }
 
      .hero-left-ui p {
@@ -1960,19 +2078,20 @@
                23px;
 
           line-height:
-               1.02;
+               0.98;
 
           letter-spacing:
                0.035em;
      }
 
+     .hero-numbers,
      .hero-engineered {
           display: none;
      }
 
-     /*
-    BIG MOBILE EXPLORE BUTTON
-  */
+     /* =======================================================
+     MOBILE EXPLORE BUTTON
+  ======================================================= */
 
      .hero-explore {
           left: 20px;
@@ -1985,33 +2104,35 @@
 
           min-width: 0;
 
-          height: 54px;
+          height:
+               52px;
 
           padding:
                0 22px;
-
-          border-color:
-               rgba(243,
-                    240,
-                    230,
-                    0.98);
 
           background:
                rgba(243,
                     240,
                     230,
-                    0.98);
+                    0.96);
 
-          backdrop-filter:
-               none;
+          border-color:
+               rgba(243,
+                    240,
+                    230,
+                    0.96);
 
           color:
                #050505;
 
-          font-size: 8px;
+          font-size:
+               8px;
 
           letter-spacing:
                0.15em;
+
+          backdrop-filter:
+               none;
      }
 
      .hero-explore span {
@@ -2024,20 +2145,27 @@
   ======================================================= */
 
      .ax-collection-intro {
+          width: 100%;
+
           min-height:
                310px;
 
+          margin: 0;
+
           padding:
-               58px 20px 52px;
+               62px 20px 55px;
 
           display: block;
      }
 
      .ax-collection-intro span {
           margin-bottom:
-               25px;
+               27px;
 
           font-size: 6px;
+
+          letter-spacing:
+               0.3em;
      }
 
      .ax-collection-intro h2 {
@@ -2061,25 +2189,15 @@
      }
 
      /* =======================================================
-     ERROR
+     PRODUCT STATUS
   ======================================================= */
 
      .ax-home-products-status {
           min-height:
-               170px;
+               180px;
 
           padding:
-               38px 22px;
-
-          font-size: 8px;
-     }
-
-     .ax-home-retry-btn {
-          min-width:
-               175px;
-
-          height:
-               40px;
+               42px 22px;
      }
 
      /* =======================================================
@@ -2087,8 +2205,12 @@
   ======================================================= */
 
      .ax-product-section {
+          width: 100%;
+
+          margin: 0;
+
           padding:
-               40px 12px 30px;
+               42px 12px 32px;
      }
 
      .ax-product-section-top {
@@ -2107,13 +2229,11 @@
           margin-bottom:
                6px;
 
-          font-size:
-               6px;
+          font-size: 6px;
      }
 
      .ax-product-section-meta p {
-          font-size:
-               6px;
+          font-size: 6px;
      }
 
      .ax-product-section-title h2 {
@@ -2140,12 +2260,13 @@
                1.55;
      }
 
-     /*
-    TWO PRODUCT CARDS
-    PER ROW ON MOBILE
-  */
+     /* =======================================================
+     TWO CARDS PER ROW
+  ======================================================= */
 
      .ax-products-grid {
+          width: 100%;
+
           grid-template-columns:
                repeat(2,
                     minmax(0,
@@ -2154,13 +2275,9 @@
           gap: 7px;
      }
 
-     /*
-    VERY IMPORTANT:
-
-    cards must always be visible
-    on mobile even if ScrollTrigger
-    does not initialise.
-  */
+     /* =======================================================
+     ALWAYS SHOW CARDS ON MOBILE
+  ======================================================= */
 
      .ax-product-card {
           opacity:
@@ -2188,20 +2305,21 @@
                none !important;
      }
 
+     /* =======================================================
+     MOBILE IMAGE
+  ======================================================= */
+
      .ax-product-image-wrap {
           aspect-ratio:
                0.84;
      }
 
-     /*
-    PHONE HAS NO HOVER
-
-    Show only main image.
-  */
-
      .ax-home-main-image {
           opacity:
                1 !important;
+
+          display:
+               block !important;
      }
 
      .ax-home-hover-image {
@@ -2240,7 +2358,7 @@
      }
 
      /* =======================================================
-     MOBILE PRODUCT INFO
+     PRODUCT INFO
   ======================================================= */
 
      .ax-product-info {
@@ -2281,37 +2399,40 @@
      }
 
      /* =======================================================
-     MOBILE RATING
+     RATING
   ======================================================= */
 
      .unbound-card-rating {
-          gap: 3px;
+          gap:
+               3px !important;
 
           margin-top:
-               5px;
+               5px !important;
 
           min-height:
-               14px;
+               14px !important;
      }
 
      .unbound-stars {
-          width: 48px;
+          width:
+               48px !important;
 
-          height: 12px;
+          height:
+               12px !important;
 
           line-height:
-               12px;
+               12px !important;
 
           font-size:
-               8px;
+               8px !important;
 
           letter-spacing:
-               0.8px;
+               0.8px !important;
      }
 
      .unbound-card-rating strong {
           font-size:
-               6px;
+               6px !important;
      }
 
      .unbound-review-count {
@@ -2319,7 +2440,7 @@
      }
 
      /* =======================================================
-     MOBILE SIZE
+     SIZE
   ======================================================= */
 
      .ax-size-area,
@@ -2356,15 +2477,15 @@
      }
 
      /* =======================================================
-     MOBILE QUANTITY
+     QUANTITY
   ======================================================= */
 
      .ax-quantity-counter {
-          height:
-               27px;
-
           grid-template-columns:
                26px 29px 26px;
+
+          height:
+               27px;
      }
 
      .ax-quantity-btn {
@@ -2378,7 +2499,7 @@
      }
 
      /* =======================================================
-     MOBILE BUTTONS
+     ACTIONS
   ======================================================= */
 
      .ax-product-actions {
@@ -2395,7 +2516,8 @@
      .ax-buy-now {
           width: 100%;
 
-          height: 29px;
+          height:
+               29px;
 
           padding:
                0 8px;
@@ -2421,7 +2543,8 @@
 
           min-width: 0;
 
-          height: 42px;
+          height:
+               42px;
      }
 }
 
@@ -2531,6 +2654,9 @@
      .ax-home *,
      .ax-home *::before,
      .ax-home *::after {
+          scroll-behavior:
+               auto !important;
+
           animation-duration:
                0.001ms !important;
 
@@ -2539,8 +2665,5 @@
 
           transition-duration:
                0.001ms !important;
-
-          scroll-behavior:
-               auto !important;
      }
 }
