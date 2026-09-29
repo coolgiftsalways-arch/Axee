@@ -1,4 +1,6 @@
 import dns from "node:dns";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import express from "express";
 import cors from "cors";
@@ -17,6 +19,7 @@ import catalogRoutes from "./routes/catalogRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import adminAuthRoutes from "./routes/adminAuthRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
 
 /* =========================================================
    MODELS
@@ -29,6 +32,22 @@ import Cart from "./models/Cart.js";
 ========================================================= */
 
 dotenv.config();
+
+/* =========================================================
+   __dirname FOR ES MODULE
+========================================================= */
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+/* =========================================================
+   FRONTEND DIST PATH
+
+   backend/server.js
+   frontend/dist
+========================================================= */
+
+const frontendDistPath = path.join(__dirname, "../frontend/dist");
 
 /* =========================================================
    DNS
@@ -55,17 +74,16 @@ const allowedOrigins = [
   "https://www.unboundclothing.in",
 ];
 
-/*
-  Allow local development from:
-  - localhost
-  - 127.0.0.1
-  - 192.168.x.x
-  - 10.x.x.x
-  - 172.16.x.x to 172.31.x.x
+/* =========================================================
+   LOCAL NETWORK CHECK
 
-  This allows your phone to open the Vite frontend
-  and connect to the backend running on your PC.
-*/
+   Allows:
+   localhost
+   127.0.0.1
+   192.168.x.x
+   10.x.x.x
+   172.16.x.x - 172.31.x.x
+========================================================= */
 
 function isPrivateLocalOrigin(origin) {
   try {
@@ -77,33 +95,25 @@ function isPrivateLocalOrigin(origin) {
 
     const host = url.hostname;
 
-    /* =========================
-       LOCALHOST
-    ========================= */
+    /* LOCALHOST */
 
     if (host === "localhost" || host === "127.0.0.1") {
       return true;
     }
 
-    /* =========================
-       192.168.x.x
-    ========================= */
+    /* 192.168.x.x */
 
     if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(host)) {
       return true;
     }
 
-    /* =========================
-       10.x.x.x
-    ========================= */
+    /* 10.x.x.x */
 
     if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) {
       return true;
     }
 
-    /* =========================
-       172.16.x.x - 172.31.x.x
-    ========================= */
+    /* 172.16.x.x - 172.31.x.x */
 
     const match172 = host.match(/^172\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/);
 
@@ -119,29 +129,26 @@ function isPrivateLocalOrigin(origin) {
   }
 }
 
+/* =========================================================
+   CORS MIDDLEWARE
+========================================================= */
+
 app.use(
   cors({
     origin(origin, callback) {
-      /* ===============================================
-         POSTMAN / CURL / SERVER REQUEST
-      =============================================== */
+      /* Server/Postman/cURL */
 
       if (!origin) {
         return callback(null, true);
       }
 
-      /* ===============================================
-         PRODUCTION WEBSITE
-      =============================================== */
+      /* Production */
 
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
-      /* ===============================================
-         LOCAL DEVELOPMENT
-         PC + MOBILE ON SAME WIFI
-      =============================================== */
+      /* Local development */
 
       if (
         process.env.NODE_ENV !== "production" &&
@@ -181,12 +188,18 @@ app.use(
 );
 
 /* =========================================================
-   HEALTH
+   API HEALTH
+
+   IMPORTANT:
+   Backend health is now /api/health
+
+   "/" is reserved for React frontend.
 ========================================================= */
 
-app.get("/", (req, res) => {
+app.get("/api/health", (req, res) => {
   res.status(200).json({
     success: true,
+
     message: "UNBOUND API is running",
 
     environment: process.env.NODE_ENV || "development",
@@ -197,22 +210,7 @@ app.get("/", (req, res) => {
 });
 
 /* =========================================================
-   DATABASE HEALTH
-========================================================= */
-
-app.get("/api/health", (req, res) => {
-  res.status(200).json({
-    success: true,
-
-    server: "running",
-
-    mongodb:
-      mongoose.connection.readyState === 1 ? "connected" : "not connected",
-  });
-});
-
-/* =========================================================
-   ROUTES
+   API ROUTES
 ========================================================= */
 
 app.use("/api/products", productRoutes);
@@ -226,27 +224,79 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/orders", orderRoutes);
 
 /* =========================================================
-   ADMIN LOGIN ROUTE
+   ADMIN AUTH
 ========================================================= */
 
 app.use("/api/admin-auth", adminAuthRoutes);
 
 /* =========================================================
-   404
-
-   KEEP AFTER ALL ROUTES
+   RAZORPAY PAYMENT
 ========================================================= */
 
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
+app.use("/api/payments", paymentRoutes);
 
+/* =========================================================
+   API 404
+
+   IMPORTANT:
+   Only /api requests should return JSON 404.
+
+   Do NOT use:
+   app.use((req,res) => 404...)
+
+   because that blocks React.
+========================================================= */
+
+app.use("/api", (req, res) => {
+  return res.status(404).json({
+    success: false,
     message: "API route not found",
   });
 });
 
 /* =========================================================
+   SERVE REACT/VITE BUILD
+
+   frontend/dist
+========================================================= */
+
+app.use(express.static(frontendDistPath));
+
+/* =========================================================
+   REACT SPA FALLBACK
+
+   Examples:
+   /
+   /shop
+   /cart
+   /checkout
+   /product/123
+   /admin
+
+   All should return React index.html.
+
+   Using middleware instead of app.get("*")
+   because Express 5 wildcard syntax can cause problems.
+========================================================= */
+
+app.use((req, res, next) => {
+  /* Only React GET requests */
+
+  if (req.method !== "GET") {
+    return next();
+  }
+
+  return res.sendFile(path.join(frontendDistPath, "index.html"), (error) => {
+    if (error) {
+      next(error);
+    }
+  });
+});
+
+/* =========================================================
    ERROR HANDLER
+
+   MUST BE AFTER ROUTES + FRONTEND
 ========================================================= */
 
 app.use((error, req, res, next) => {
@@ -254,7 +304,11 @@ app.use((error, req, res, next) => {
 
   console.error(error);
 
-  res.status(error.status || 500).json({
+  if (res.headersSent) {
+    return next(error);
+  }
+
+  return res.status(error.status || 500).json({
     success: false,
 
     message: error.message || "Internal server error",
@@ -267,10 +321,6 @@ app.use((error, req, res, next) => {
 
 async function fixCartIndexes() {
   try {
-    /* ===============================================
-       DATABASE CHECK
-    =============================================== */
-
     if (mongoose.connection.readyState !== 1) {
       console.log("⚠️ Cart index fix skipped - MongoDB not connected");
 
@@ -289,7 +339,7 @@ async function fixCartIndexes() {
     );
 
     /* ===============================================
-       REMOVE OLD INDEX
+       REMOVE OLD userId INDEX
     =============================================== */
 
     const oldUserIndex = indexes.find((index) => index.name === "userId_1");
@@ -323,6 +373,10 @@ async function fixCartIndexes() {
 
 /* =========================================================
    PORT
+
+   Hostinger can provide process.env.PORT.
+
+   Local fallback = 5000.
 ========================================================= */
 
 const PORT = process.env.PORT || 5000;
@@ -330,25 +384,27 @@ const PORT = process.env.PORT || 5000;
 /* =========================================================
    START EXPRESS
 
-   IMPORTANT:
-   0.0.0.0 allows your phone on the same WiFi
-   to access the backend through your PC IP.
+   One server serves BOTH:
+   - React frontend
+   - Node/Express API
 ========================================================= */
 
 const server = app.listen(PORT, "0.0.0.0", () => {
   console.log("");
 
-  console.log("================================");
+  console.log("==============================================");
 
   console.log(`✅ UNBOUND Server running on port ${PORT}`);
 
   console.log(`✅ Environment: ${process.env.NODE_ENV || "development"}`);
 
-  console.log(`✅ Local API: http://localhost:${PORT}`);
+  console.log("");
 
-  console.log(`✅ Network API enabled on port ${PORT}`);
+  console.log(`🌐 Frontend: http://localhost:${PORT}`);
 
-  console.log("✅ Health: /");
+  console.log(`❤️ API Health: http://localhost:${PORT}/api/health`);
+
+  console.log("");
 
   console.log("✅ Products: /api/products");
 
@@ -360,11 +416,17 @@ const server = app.listen(PORT, "0.0.0.0", () => {
 
   console.log("✅ Orders: /api/orders");
 
+  console.log("✅ Payments: /api/payments");
+
   console.log("✅ Admin Login: /api/admin-auth/login");
 
   console.log("✅ Admin Verify: /api/admin-auth/verify");
 
-  console.log("================================");
+  console.log("");
+
+  console.log(`📁 React build: ${frontendDistPath}`);
+
+  console.log("==============================================");
 
   console.log("");
 });
@@ -419,7 +481,7 @@ mongoose.connection.on("disconnected", () => {
 });
 
 /* =========================================================
-   SHUTDOWN
+   GRACEFUL SHUTDOWN
 ========================================================= */
 
 async function shutdown(signal) {
