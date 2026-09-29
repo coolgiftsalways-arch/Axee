@@ -2,6 +2,9 @@ import express from "express";
 import mongoose from "mongoose";
 
 import Order from "../models/Order.js";
+
+import { validateCouponForOrder } from "../controllers/couponController.js";
+
 import { sendOrderEmails } from "../utils/orderEmail.js";
 
 const router = express.Router();
@@ -67,43 +70,32 @@ const getItemImage = (item) => {
 
 /* =========================================================
    CUSTOMER NORMALIZATION
-
-   Customers page identifies a customer using:
-
-   NAME + EMAIL + PHONE
-
-   So deletion uses the same rule.
 ========================================================= */
 
-const normalizeText = (value = "") => {
-  return String(value ?? "")
+const normalizeText = (value = "") =>
+  String(value ?? "")
     .trim()
     .replace(/\s+/g, " ")
     .toLowerCase();
-};
 
-const normalizeEmail = (value = "") => {
-  return String(value ?? "")
+const normalizeEmail = (value = "") =>
+  String(value ?? "")
     .trim()
     .toLowerCase();
-};
 
-const normalizePhone = (value = "") => {
-  return String(value ?? "")
+const normalizePhone = (value = "") =>
+  String(value ?? "")
     .replace(/\D/g, "")
     .trim();
-};
 
-const getCustomerFullName = (order) => {
-  return [order?.customer?.firstName, order?.customer?.lastName]
+const getCustomerFullName = (order) =>
+  [order?.customer?.firstName, order?.customer?.lastName]
     .filter(Boolean)
     .join(" ")
     .trim();
-};
 
-const normalizeCustomerName = (order) => {
-  return normalizeText(getCustomerFullName(order));
-};
+const normalizeCustomerName = (order) =>
+  normalizeText(getCustomerFullName(order));
 
 /* =========================================================
    ORDER NUMBER
@@ -131,318 +123,464 @@ const makeOrderNumber = () => {
    POST /api/orders
 ========================================================= */
 
-router.post("/", async (req, res) => {
-  try {
-    /* =====================================================
-       DATABASE CHECK
-    ===================================================== */
+router.post(
+  "/",
 
-    if (mongoose.connection.readyState !== 1) {
-      return res.status(503).json({
-        success: false,
-        message: "Database is not connected.",
-      });
-    }
+  async (req, res) => {
+    try {
+      if (mongoose.connection.readyState !== 1) {
+        return res.status(503).json({
+          success: false,
 
-    const {
-      cartId = "",
-      customer,
-      shippingAddress,
-      notes = "",
-      paymentMethod,
-      items = [],
-    } = req.body;
-
-    /* =====================================================
-       CUSTOMER VALIDATION
-    ===================================================== */
-
-    if (
-      !customer?.firstName?.trim() ||
-      !customer?.lastName?.trim() ||
-      !customer?.email?.trim() ||
-      !customer?.phone?.trim()
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Customer details are incomplete.",
-      });
-    }
-
-    /* =====================================================
-       ADDRESS VALIDATION
-    ===================================================== */
-
-    if (
-      !shippingAddress?.address?.trim() ||
-      !shippingAddress?.city?.trim() ||
-      !shippingAddress?.state?.trim() ||
-      !shippingAddress?.pincode?.trim()
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Delivery address is incomplete.",
-      });
-    }
-
-    /* =====================================================
-       CART VALIDATION
-    ===================================================== */
-
-    if (!Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Your bag is empty.",
-      });
-    }
-
-    /* =====================================================
-       PAYMENT VALIDATION
-    ===================================================== */
-
-    if (!["upi", "card", "cod"].includes(paymentMethod)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid payment method.",
-      });
-    }
-
-    /* =====================================================
-       NORMALIZE PRODUCTS
-    ===================================================== */
-
-    const normalizedItems = items.map((item) => {
-      const price = getItemPrice(item);
-
-      const quantity = getItemQuantity(item);
-
-      return {
-        productId: String(getItemProductId(item) || ""),
-
-        name: getItemName(item),
-
-        image: getItemImage(item),
-
-        size: String(item?.size || ""),
-
-        color: String(item?.color || ""),
-
-        quantity,
-
-        price,
-
-        lineTotal: price * quantity,
-      };
-    });
-
-    /* =====================================================
-       PRICE VALIDATION
-    ===================================================== */
-
-    const invalidPrice = normalizedItems.some(
-      (item) => !Number.isFinite(item.price) || item.price < 0,
-    );
-
-    if (invalidPrice) {
-      return res.status(400).json({
-        success: false,
-        message: "One or more products have an invalid price.",
-      });
-    }
-
-    /* =====================================================
-       PRODUCT ID VALIDATION
-    ===================================================== */
-
-    const invalidProduct = normalizedItems.some(
-      (item) => !String(item.productId || "").trim(),
-    );
-
-    if (invalidProduct) {
-      return res.status(400).json({
-        success: false,
-        message: "One or more products are missing product ID.",
-      });
-    }
-
-    /* =====================================================
-       CALCULATE TOTAL
-    ===================================================== */
-
-    const subtotal = normalizedItems.reduce(
-      (total, item) => total + Number(item.lineTotal || 0),
-      0,
-    );
-
-    const shipping = 0;
-
-    const total = subtotal + shipping;
-
-    /* =====================================================
-       PAYMENT RULE
-    ===================================================== */
-
-    const paymentRequired = paymentMethod !== "cod";
-
-    /* =====================================================
-       SAVE ORDER
-    ===================================================== */
-
-    const order = await Order.create({
-      orderNumber: makeOrderNumber(),
-
-      cartId: String(cartId || ""),
-
-      customer: {
-        firstName: customer.firstName.trim(),
-
-        lastName: customer.lastName.trim(),
-
-        email: customer.email.trim().toLowerCase(),
-
-        phone: customer.phone.trim(),
-      },
-
-      shippingAddress: {
-        address: shippingAddress.address.trim(),
-
-        apartment: shippingAddress.apartment?.trim() || "",
-
-        city: shippingAddress.city.trim(),
-
-        state: shippingAddress.state.trim(),
-
-        pincode: shippingAddress.pincode.trim(),
-
-        country: shippingAddress.country?.trim() || "India",
-      },
-
-      items: normalizedItems,
-
-      subtotal,
-
-      shipping,
-
-      total,
-
-      paymentMethod,
-
-      paymentStatus: "pending",
-
-      orderStatus: paymentRequired ? "pending_payment" : "placed",
-
-      notes: String(notes || "").trim(),
-    });
-
-    /* =====================================================
-       ORDER EMAIL
-    ===================================================== */
-
-    let emailStatus = {
-      attempted: false,
-      adminSent: false,
-      customerSent: false,
-    };
-
-    if (paymentMethod === "cod") {
-      emailStatus.attempted = true;
-
-      try {
-        const result = await sendOrderEmails(order);
-
-        emailStatus = {
-          attempted: true,
-          ...result,
-        };
-      } catch (emailError) {
-        console.error("❌ Order email error:", emailError);
+          message: "Database is not connected.",
+        });
       }
-    }
 
-    /* =====================================================
-       RESPONSE
-    ===================================================== */
+      const {
+        cartId = "",
 
-    return res.status(201).json({
-      success: true,
+        customer,
 
-      message: paymentRequired
-        ? "Order saved. Complete online payment to confirm the order."
-        : "COD order placed successfully.",
+        shippingAddress,
 
-      paymentRequired,
+        notes = "",
 
-      emailStatus,
+        paymentMethod,
 
-      order: {
-        _id: order._id,
+        couponCode = "",
 
-        orderNumber: order.orderNumber,
+        items = [],
+      } = req.body || {};
 
-        customer: order.customer,
+      /* =====================================================
+         CUSTOMER
+      ===================================================== */
 
-        shippingAddress: order.shippingAddress,
+      if (
+        !customer?.firstName?.trim() ||
+        !customer?.lastName?.trim() ||
+        !customer?.email?.trim() ||
+        !customer?.phone?.trim()
+      ) {
+        return res.status(400).json({
+          success: false,
 
-        items: order.items,
+          message: "Customer details are incomplete.",
+        });
+      }
 
-        subtotal: order.subtotal,
+      /* =====================================================
+         ADDRESS
+      ===================================================== */
 
-        shipping: order.shipping,
+      if (
+        !shippingAddress?.address?.trim() ||
+        !shippingAddress?.city?.trim() ||
+        !shippingAddress?.state?.trim() ||
+        !shippingAddress?.pincode?.trim()
+      ) {
+        return res.status(400).json({
+          success: false,
 
-        total: order.total,
+          message: "Delivery address is incomplete.",
+        });
+      }
 
-        paymentMethod: order.paymentMethod,
+      /* =====================================================
+         ITEMS
+      ===================================================== */
 
-        paymentStatus: order.paymentStatus,
+      if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({
+          success: false,
 
-        orderStatus: order.orderStatus,
+          message: "Your bag is empty.",
+        });
+      }
+
+      /* =====================================================
+         PAYMENT METHOD
+      ===================================================== */
+
+      if (!["upi", "card", "cod"].includes(paymentMethod)) {
+        return res.status(400).json({
+          success: false,
+
+          message: "Invalid payment method.",
+        });
+      }
+
+      /* =====================================================
+         NORMALIZE ITEMS
+      ===================================================== */
+
+      const normalizedItems = items.map((item) => {
+        const price = getItemPrice(item);
+
+        const quantity = getItemQuantity(item);
+
+        return {
+          productId: String(getItemProductId(item) || ""),
+
+          name: getItemName(item),
+
+          image: getItemImage(item),
+
+          size: String(item?.size || ""),
+
+          color: String(item?.color || ""),
+
+          quantity,
+
+          price,
+
+          lineTotal: price * quantity,
+        };
+      });
+
+      /* =====================================================
+         PRICE VALIDATION
+      ===================================================== */
+
+      const invalidPrice = normalizedItems.some(
+        (item) => !Number.isFinite(item.price) || item.price < 0,
+      );
+
+      if (invalidPrice) {
+        return res.status(400).json({
+          success: false,
+
+          message: "One or more products have an invalid price.",
+        });
+      }
+
+      /* =====================================================
+         PRODUCT VALIDATION
+      ===================================================== */
+
+      const invalidProduct = normalizedItems.some(
+        (item) => !String(item.productId || "").trim(),
+      );
+
+      if (invalidProduct) {
+        return res.status(400).json({
+          success: false,
+
+          message: "One or more products are missing product ID.",
+        });
+      }
+
+      /* =====================================================
+         SUBTOTAL
+      ===================================================== */
+
+      const subtotal = normalizedItems.reduce(
+        (total, item) => total + Number(item.lineTotal || 0),
+
+        0,
+      );
+
+      const shipping = 0;
+
+      /* =====================================================
+         COUPON
+
+         BACKEND VALIDATES COUPON AGAIN.
+      ===================================================== */
+
+      let appliedCoupon = null;
+
+      let discountAmount = 0;
+
+      if (String(couponCode || "").trim()) {
+        const couponResult = await validateCouponForOrder({
+          code: couponCode,
+
+          subtotal,
+
+          email: customer.email,
+
+          phone: customer.phone,
+        });
+
+        if (!couponResult.valid) {
+          return res.status(couponResult.status || 400).json({
+            success: false,
+
+            message: couponResult.message,
+          });
+        }
+
+        appliedCoupon = couponResult.coupon;
+
+        discountAmount = Number(couponResult.discountAmount || 0);
+      }
+
+      /* =====================================================
+         FINAL TOTAL
+
+         Example:
+         ₹7595 subtotal
+         - ₹759 coupon
+         = ₹6836
+
+         COD customer pays ₹6836 ON DELIVERY.
+      ===================================================== */
+
+      const total = Math.max(
+        0,
+
+        subtotal + shipping - discountAmount,
+      );
+
+      /* =====================================================
+         PAYMENT RULE
+
+         FULL CASH ON DELIVERY
+
+         No 10% advance.
+         No ₹2000 rule.
+         No Razorpay for COD.
+
+         Online payments still use Razorpay.
+      ===================================================== */
+
+      const codAdvanceRequired = false;
+
+      const advancePercentage = 0;
+
+      const advanceAmount = 0;
+
+      const balanceDueOnDelivery = paymentMethod === "cod" ? total : 0;
+
+      /*
+        IMPORTANT:
+
+        COD:
+        paymentRequired = false
+
+        UPI / Card:
+        paymentRequired = true
+      */
+
+      const paymentRequired = paymentMethod !== "cod";
+
+      /* =====================================================
+         SAVE ORDER
+      ===================================================== */
+
+      const order = await Order.create({
+        orderNumber: makeOrderNumber(),
+
+        cartId: String(cartId || ""),
+
+        customer: {
+          firstName: customer.firstName.trim(),
+
+          lastName: customer.lastName.trim(),
+
+          email: customer.email.trim().toLowerCase(),
+
+          phone: customer.phone.trim(),
+        },
+
+        shippingAddress: {
+          address: shippingAddress.address.trim(),
+
+          apartment: shippingAddress.apartment?.trim() || "",
+
+          city: shippingAddress.city.trim(),
+
+          state: shippingAddress.state.trim(),
+
+          pincode: shippingAddress.pincode.trim(),
+
+          country: shippingAddress.country?.trim() || "India",
+        },
+
+        items: normalizedItems,
+
+        subtotal,
+
+        shipping,
+
+        couponCode: appliedCoupon?.code || "",
+
+        discountType: appliedCoupon?.discountType || "",
+
+        discountValue: Number(appliedCoupon?.discountValue || 0),
+
+        discountAmount,
+
+        total,
+
+        paymentMethod,
+
+        paymentStatus: "pending",
+
+        /*
+            COD gets PLACED immediately.
+
+            UPI/Card remains
+            pending_payment until
+            Razorpay succeeds.
+          */
+
+        orderStatus: paymentRequired ? "pending_payment" : "placed",
+
+        /* OLD ADVANCE FIELDS KEPT FOR SCHEMA COMPATIBILITY */
+
+        codAdvanceRequired: false,
+
+        advancePercentage: 0,
+
+        advanceAmount: 0,
+
+        balanceDueOnDelivery,
+
+        notes: String(notes || "").trim(),
+      });
+
+      /* =====================================================
+         ORDER EMAIL
+
+         COD sends immediately.
+         Online payment email can send after verification.
+      ===================================================== */
+
+      let emailStatus = {
+        attempted: false,
+
+        adminSent: false,
+
+        customerSent: false,
+      };
+
+      if (paymentMethod === "cod") {
+        emailStatus.attempted = true;
+
+        try {
+          const result = await sendOrderEmails(order);
+
+          emailStatus = {
+            attempted: true,
+
+            ...result,
+          };
+        } catch (emailError) {
+          console.error("❌ Order email error:", emailError);
+        }
+      }
+
+      /* =====================================================
+         RESPONSE
+      ===================================================== */
+
+      return res.status(201).json({
+        success: true,
+
+        message: paymentRequired
+          ? "Order saved. Complete online payment to confirm the order."
+          : "Cash on Delivery order placed successfully.",
 
         paymentRequired,
 
-        createdAt: order.createdAt,
-      },
-    });
-  } catch (error) {
-    console.error("❌ Create order error:", error);
+        emailStatus,
 
-    return res.status(500).json({
-      success: false,
-      message: "Failed to create order.",
-      error: error.message,
-    });
-  }
-});
+        order: {
+          _id: order._id,
+
+          orderNumber: order.orderNumber,
+
+          customer: order.customer,
+
+          shippingAddress: order.shippingAddress,
+
+          items: order.items,
+
+          subtotal: order.subtotal,
+
+          shipping: order.shipping,
+
+          couponCode: order.couponCode,
+
+          discountType: order.discountType,
+
+          discountValue: order.discountValue,
+
+          discountAmount: order.discountAmount,
+
+          total: order.total,
+
+          paymentMethod: order.paymentMethod,
+
+          paymentStatus: order.paymentStatus,
+
+          orderStatus: order.orderStatus,
+
+          codAdvanceRequired: false,
+
+          advancePercentage: 0,
+
+          advanceAmount: 0,
+
+          balanceDueOnDelivery: order.balanceDueOnDelivery,
+
+          paymentRequired,
+
+          createdAt: order.createdAt,
+        },
+      });
+    } catch (error) {
+      console.error("❌ Create order error:", error);
+
+      return res.status(500).json({
+        success: false,
+
+        message: "Failed to create order.",
+
+        error: error.message,
+      });
+    }
+  },
+);
 
 /* =========================================================
-   GET ALL ORDERS
-
-   GET /api/orders
+   GET ORDERS
 ========================================================= */
 
-router.get("/", async (req, res) => {
-  try {
-    const orders = await Order.find().sort({
-      createdAt: -1,
-    });
+router.get(
+  "/",
 
-    return res.status(200).json({
-      success: true,
-      count: orders.length,
-      orders,
-    });
-  } catch (error) {
-    console.error("❌ Get orders error:", error);
+  async (_req, res) => {
+    try {
+      const orders = await Order.find().sort({
+        createdAt: -1,
+      });
 
-    return res.status(500).json({
-      success: false,
-      message: "Failed to load orders.",
-      error: error.message,
-    });
-  }
-});
+      return res.status(200).json({
+        success: true,
+
+        count: orders.length,
+
+        orders,
+      });
+    } catch (error) {
+      console.error("❌ Get orders error:", error);
+
+      return res.status(500).json({
+        success: false,
+
+        message: "Failed to load orders.",
+
+        error: error.message,
+      });
+    }
+  },
+);
 
 /* =========================================================
-   REAL BEST SELLERS
+   BEST SELLERS
 
    GET /api/orders/best-sellers
 ========================================================= */
@@ -455,6 +593,7 @@ router.get(
       if (mongoose.connection.readyState !== 1) {
         return res.status(503).json({
           success: false,
+
           message: "Database is not connected.",
         });
       }
@@ -462,7 +601,15 @@ router.get(
       const requestedLimit = Number(req.query.limit || 8);
 
       const limit = Number.isFinite(requestedLimit)
-        ? Math.min(50, Math.max(1, Math.floor(requestedLimit)))
+        ? Math.min(
+            50,
+
+            Math.max(
+              1,
+
+              Math.floor(requestedLimit),
+            ),
+          )
         : 8;
 
       const bestSellers = await Order.aggregate([
@@ -545,7 +692,9 @@ router.get(
         {
           $sort: {
             totalSold: -1,
+
             totalRevenue: -1,
+
             lastSoldAt: -1,
           },
         },
@@ -605,19 +754,9 @@ router.get(
 );
 
 /* =========================================================
-   DELETE CUSTOMER + ALL THEIR ORDERS
+   DELETE CUSTOMER
 
-   DELETE /api/orders/customer
-
-   BODY:
-   {
-     "name": "Ahmed Khan",
-     "email": "example@gmail.com",
-     "phone": "9191379609"
-   }
-
-   IMPORTANT:
-   Keep this BEFORE /:id.
+   Keep before /:id
 ========================================================= */
 
 router.delete(
@@ -625,10 +764,6 @@ router.delete(
 
   async (req, res) => {
     try {
-      /* ===================================================
-         DATABASE
-      =================================================== */
-
       if (mongoose.connection.readyState !== 1) {
         return res.status(503).json({
           success: false,
@@ -636,10 +771,6 @@ router.delete(
           message: "Database is not connected.",
         });
       }
-
-      /* ===================================================
-         CUSTOMER DATA
-      =================================================== */
 
       const name = normalizeText(req.body?.name);
 
@@ -655,24 +786,9 @@ router.delete(
         });
       }
 
-      /* ===================================================
-         LOAD CUSTOMER ORDERS
-
-         Email is already normalized/lowercase in MongoDB,
-         so use it to reduce the search first.
-      =================================================== */
-
       const possibleOrders = await Order.find({
         "customer.email": email,
       }).select("_id customer orderNumber total items createdAt");
-
-      /* ===================================================
-         EXACT MATCH
-
-         Same identity rule as Customers.jsx:
-
-         NAME + EMAIL + PHONE
-      =================================================== */
 
       const matchedOrders = possibleOrders.filter((order) => {
         const orderName = normalizeCustomerName(order);
@@ -686,10 +802,6 @@ router.delete(
         );
       });
 
-      /* ===================================================
-         NOTHING FOUND
-      =================================================== */
-
       if (matchedOrders.length === 0) {
         return res.status(404).json({
           success: false,
@@ -698,49 +810,35 @@ router.delete(
         });
       }
 
-      /* ===================================================
-         IDS
-      =================================================== */
-
       const orderIds = matchedOrders.map((order) => order._id);
-
-      /* ===================================================
-         TOTALS BEFORE DELETE
-      =================================================== */
 
       const deletedRevenue = matchedOrders.reduce(
         (total, order) => total + Number(order.total || 0),
+
         0,
       );
 
-      const deletedItems = matchedOrders.reduce((total, order) => {
-        const itemCount = Array.isArray(order.items)
-          ? order.items.reduce(
-              (itemTotal, item) => itemTotal + Number(item?.quantity || 1),
-              0,
-            )
-          : 0;
+      const deletedItems = matchedOrders.reduce(
+        (total, order) => {
+          const itemCount = Array.isArray(order.items)
+            ? order.items.reduce(
+                (itemTotal, item) => itemTotal + Number(item?.quantity || 1),
 
-        return total + itemCount;
-      }, 0);
+                0,
+              )
+            : 0;
 
-      /* ===================================================
-         DELETE ALL CUSTOMER ORDERS
-      =================================================== */
+          return total + itemCount;
+        },
+
+        0,
+      );
 
       const result = await Order.deleteMany({
         _id: {
           $in: orderIds,
         },
       });
-
-      console.log(`🗑 Customer deleted: ${name}`);
-
-      console.log(`🗑 Orders deleted: ${result.deletedCount}`);
-
-      /* ===================================================
-         RESPONSE
-      =================================================== */
 
       return res.status(200).json({
         success: true,
@@ -775,8 +873,6 @@ router.delete(
 
 /* =========================================================
    TRACK ORDER
-
-   GET /api/orders/track/:orderNumber
 ========================================================= */
 
 router.get(
@@ -798,6 +894,7 @@ router.get(
 
       return res.status(200).json({
         success: true,
+
         order,
       });
     } catch (error) {
@@ -816,11 +913,6 @@ router.get(
 
 /* =========================================================
    UPDATE ORDER STATUS
-
-   PATCH /api/orders/:id/status
-
-   IMPORTANT:
-   Keep this before GET /:id if possible.
 ========================================================= */
 
 router.patch(
@@ -840,10 +932,6 @@ router.patch(
 
       const { orderStatus } = req.body;
 
-      /* ===================================================
-         VALIDATE ID
-      =================================================== */
-
       if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
         return res.status(400).json({
           success: false,
@@ -852,10 +940,6 @@ router.patch(
         });
       }
 
-      /* ===================================================
-         VALIDATE STATUS
-      =================================================== */
-
       if (!allowedStatuses.includes(orderStatus)) {
         return res.status(400).json({
           success: false,
@@ -863,10 +947,6 @@ router.patch(
           message: "Invalid order status.",
         });
       }
-
-      /* ===================================================
-         UPDATE
-      =================================================== */
 
       const order = await Order.findByIdAndUpdate(
         req.params.id,
@@ -877,6 +957,7 @@ router.patch(
 
         {
           new: true,
+
           runValidators: true,
         },
       );
@@ -912,16 +993,6 @@ router.patch(
 
 /* =========================================================
    DELETE SINGLE ORDER
-
-   DELETE /api/orders/:id
-
-   This also affects:
-   Orders
-   Customers
-   Dashboard
-   Best Sellers
-
-   because all of those use the Order collection.
 ========================================================= */
 
 router.delete(
@@ -929,10 +1000,6 @@ router.delete(
 
   async (req, res) => {
     try {
-      /* ===================================================
-         VALIDATE ID
-      =================================================== */
-
       if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
         return res.status(400).json({
           success: false,
@@ -940,10 +1007,6 @@ router.delete(
           message: "Invalid order ID.",
         });
       }
-
-      /* ===================================================
-         DELETE
-      =================================================== */
 
       const order = await Order.findByIdAndDelete(req.params.id);
 
@@ -954,10 +1017,6 @@ router.delete(
           message: "Order not found.",
         });
       }
-
-      /* ===================================================
-         RESPONSE
-      =================================================== */
 
       return res.status(200).json({
         success: true,
@@ -991,13 +1050,7 @@ router.delete(
 /* =========================================================
    GET SINGLE ORDER
 
-   GET /api/orders/:id
-
-   IMPORTANT:
-   Keep below:
-   /best-sellers
-   /customer
-   /track/:orderNumber
+   KEEP THIS AFTER SPECIAL ROUTES
 ========================================================= */
 
 router.get(

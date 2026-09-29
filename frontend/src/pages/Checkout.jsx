@@ -3,360 +3,279 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
-
   ArrowLeft,
-
   ArrowRight,
-
   Check,
-
   ChevronDown,
-
-  CreditCard,
-
   IndianRupee,
-
   LockKeyhole,
-
   MapPin,
-
   PackageCheck,
-
   Smartphone,
-
   Truck,
-
   WalletCards,
-
 } from "lucide-react";
 
 import "../styles/checkout.css";
 
-const API_URL =
+/* =========================================================
+   API
+========================================================= */
 
-  import.meta.env.VITE_API_URL || "";
+const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+
+/* =========================================================
+   FORM
+========================================================= */
 
 const initialForm = {
-
   firstName: "",
-
   lastName: "",
-
   email: "",
-
   phone: "",
-
   address: "",
-
   apartment: "",
-
   city: "",
-
   state: "",
-
   pincode: "",
-
   country: "India",
-
-  notes: "",
-
 };
 
+/* =========================================================
+   PAYMENT OPTIONS
+
+   ONLY:
+   1. ONLINE PAYMENT
+   2. CASH ON DELIVERY
+========================================================= */
+
 const paymentOptions = [
-
   {
-
     id: "upi",
 
-    title: "UPI / Online Payment",
+    title: "Online Payment",
 
-    subtitle: "Pay securely with UPI, cards or supported wallets.",
+    subtitle: "Pay securely using UPI, cards or supported wallets.",
 
     icon: Smartphone,
-
   },
 
   {
-
-    id: "card",
-
-    title: "Credit / Debit Card",
-
-    subtitle: "Visa, Mastercard, RuPay and more.",
-
-    icon: CreditCard,
-
-  },
-
-  {
-
     id: "cod",
 
     title: "Cash on Delivery",
 
-    subtitle: "Pay when your order reaches you.",
+    subtitle: "Pay the full amount when your order reaches you.",
 
     icon: IndianRupee,
-
   },
-
 ];
+
+/* =========================================================
+   INDIAN STATES
+========================================================= */
 
 const indianStates = [
-
   "Andhra Pradesh",
-
   "Arunachal Pradesh",
-
   "Assam",
-
   "Bihar",
-
   "Chhattisgarh",
-
   "Goa",
-
   "Gujarat",
-
   "Haryana",
-
   "Himachal Pradesh",
-
   "Jharkhand",
-
   "Karnataka",
-
   "Kerala",
-
   "Madhya Pradesh",
-
   "Maharashtra",
-
   "Manipur",
-
   "Meghalaya",
-
   "Mizoram",
-
   "Nagaland",
-
   "Odisha",
-
   "Punjab",
-
   "Rajasthan",
-
   "Sikkim",
-
   "Tamil Nadu",
-
   "Telangana",
-
   "Tripura",
-
   "Uttar Pradesh",
-
   "Uttarakhand",
-
   "West Bengal",
-
   "Andaman and Nicobar Islands",
-
   "Chandigarh",
-
   "Dadra and Nagar Haveli and Daman and Diu",
-
   "Delhi",
-
   "Jammu and Kashmir",
-
   "Ladakh",
-
   "Lakshadweep",
-
   "Puducherry",
-
 ];
 
-const money = (value) => {
+/* =========================================================
+   MONEY
+========================================================= */
 
-  const number = Number(value || 0);
+const money = (value) => {
+  const amount = Number(value || 0);
 
   return new Intl.NumberFormat("en-IN", {
-
     style: "currency",
-
     currency: "INR",
-
     maximumFractionDigits: 0,
-
-  }).format(Number.isFinite(number) ? number : 0);
-
+  }).format(Number.isFinite(amount) ? amount : 0);
 };
 
+/* =========================================================
+   ITEM NAME
+========================================================= */
+
 const getItemName = (item) =>
-
   item?.product?.name ||
-
   item?.productId?.name ||
-
   item?.name ||
-
   "UNBOUND Product";
 
+/* =========================================================
+   ITEM PRICE
+========================================================= */
+
+const getItemPrice = (item) =>
+  Number(
+    item?.price ??
+      item?.product?.salePrice ??
+      item?.product?.price ??
+      item?.productId?.salePrice ??
+      item?.productId?.price ??
+      0,
+  );
+
+/* =========================================================
+   ITEM QUANTITY
+========================================================= */
+
+const getItemQuantity = (item) => Math.max(1, Number(item?.quantity || 1));
+
+/* =========================================================
+   IMAGE URL
+========================================================= */
+
 const resolveImageUrl = (value) => {
-
-  if (!value) return "";
-
-  // Image object
+  if (!value) {
+    return "";
+  }
 
   if (typeof value === "object") {
-
-    // Normal URL object
-
     if (value.url) {
-
       return resolveImageUrl(value.url);
-
     }
-
-    // GridFS file
 
     const fileId = value.fileId || value._id || value.id;
 
     if (fileId) {
-
       return `${API_URL}/api/catalog/images/${fileId}`;
-
     }
 
     return "";
-
   }
 
   const image = String(value).trim();
 
-  if (!image) return "";
-
-  // Already complete URL
+  if (!image) {
+    return "";
+  }
 
   if (
-
     image.startsWith("http://") ||
-
     image.startsWith("https://") ||
-
     image.startsWith("data:") ||
-
     image.startsWith("blob:")
-
   ) {
-
     return image;
-
   }
-
-  // Old backend image route
 
   if (image.startsWith("/api/images/")) {
-
-    return `${API_URL}${image.replace(
-
-      "/api/images/",
-
-      "/api/catalog/images/",
-
-    )}`;
-
+    return `${API_URL}${image.replace("/api/images/", "/api/catalog/images/")}`;
   }
-
-  // Backend API image
 
   if (image.startsWith("/api/")) {
-
     return `${API_URL}${image}`;
-
   }
-
-  // Backend uploads
 
   if (image.startsWith("/uploads/")) {
-
     return `${API_URL}${image}`;
-
   }
 
-  // Relative backend uploads
-
   if (image.startsWith("uploads/")) {
-
     return `${API_URL}/${image}`;
-
   }
 
   return image;
-
 };
 
-const getItemImage = (item) => {
+/* =========================================================
+   ITEM IMAGE
+========================================================= */
 
+const getItemImage = (item) => {
   const product = item?.product || item?.productId || {};
 
   const image =
-
     product?.imageFiles?.[0] ||
-
     product?.images?.[0] ||
-
     product?.mainImage ||
-
     product?.image ||
-
     item?.imageFiles?.[0] ||
-
     item?.images?.[0] ||
-
     item?.image;
 
   return resolveImageUrl(image);
-
 };
 
-const getItemPrice = (item) =>
-
-  Number(
-
-    item?.price ??
-
-      item?.product?.salePrice ??
-
-      item?.product?.price ??
-
-      item?.productId?.salePrice ??
-
-      item?.productId?.price ??
-
-      0,
-
-  );
-
-const getItemQuantity = (item) => Number(item?.quantity || 1);
+/* =========================================================
+   CHECKOUT
+========================================================= */
 
 function Checkout() {
-
   const navigate = useNavigate();
+
+  /* =======================================================
+     FORM
+  ======================================================= */
 
   const [form, setForm] = useState(initialForm);
 
+  /* =======================================================
+     PAYMENT
+
+     DEFAULT = ONLINE PAYMENT
+  ======================================================= */
+
   const [paymentMethod, setPaymentMethod] = useState("upi");
 
-  const [cart, setCart] = useState(null);
+  /* =======================================================
+     CART
+  ======================================================= */
+
+  const [cart, setCart] = useState({
+    items: [],
+  });
 
   const [loadingCart, setLoadingCart] = useState(true);
 
   const [cartError, setCartError] = useState("");
 
+  /* =======================================================
+     FORM ERRORS
+  ======================================================= */
+
   const [formErrors, setFormErrors] = useState({});
+
+  /* =======================================================
+     ORDER
+  ======================================================= */
 
   const [placingOrder, setPlacingOrder] = useState(false);
 
@@ -364,1012 +283,784 @@ function Checkout() {
 
   const [orderResult, setOrderResult] = useState(null);
 
+  /* =======================================================
+     COUPONS
+  ======================================================= */
+
+  const [availableCoupons, setAvailableCoupons] = useState([]);
+
+  const [couponCode, setCouponCode] = useState("");
+
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+
+  const [couponLoading, setCouponLoading] = useState(false);
+
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+
+  const [couponMessage, setCouponMessage] = useState("");
+
+  const [couponError, setCouponError] = useState("");
+
+  /* =========================================================
+     LOAD CART
+  ========================================================= */
+
   useEffect(() => {
-
     const loadCart = async () => {
-
       const cartId = localStorage.getItem("axiee-cart-id");
 
       if (!cartId) {
-
-        setCart({ items: [] });
+        setCart({
+          items: [],
+        });
 
         setLoadingCart(false);
 
         return;
-
       }
 
       try {
-
         setLoadingCart(true);
 
         setCartError("");
 
-        const response = await fetch(`${API_URL}/api/cart/${cartId}`);
+        const response = await fetch(`${API_URL}/api/cart/${cartId}`, {
+          cache: "no-store",
+
+          headers: {
+            Accept: "application/json",
+          },
+        });
 
         const data = await response.json();
 
         if (!response.ok) {
-
           throw new Error(data?.message || "Could not load your bag.");
-
         }
 
-        setCart(data?.cart || data || { items: [] });
-
+        setCart(
+          data?.cart ||
+            data || {
+              items: [],
+            },
+        );
       } catch (error) {
-
         console.error("Checkout cart error:", error);
 
-        setCartError(error.message || "Could not load your bag.");
-
+        setCartError(error?.message || "Could not load your bag.");
       } finally {
-
         setLoadingCart(false);
-
       }
-
     };
 
     loadCart();
-
   }, []);
 
-  const items = useMemo(() => cart?.items || [], [cart]);
+  /* =========================================================
+     ITEMS
+  ========================================================= */
+
+  const items = useMemo(
+    () => (Array.isArray(cart?.items) ? cart.items : []),
+
+    [cart],
+  );
+
+  /* =========================================================
+     SUBTOTAL
+  ========================================================= */
 
   const subtotal = useMemo(
-
     () =>
-
       items.reduce(
-
-        (total, item) => total + getItemPrice(item) * getItemQuantity(item),
+        (totalValue, item) =>
+          totalValue + getItemPrice(item) * getItemQuantity(item),
 
         0,
-
       ),
 
     [items],
-
   );
 
-  const shipping = subtotal > 0 ? 0 : 0;
+  /* =========================================================
+     SHIPPING
+  ========================================================= */
 
-  const total = subtotal + shipping;
+  const shipping = 0;
 
-  // COD RULE:
+  /* =========================================================
+     DISCOUNT
+  ========================================================= */
 
-  // Below ₹2,000  -> normal Cash on Delivery.
+  const discountAmount = Number(appliedCoupon?.discountAmount || 0);
 
-  // ₹2,000+       -> customer must pay 10% online in advance.
+  /* =========================================================
+     TOTAL
+  ========================================================= */
 
-  // Remaining 90% -> collected as Cash on Delivery.
+  const total = Math.max(
+    0,
 
-  const codAdvanceRequired = paymentMethod === "cod" && total >= 2000;
+    subtotal + shipping - discountAmount,
+  );
 
-  const codAdvanceAmount = codAdvanceRequired ? Math.ceil(total * 0.1) : 0;
+  /* =========================================================
+     AVAILABLE COUPONS
+  ========================================================= */
 
-  const codBalanceAmount = codAdvanceRequired
+  useEffect(() => {
+    let cancelled = false;
 
-    ? total - codAdvanceAmount
+    const loadAvailableCoupons = async () => {
+      if (subtotal <= 0) {
+        setAvailableCoupons([]);
 
-    : total;
+        return;
+      }
+
+      try {
+        setCouponLoading(true);
+
+        const response = await fetch(
+          `${API_URL}/api/coupons/available?subtotal=${encodeURIComponent(
+            subtotal,
+          )}`,
+          {
+            cache: "no-store",
+
+            headers: {
+              Accept: "application/json",
+            },
+          },
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data?.message || "Could not load coupons.");
+        }
+
+        if (!cancelled) {
+          setAvailableCoupons(Array.isArray(data?.coupons) ? data.coupons : []);
+        }
+      } catch (error) {
+        console.warn("Coupon list error:", error);
+
+        if (!cancelled) {
+          setAvailableCoupons([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setCouponLoading(false);
+        }
+      }
+    };
+
+    loadAvailableCoupons();
+
+    const refreshCoupons = () => {
+      if (document.visibilityState === "visible") {
+        loadAvailableCoupons();
+      }
+    };
+
+    window.addEventListener("focus", refreshCoupons);
+
+    document.addEventListener("visibilitychange", refreshCoupons);
+
+    return () => {
+      cancelled = true;
+
+      window.removeEventListener("focus", refreshCoupons);
+
+      document.removeEventListener("visibilitychange", refreshCoupons);
+    };
+  }, [subtotal]);
+
+  /* =========================================================
+     REMOVE COUPON IF CART GOES BELOW MINIMUM
+  ========================================================= */
+
+  useEffect(() => {
+    if (!appliedCoupon) {
+      return;
+    }
+
+    const minimum = Number(appliedCoupon?.minOrderAmount || 0);
+
+    if (subtotal < minimum) {
+      setAppliedCoupon(null);
+
+      setCouponMessage("");
+
+      setCouponError(`Coupon removed. Minimum order is ${money(minimum)}.`);
+    }
+  }, [subtotal, appliedCoupon]);
+
+  /* =========================================================
+     APPLY COUPON
+  ========================================================= */
+
+  const applyCoupon = async (codeToApply = couponCode) => {
+    const normalizedCode = String(codeToApply || "")
+      .trim()
+      .toUpperCase();
+
+    if (!normalizedCode) {
+      setCouponError("Enter a coupon code.");
+
+      setCouponMessage("");
+
+      return;
+    }
+
+    try {
+      setApplyingCoupon(true);
+
+      setCouponError("");
+
+      setCouponMessage("");
+
+      const response = await fetch(`${API_URL}/api/coupons/apply`, {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+
+          Accept: "application/json",
+        },
+
+        body: JSON.stringify({
+          code: normalizedCode,
+
+          subtotal,
+
+          email: form.email.trim(),
+
+          phone: form.phone,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Coupon could not be applied.");
+      }
+
+      setCouponCode(data.coupon.code);
+
+      setAppliedCoupon(data.coupon);
+
+      setCouponMessage(
+        `${data.coupon.code} applied. You save ${money(
+          data.coupon.discountAmount,
+        )}.`,
+      );
+
+      setCouponError("");
+    } catch (error) {
+      setAppliedCoupon(null);
+
+      setCouponMessage("");
+
+      setCouponError(error?.message || "Coupon could not be applied.");
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
+
+  /* =========================================================
+     REMOVE COUPON
+  ========================================================= */
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+
+    setCouponCode("");
+
+    setCouponMessage("");
+
+    setCouponError("");
+  };
+
+  /* =========================================================
+     RESET CART
+  ========================================================= */
+
+  const resetCartAfterSuccessfulOrder = async () => {
+    const cartId = localStorage.getItem("axiee-cart-id");
+
+    const emptyCart = {
+      items: [],
+    };
+
+    /* LOCAL */
+
+    localStorage.removeItem("axiee-cart-id");
+
+    setCart(emptyCart);
+
+    /* NAVBAR */
+
+    window.dispatchEvent(
+      new CustomEvent("axiee-cart-updated", {
+        detail: emptyCart,
+      }),
+    );
+
+    window.dispatchEvent(new Event("axiee-cart-cleared"));
+
+    /* BACKEND CART */
+
+    if (cartId) {
+      try {
+        const response = await fetch(`${API_URL}/api/cart/${cartId}/clear`, {
+          method: "DELETE",
+
+          headers: {
+            Accept: "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+
+          console.warn(
+            "Backend cart clear failed:",
+            data?.message || response.statusText,
+          );
+        }
+      } catch (error) {
+        console.warn("Backend cart clear error:", error);
+      }
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("axiee-cart-updated", {
+        detail: emptyCart,
+      }),
+    );
+  };
+
+  /* =========================================================
+     FORM CHANGE
+  ========================================================= */
 
   const handleChange = (event) => {
-
     const { name, value } = event.target;
 
     let nextValue = value;
 
     if (name === "phone") {
-
       nextValue = value.replace(/\D/g, "").slice(0, 10);
-
     }
 
     if (name === "pincode") {
-
       nextValue = value.replace(/\D/g, "").slice(0, 6);
-
     }
 
     setForm((current) => ({
-
       ...current,
 
       [name]: nextValue,
-
     }));
 
     setFormErrors((current) => ({
-
       ...current,
 
       [name]: "",
-
     }));
-
   };
 
-  const validate = () => {
+  /* =========================================================
+     VALIDATION
+  ========================================================= */
 
+  const validate = () => {
     const nextErrors = {};
 
-    if (!form.firstName.trim())
-
+    if (!form.firstName.trim()) {
       nextErrors.firstName = "First name is required.";
+    }
 
-    if (!form.lastName.trim()) nextErrors.lastName = "Last name is required.";
+    if (!form.lastName.trim()) {
+      nextErrors.lastName = "Last name is required.";
+    }
 
     if (!form.email.trim()) {
-
       nextErrors.email = "Email is required.";
-
     } else if (!/^\S+@\S+\.\S+$/.test(form.email)) {
-
       nextErrors.email = "Enter a valid email address.";
-
     }
 
     if (!/^[6-9]\d{9}$/.test(form.phone)) {
-
       nextErrors.phone = "Enter a valid 10-digit Indian mobile number.";
-
     }
 
-    if (!form.address.trim()) nextErrors.address = "Address is required.";
+    if (!form.address.trim()) {
+      nextErrors.address = "Address is required.";
+    }
 
-    if (!form.city.trim()) nextErrors.city = "City is required.";
+    if (!form.city.trim()) {
+      nextErrors.city = "City is required.";
+    }
 
-    if (!form.state) nextErrors.state = "Select your state.";
+    if (!form.state) {
+      nextErrors.state = "Select your state.";
+    }
 
     if (!/^\d{6}$/.test(form.pincode)) {
-
       nextErrors.pincode = "Enter a valid 6-digit PIN code.";
-
     }
 
     setFormErrors(nextErrors);
 
     return Object.keys(nextErrors).length === 0;
-
   };
 
-const openRazorpayPayment = async ({
+  /* =========================================================
+     RAZORPAY ONLINE PAYMENT
+  ========================================================= */
 
-  amount,
+  const openRazorpayPayment = async ({ amount, internalOrder }) => {
+    try {
+      if (!window.Razorpay) {
+        throw new Error(
+          "Razorpay Checkout could not be loaded. Please refresh and try again.",
+        );
+      }
 
-  internalOrder,
+      /* KEY */
 
-}) => {
+      const keyResponse = await fetch(`${API_URL}/api/payments/key`);
 
-  try {
+      const keyData = await keyResponse.json();
 
-    if (!window.Razorpay) {
+      if (!keyResponse.ok || !keyData?.key) {
+        throw new Error(keyData?.message || "Razorpay Key ID is missing.");
+      }
 
-      throw new Error(
+      /* CREATE RAZORPAY ORDER */
 
-        "Razorpay Checkout could not be loaded. Please refresh and try again.",
+      const orderResponse = await fetch(
+        `${API_URL}/api/payments/create-order`,
+        {
+          method: "POST",
 
-      );
-
-    }
-
-    const keyResponse = await fetch(
-
-      `${API_URL}/api/payments/key`,
-
-    );
-
-    const keyData =
-
-      await keyResponse.json();
-
-    if (!keyResponse.ok) {
-
-      throw new Error(
-
-        keyData?.message ||
-
-          "Could not load Razorpay configuration.",
-
-      );
-
-    }
-
-    if (!keyData?.key) {
-
-      throw new Error(
-
-        "Razorpay Key ID is missing.",
-
-      );
-
-    }
-
-    const orderResponse = await fetch(
-
-      `${API_URL}/api/payments/create-order`,
-
-      {
-
-        method: "POST",
-
-        headers: {
-
-          "Content-Type":
-
-            "application/json",
-
-        },
-
-        body: JSON.stringify({
-
-          amount,
-
-          receipt:
-
-            internalOrder?.orderNumber ||
-
-            `UNBOUND-${Date.now()}`,
-
-          notes: {
-
-            internalOrderId:
-
-              internalOrder?._id || "",
-
-            orderNumber:
-
-              internalOrder?.orderNumber ||
-
-              "",
-
-            paymentMethod,
-
+          headers: {
+            "Content-Type": "application/json",
           },
 
-        }),
+          body: JSON.stringify({
+            amount,
 
-      },
+            receipt: internalOrder?.orderNumber || `UNBOUND-${Date.now()}`,
 
-    );
+            notes: {
+              internalOrderId: internalOrder?._id || "",
 
-    const razorpayOrderData =
+              orderNumber: internalOrder?.orderNumber || "",
 
-      await orderResponse.json();
-
-    if (!orderResponse.ok) {
-
-      throw new Error(
-
-        razorpayOrderData?.message ||
-
-          "Could not create Razorpay payment order.",
-
+              paymentMethod: "online",
+            },
+          }),
+        },
       );
 
-    }
+      const razorpayOrderData = await orderResponse.json();
 
-    const razorpayOrder =
+      if (!orderResponse.ok || !razorpayOrderData?.order?.id) {
+        throw new Error(
+          razorpayOrderData?.message || "Could not create Razorpay order.",
+        );
+      }
 
-      razorpayOrderData?.order;
+      const razorpayOrder = razorpayOrderData.order;
 
-    if (!razorpayOrder?.id) {
+      /* OPTIONS */
 
-      throw new Error(
+      const options = {
+        key: keyData.key,
 
-        "Razorpay order ID was not returned.",
+        amount: razorpayOrder.amount,
 
-      );
+        currency: razorpayOrder.currency || "INR",
 
-    }
+        name: "UNBOUND",
 
-    console.log(
+        description: "UNBOUND Online Payment",
 
-      "Razorpay order created:",
+        order_id: razorpayOrder.id,
 
-      razorpayOrder,
+        prefill: {
+          name: `${form.firstName} ${form.lastName}`.trim(),
 
-    );
+          email: form.email,
 
-    const options = {
+          contact: form.phone,
+        },
 
-      key: keyData.key,
+        notes: {
+          orderNumber: internalOrder?.orderNumber || "",
 
-      amount:
+          internalOrderId: internalOrder?._id || "",
+        },
 
-        razorpayOrder.amount,
+        theme: {
+          color: "#c7ff13",
+        },
 
-      currency:
-
-        razorpayOrder.currency ||
-
-        "INR",
-
-      name:
-
-        "UNBOUND",
-
-      description:
-
-        internalOrder?.codAdvanceRequired
-
-          ? "10% COD Advance Payment"
-
-          : "UNBOUND Clothing Order",
-
-      order_id:
-
-        razorpayOrder.id,
-
-      handler: async (
-
-        paymentResponse,
-
-      ) => {
-
-        try {
-
-          console.log(
-
-            "Razorpay payment response:",
-
-            paymentResponse,
-
-          );
-
-          const verifyResponse =
-
-            await fetch(
-
+        handler: async (paymentResponse) => {
+          try {
+            const verifyResponse = await fetch(
               `${API_URL}/api/payments/verify`,
-
               {
-
                 method: "POST",
 
                 headers: {
-
-                  "Content-Type":
-
-                    "application/json",
-
+                  "Content-Type": "application/json",
                 },
 
                 body: JSON.stringify({
+                  razorpay_order_id: paymentResponse.razorpay_order_id,
 
-                  razorpay_order_id:
+                  razorpay_payment_id: paymentResponse.razorpay_payment_id,
 
-                    paymentResponse
+                  razorpay_signature: paymentResponse.razorpay_signature,
 
-                      .razorpay_order_id,
+                  internalOrderId: internalOrder?._id || "",
 
-                  razorpay_payment_id:
-
-                    paymentResponse
-
-                      .razorpay_payment_id,
-
-                  razorpay_signature:
-
-                    paymentResponse
-
-                      .razorpay_signature,
-
-                  internalOrderId:
-
-                    internalOrder?._id ||
-
-                    "",
-
-                  orderNumber:
-
-                    internalOrder
-
-                      ?.orderNumber ||
-
-                    "",
-
+                  orderNumber: internalOrder?.orderNumber || "",
                 }),
-
               },
-
             );
 
-          const verifyData =
+            const verifyData = await verifyResponse.json();
 
-            await verifyResponse.json();
+            if (!verifyResponse.ok || !verifyData?.success) {
+              throw new Error(
+                verifyData?.message || "Payment verification failed.",
+              );
+            }
 
-          if (
+            await resetCartAfterSuccessfulOrder();
 
-            !verifyResponse.ok ||
-
-            !verifyData?.success
-
-          ) {
-
-            throw new Error(
-
-              verifyData?.message ||
-
-                "Payment verification failed.",
-
-            );
-
-          }
-
-          console.log(
-
-            "Razorpay payment verified:",
-
-            verifyData,
-
-          );
-
-          localStorage.removeItem(
-
-            "axiee-cart-id",
-
-          );
-
-          setCart({
-
-            items: [],
-
-          });
-
-          setOrderResult(
-
-            (current) => ({
-
+            setOrderResult((current) => ({
               ...current,
 
-              paymentStatus:
+              paymentStatus: "paid",
 
-                "paid",
+              razorpayPaymentId: paymentResponse.razorpay_payment_id,
 
-              razorpayPaymentId:
+              razorpayOrderId: paymentResponse.razorpay_order_id,
+            }));
 
-                paymentResponse
+            setOrderComplete(true);
 
-                  .razorpay_payment_id,
+            setPlacingOrder(false);
 
-              razorpayOrderId:
+            window.scrollTo({
+              top: 0,
+              left: 0,
+              behavior: "smooth",
+            });
+          } catch (error) {
+            console.error("Razorpay verification error:", error);
 
-                paymentResponse
+            setCartError(error?.message || "Payment verification failed.");
 
-                  .razorpay_order_id,
-
-              razorpaySignature:
-
-                paymentResponse
-
-                  .razorpay_signature,
-
-            }),
-
-          );
-
-          setOrderComplete(true);
-
-          setPlacingOrder(false);
-
-          window.scrollTo({
-
-            top: 0,
-
-            left: 0,
-
-            behavior: "smooth",
-
-          });
-
-        } catch (error) {
-
-          console.error(
-
-            "Razorpay verification error:",
-
-            error,
-
-          );
-
-          setCartError(
-
-            error?.message ||
-
-              "Payment verification failed.",
-
-          );
-
-          setPlacingOrder(false);
-
-        }
-
-      },
-
-      prefill: {
-
-        name:
-
-          `${form.firstName} ${form.lastName}`.trim(),
-
-        email:
-
-          form.email,
-
-        contact:
-
-          form.phone,
-
-      },
-
-      notes: {
-
-        orderNumber:
-
-          internalOrder?.orderNumber ||
-
-          "",
-
-        internalOrderId:
-
-          internalOrder?._id ||
-
-          "",
-
-      },
-
-      theme: {
-
-        color:
-
-          "#c7ff13",
-
-      },
-
-      modal: {
-
-        escape: true,
-
-        ondismiss: () => {
-
-          console.log(
-
-            "Razorpay checkout closed.",
-
-          );
-
-          setPlacingOrder(false);
-
+            setPlacingOrder(false);
+          }
         },
 
-      },
+        modal: {
+          escape: true,
 
-    };
+          ondismiss: () => {
+            setPlacingOrder(false);
+          },
+        },
+      };
 
-    const razorpay =
+      const razorpay = new window.Razorpay(options);
 
-      new window.Razorpay(
-
-        options,
-
-      );
-
-    razorpay.on(
-
-      "payment.failed",
-
-      (response) => {
-
-        console.error(
-
-          "Razorpay payment failed:",
-
-          response?.error,
-
-        );
-
+      razorpay.on("payment.failed", (response) => {
         const message =
-
-          response?.error
-
-            ?.description ||
-
+          response?.error?.description ||
           response?.error?.reason ||
-
           "Payment failed. Please try again.";
 
-        setCartError(
-
-          message,
-
-        );
+        setCartError(message);
 
         setPlacingOrder(false);
-
-      },
-
-    );
-
-    razorpay.open();
-
-  } catch (error) {
-
-    console.error(
-
-      "Razorpay checkout error:",
-
-      error,
-
-    );
-
-    setCartError(
-
-      error?.message ||
-
-        "Could not open Razorpay payment.",
-
-    );
-
-    setPlacingOrder(false);
-
-  }
-
-};
-
-const handleSubmit = async (
-
-  event,
-
-) => {
-
-  event.preventDefault();
-
-  if (!validate()) {
-
-    const firstError =
-
-      document.querySelector(
-
-        ".ax-checkout-field.is-error",
-
-      );
-
-    firstError?.scrollIntoView({
-
-      behavior: "smooth",
-
-      block: "center",
-
-    });
-
-    return;
-
-  }
-
-  if (!items.length) {
-
-    setCartError(
-
-      "Your bag is empty. Add a product before checkout.",
-
-    );
-
-    return;
-
-  }
-
-  const checkoutPayload = {
-
-    cartId:
-
-      localStorage.getItem(
-
-        "axiee-cart-id",
-
-      ),
-
-    customer: {
-
-      firstName:
-
-        form.firstName.trim(),
-
-      lastName:
-
-        form.lastName.trim(),
-
-      email:
-
-        form.email.trim(),
-
-      phone:
-
-        form.phone,
-
-    },
-
-    shippingAddress: {
-
-      address:
-
-        form.address.trim(),
-
-      apartment:
-
-        form.apartment.trim(),
-
-      city:
-
-        form.city.trim(),
-
-      state:
-
-        form.state,
-
-      pincode:
-
-        form.pincode,
-
-      country:
-
-        form.country,
-
-    },
-
-    notes:
-
-      form.notes.trim(),
-
-    paymentMethod,
-
-    items,
-
-  };
-
-  try {
-
-    setPlacingOrder(true);
-
-    setCartError("");
-
-    console.log(
-
-      "Sending order:",
-
-      checkoutPayload,
-
-    );
-
-    const response = await fetch(
-
-      `${API_URL}/api/orders`,
-
-      {
-
-        method: "POST",
-
-        headers: {
-
-          "Content-Type":
-
-            "application/json",
-
-        },
-
-        body: JSON.stringify(
-
-          checkoutPayload,
-
-        ),
-
-      },
-
-    );
-
-    const data =
-
-      await response.json();
-
-    console.log(
-
-      "Order response:",
-
-      data,
-
-    );
-
-    if (!response.ok) {
-
-      throw new Error(
-
-        data?.message ||
-
-          "Could not create your order.",
-
-      );
-
-    }
-
-    const createdOrder =
-
-      data?.order || null;
-
-    if (!createdOrder) {
-
-      throw new Error(
-
-        "Order was not returned from the server.",
-
-      );
-
-    }
-
-    setOrderResult(
-
-      createdOrder,
-
-    );
-
-    if (!data?.paymentRequired) {
-
-      localStorage.removeItem(
-
-        "axiee-cart-id",
-
-      );
-
-      setCart({
-
-        items: [],
-
       });
 
-      setOrderComplete(true);
+      razorpay.open();
+    } catch (error) {
+      console.error("Razorpay checkout error:", error);
+
+      setCartError(error?.message || "Could not open Razorpay payment.");
 
       setPlacingOrder(false);
+    }
+  };
 
-      window.scrollTo({
+  /* =========================================================
+     SUBMIT
+  ========================================================= */
 
-        top: 0,
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
-        left: 0,
-
+    if (!validate()) {
+      document.querySelector(".ax-checkout-field.is-error")?.scrollIntoView({
         behavior: "smooth",
 
+        block: "center",
       });
 
       return;
-
     }
 
-    let paymentAmount = 0;
+    if (!items.length) {
+      setCartError("Your bag is empty. Add a product before checkout.");
 
-    if (
-
-      createdOrder
-
-        ?.codAdvanceRequired
-
-    ) {
-
-      paymentAmount =
-
-        Number(
-
-          createdOrder
-
-            ?.advanceAmount ||
-
-            codAdvanceAmount ||
-
-            0,
-
-        );
-
+      return;
     }
 
-    else {
+    /*
+        NO ORDER NOTE IS SENT.
 
-      paymentAmount =
+        paymentMethod:
+        upi = ONLINE PAYMENT
+        cod = CASH ON DELIVERY
+      */
 
-        Number(
+    const checkoutPayload = {
+      cartId: localStorage.getItem("axiee-cart-id"),
 
-          createdOrder?.total ||
+      customer: {
+        firstName: form.firstName.trim(),
 
-            total ||
+        lastName: form.lastName.trim(),
 
-            0,
+        email: form.email.trim(),
 
-        );
-
-    }
-
-    if (
-
-      !Number.isFinite(
-
-        paymentAmount,
-
-      ) ||
-
-      paymentAmount <= 0
-
-    ) {
-
-      throw new Error(
-
-        "Invalid payment amount.",
-
-      );
-
-    }
-
-    console.log(
-
-      "Starting Razorpay:",
-
-      {
-
-        paymentMethod,
-
-        paymentAmount,
-
-        total,
-
-        codAdvanceRequired:
-
-          createdOrder
-
-            ?.codAdvanceRequired,
-
+        phone: form.phone,
       },
 
-    );
+      shippingAddress: {
+        address: form.address.trim(),
 
-    await openRazorpayPayment({
+        apartment: form.apartment.trim(),
 
-      amount:
+        city: form.city.trim(),
 
-        paymentAmount,
+        state: form.state,
 
-      internalOrder:
+        pincode: form.pincode,
 
-        createdOrder,
+        country: form.country,
+      },
 
-    });
+      paymentMethod,
 
-  } catch (error) {
+      couponCode: appliedCoupon?.code || "",
 
-    console.error(
+      items,
+    };
 
-      "Create order / payment error:",
+    try {
+      setPlacingOrder(true);
 
-      error,
+      setCartError("");
 
-    );
+      const response = await fetch(`${API_URL}/api/orders`, {
+        method: "POST",
 
-    setCartError(
+        headers: {
+          "Content-Type": "application/json",
 
-      error?.message ||
+          Accept: "application/json",
+        },
 
-        "Could not create your order.",
+        body: JSON.stringify(checkoutPayload),
+      });
 
-    );
+      const data = await response.json();
 
-    setPlacingOrder(false);
+      if (!response.ok) {
+        throw new Error(data?.message || "Could not create your order.");
+      }
 
-  }
+      const createdOrder = data?.order;
 
-};
+      if (!createdOrder) {
+        throw new Error("Order was not returned from the server.");
+      }
+
+      setOrderResult(createdOrder);
+
+      /* ===================================================
+           CASH ON DELIVERY
+
+           paymentRequired = false
+
+           Full amount paid on delivery.
+
+           NO Razorpay.
+           NO 10% advance.
+        =================================================== */
+
+      if (paymentMethod === "cod") {
+        await resetCartAfterSuccessfulOrder();
+
+        setOrderComplete(true);
+
+        setPlacingOrder(false);
+
+        window.scrollTo({
+          top: 0,
+          left: 0,
+          behavior: "smooth",
+        });
+
+        return;
+      }
+
+      /* ===================================================
+           ONLINE PAYMENT
+        =================================================== */
+
+      const paymentAmount = Number(createdOrder?.total || total || 0);
+
+      if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+        throw new Error("Invalid payment amount.");
+      }
+
+      await openRazorpayPayment({
+        amount: paymentAmount,
+
+        internalOrder: createdOrder,
+      });
+    } catch (error) {
+      console.error("Create order / payment error:", error);
+
+      setCartError(error?.message || "Could not create your order.");
+
+      setPlacingOrder(false);
+    }
+  };
+
+  /* =========================================================
+     SUCCESS PAGE
+  ========================================================= */
 
   if (orderComplete) {
     return (
       <main className="ax-checkout-page ax-checkout-success-page">
         <div className="ax-checkout-orb ax-checkout-orb-one"></div>
+
         <div className="ax-checkout-orb ax-checkout-orb-two"></div>
 
         <section className="ax-checkout-success">
@@ -1389,10 +1080,10 @@ const handleSubmit = async (
 
           <p>
             {orderResult?.paymentMethod === "cod"
-              ? orderResult?.codAdvanceRequired
-                ? "Your advance payment has been received. The remaining amount will be collected on delivery."
-                : "Your Cash on Delivery order has been placed successfully."
-              : "Your payment has been received and your order has been confirmed."}
+              ? `Your Cash on Delivery order has been placed successfully. Pay ${money(
+                  orderResult.total,
+                )} when your order is delivered.`
+              : "Your online payment has been received and your order has been confirmed."}
           </p>
 
           {orderResult && (
@@ -1401,6 +1092,14 @@ const handleSubmit = async (
                 ORDER NUMBER:
                 <strong> {orderResult.orderNumber}</strong>
               </p>
+
+              {Number(orderResult.discountAmount || 0) > 0 && (
+                <p>
+                  DISCOUNT
+                  {orderResult.couponCode ? ` (${orderResult.couponCode})` : ""}
+                  :<strong> -{money(orderResult.discountAmount)}</strong>
+                </p>
+              )}
 
               <p>
                 TOTAL:
@@ -1411,7 +1110,9 @@ const handleSubmit = async (
                 PAYMENT:
                 <strong>
                   {" "}
-                  {String(orderResult.paymentMethod || "").toUpperCase()}
+                  {orderResult.paymentMethod === "cod"
+                    ? "CASH ON DELIVERY"
+                    : "ONLINE PAYMENT"}
                 </strong>
               </p>
 
@@ -1429,26 +1130,16 @@ const handleSubmit = async (
                 </p>
               )}
 
-              {orderResult?.codAdvanceRequired && (
-                <>
-                  <p>
-                    PAID NOW:
-                    <strong> {money(orderResult.advanceAmount)}</strong>
-                  </p>
-
-                  <p>
-                    PAY ON DELIVERY:
-                    <strong>
-                      {" "}
-                      {money(orderResult.balanceDueOnDelivery)}
-                    </strong>
-                  </p>
-                </>
+              {orderResult?.paymentMethod === "cod" && (
+                <p>
+                  PAY ON DELIVERY:
+                  <strong> {money(orderResult.total)}</strong>
+                </p>
               )}
             </div>
           )}
 
-          <button type="button" onClick={() => navigate("/shop")}>
+          <button type="button" onClick={() => navigate("/best-sellers")}>
             CONTINUE SHOPPING
             <ArrowRight size={17} />
           </button>
@@ -1457,844 +1148,933 @@ const handleSubmit = async (
     );
   }
 
+  /* =========================================================
+     CHECKOUT PAGE
+  ========================================================= */
+
   return (
-
     <main className="ax-checkout-page">
-
       <div className="ax-checkout-orb ax-checkout-orb-one"></div>
 
       <div className="ax-checkout-orb ax-checkout-orb-two"></div>
 
       <section className="ax-checkout-shell">
+        {/* ===================================================
+            HEADER
+        =================================================== */}
 
         <header className="ax-checkout-heading">
-
           <button
-
             type="button"
-
             className="ax-checkout-back"
-
             onClick={() => navigate("/cart")}
-
           >
-
             <ArrowLeft size={16} />
-
             BACK TO BAG
-
           </button>
 
           <div className="ax-checkout-title-wrap">
-
             <span className="ax-checkout-index">02 / CHECKOUT</span>
-
           </div>
 
           <div className="ax-checkout-secure">
-
             <LockKeyhole size={14} />
-
             SECURE CHECKOUT
-
           </div>
-
         </header>
 
         <div className="ax-checkout-grid">
+          {/* =================================================
+              LEFT
+          ================================================= */}
 
           <form className="ax-checkout-form" onSubmit={handleSubmit} noValidate>
+            {/* ===============================================
+                CONTACT
+            =============================================== */}
 
             <section className="ax-checkout-card">
-
               <div className="ax-checkout-card-head">
-
                 <div>
-
                   <span>01</span>
 
                   <h2>CONTACT</h2>
-
                 </div>
 
                 <Smartphone size={21} strokeWidth={1.4} />
-
               </div>
 
               <div className="ax-checkout-fields ax-checkout-fields-two">
+                {/* FIRST NAME */}
 
                 <label
-
                   className={`ax-checkout-field ${
-
                     formErrors.firstName ? "is-error" : ""
-
                   }`}
-
                 >
-
                   <span>FIRST NAME *</span>
 
                   <input
-
                     type="text"
-
                     name="firstName"
-
                     value={form.firstName}
-
                     onChange={handleChange}
-
                     placeholder="Ahmed"
-
                     autoComplete="given-name"
-
                   />
 
                   {formErrors.firstName && (
-
                     <small>{formErrors.firstName}</small>
-
                   )}
-
                 </label>
 
+                {/* LAST NAME */}
+
                 <label
-
                   className={`ax-checkout-field ${
-
                     formErrors.lastName ? "is-error" : ""
-
                   }`}
-
                 >
-
                   <span>LAST NAME *</span>
 
                   <input
-
                     type="text"
-
                     name="lastName"
-
                     value={form.lastName}
-
                     onChange={handleChange}
-
                     placeholder="Khan"
-
                     autoComplete="family-name"
-
                   />
 
                   {formErrors.lastName && <small>{formErrors.lastName}</small>}
-
                 </label>
 
+                {/* EMAIL */}
+
                 <label
-
                   className={`ax-checkout-field ${
-
                     formErrors.email ? "is-error" : ""
-
                   }`}
-
                 >
-
                   <span>EMAIL *</span>
 
                   <input
-
                     type="email"
-
                     name="email"
-
                     value={form.email}
-
                     onChange={handleChange}
-
                     placeholder="you@example.com"
-
                     autoComplete="email"
-
                   />
 
                   {formErrors.email && <small>{formErrors.email}</small>}
-
                 </label>
 
+                {/* PHONE */}
+
                 <label
-
                   className={`ax-checkout-field ${
-
                     formErrors.phone ? "is-error" : ""
-
                   }`}
-
                 >
-
                   <span>MOBILE NUMBER *</span>
 
                   <div className="ax-checkout-phone">
-
                     <b>+91</b>
 
                     <input
-
                       type="tel"
-
                       inputMode="numeric"
-
                       name="phone"
-
                       value={form.phone}
-
                       onChange={handleChange}
-
                       placeholder="9876543210"
-
                       autoComplete="tel"
-
                     />
-
                   </div>
 
                   {formErrors.phone && <small>{formErrors.phone}</small>}
-
                 </label>
-
               </div>
-
             </section>
 
+            {/* ===============================================
+                DELIVERY
+            =============================================== */}
+
             <section className="ax-checkout-card">
-
               <div className="ax-checkout-card-head">
-
                 <div>
-
                   <span>02</span>
 
                   <h2>DELIVERY ADDRESS</h2>
-
                 </div>
 
                 <MapPin size={21} strokeWidth={1.4} />
-
               </div>
 
               <div className="ax-checkout-fields">
+                {/* ADDRESS */}
 
                 <label
-
                   className={`ax-checkout-field ${
-
                     formErrors.address ? "is-error" : ""
-
                   }`}
-
                 >
-
                   <span>ADDRESS *</span>
 
                   <input
-
                     type="text"
-
                     name="address"
-
                     value={form.address}
-
                     onChange={handleChange}
-
                     placeholder="House / Flat no., building, street"
-
                     autoComplete="street-address"
-
                   />
 
                   {formErrors.address && <small>{formErrors.address}</small>}
-
                 </label>
 
-                <label className="ax-checkout-field">
+                {/* LANDMARK */}
 
+                <label className="ax-checkout-field">
                   <span>APARTMENT / LANDMARK</span>
 
                   <input
-
                     type="text"
-
                     name="apartment"
-
                     value={form.apartment}
-
                     onChange={handleChange}
-
                     placeholder="Optional"
-
                   />
-
                 </label>
 
                 <div className="ax-checkout-fields ax-checkout-fields-two ax-checkout-nested-fields">
+                  {/* CITY */}
 
                   <label
-
                     className={`ax-checkout-field ${
-
                       formErrors.city ? "is-error" : ""
-
                     }`}
-
                   >
-
                     <span>CITY *</span>
 
                     <input
-
                       type="text"
-
                       name="city"
-
                       value={form.city}
-
                       onChange={handleChange}
-
                       placeholder="Mumbai"
-
                       autoComplete="address-level2"
-
                     />
 
                     {formErrors.city && <small>{formErrors.city}</small>}
-
                   </label>
 
+                  {/* STATE */}
+
                   <label
-
                     className={`ax-checkout-field ax-checkout-select ${
-
                       formErrors.state ? "is-error" : ""
-
                     }`}
-
                   >
-
                     <span>STATE *</span>
 
                     <div>
-
                       <select
-
                         name="state"
-
                         value={form.state}
-
                         onChange={handleChange}
-
                         autoComplete="address-level1"
-
                       >
-
                         <option value="">Select state</option>
 
                         {indianStates.map((state) => (
-
                           <option key={state} value={state}>
-
                             {state}
-
                           </option>
-
                         ))}
-
                       </select>
 
                       <ChevronDown size={16} />
-
                     </div>
 
                     {formErrors.state && <small>{formErrors.state}</small>}
-
                   </label>
 
+                  {/* PIN CODE */}
+
                   <label
-
                     className={`ax-checkout-field ${
-
                       formErrors.pincode ? "is-error" : ""
-
                     }`}
-
                   >
-
                     <span>PIN CODE *</span>
 
                     <input
-
                       type="text"
-
                       inputMode="numeric"
-
                       name="pincode"
-
                       value={form.pincode}
-
                       onChange={handleChange}
-
                       placeholder="400001"
-
                       autoComplete="postal-code"
-
                     />
 
                     {formErrors.pincode && <small>{formErrors.pincode}</small>}
-
                   </label>
 
-                  <label className="ax-checkout-field">
+                  {/* COUNTRY */}
 
+                  <label className="ax-checkout-field">
                     <span>COUNTRY</span>
 
                     <input
-
                       type="text"
-
                       name="country"
-
                       value={form.country}
-
                       readOnly
-
                     />
-
                   </label>
-
                 </div>
 
-                <label className="ax-checkout-field">
-
-                  <span>ORDER NOTE</span>
-
-                  <textarea
-
-                    name="notes"
-
-                    value={form.notes}
-
-                    onChange={handleChange}
-
-                    placeholder="Delivery instructions, landmark or anything we should know\..."
-
-                    rows="4"
-
-                  />
-
-                </label>
-
+                {/* ORDER NOTE REMOVED */}
               </div>
-
             </section>
 
+            {/* ===============================================
+                PAYMENT
+            =============================================== */}
+
             <section className="ax-checkout-card">
-
               <div className="ax-checkout-card-head">
-
                 <div>
-
                   <span>03</span>
 
                   <h2>PAYMENT</h2>
-
                 </div>
 
                 <WalletCards size={21} strokeWidth={1.4} />
-
               </div>
 
+              {/* =============================================
+                  ONLY 2 PAYMENT OPTIONS
+              ============================================= */}
+
               <div className="ax-checkout-payment-list">
-
                 {paymentOptions.map((option) => {
-
                   const Icon = option.icon;
 
                   const active = paymentMethod === option.id;
 
                   return (
-
                     <button
-
                       key={option.id}
-
                       type="button"
-
                       className={`ax-checkout-payment-option ${
-
                         active ? "active" : ""
-
                       }`}
-
                       onClick={() => setPaymentMethod(option.id)}
-
                     >
-
                       <span className="ax-checkout-payment-radio">
-
                         <i></i>
-
                       </span>
 
                       <span className="ax-checkout-payment-icon">
-
                         <Icon size={20} strokeWidth={1.5} />
-
                       </span>
 
                       <span className="ax-checkout-payment-copy">
-
                         <strong>{option.title}</strong>
 
                         <small>{option.subtitle}</small>
-
                       </span>
-
                     </button>
-
                   );
-
                 })}
-
               </div>
 
-              {paymentMethod !== "cod" && (
+              {/* ONLINE */}
 
+              {paymentMethod === "upi" && (
                 <div className="ax-checkout-online-note">
-
                   <LockKeyhole size={14} />
-
-                  Secure payment powered by Razorpay.
-
+                  Secure online payment powered by Razorpay.
                 </div>
-
               )}
+
+              {/* COD */}
 
               {paymentMethod === "cod" && (
-
-                <div
-
-                  className={`ax-checkout-cod-rule ${
-
-                    codAdvanceRequired ? "advance-required" : ""
-
-                  }`}
-
-                >
-
+                <div className="ax-checkout-cod-rule">
                   <div className="ax-checkout-cod-rule-head">
-
                     <Truck size={16} />
 
-                    <strong>CASH ON DELIVERY RULE</strong>
-
+                    <strong>CASH ON DELIVERY</strong>
                   </div>
 
-                  {codAdvanceRequired ? (
+                  <p>
+                    Pay the complete order amount of <b>{money(total)}</b> when
+                    your order is delivered.
+                  </p>
 
-                    <>
-
-                      <p>
-
-                        Your order is {money(total)}. Orders of ₹2,000 or more
-
-                        require a <b>10% online advance</b> before the order is
-
-                        confirmed.
-
-                      </p>
-
-                      <div className="ax-checkout-cod-split">
-
-                        <div>
-
-                          <span>PAY NOW (10%)</span>
-
-                          <strong>{money(codAdvanceAmount)}</strong>
-
-                        </div>
-
-                        <div>
-
-                          <span>PAY ON DELIVERY</span>
-
-                          <strong>{money(codBalanceAmount)}</strong>
-
-                        </div>
-
-                      </div>
-
-                    </>
-
-                  ) : (
-
-                    <p>
-
-                      Your order is below ₹2,000, so you can place it with
-
-                      normal Cash on Delivery.
-
-                    </p>
-
-                  )}
-
+                  <p>No online advance is required.</p>
                 </div>
-
               )}
-
             </section>
 
+            {/* ===============================================
+                MOBILE BUTTON
+            =============================================== */}
+
             <button
-
               type="submit"
-
               className="ax-checkout-place-mobile"
-
-              disabled={placingOrder || loadingCart}
-
+              disabled={placingOrder || loadingCart || !items.length}
             >
-
               {placingOrder
-
                 ? "PROCESSING..."
-
-                : codAdvanceRequired
-
-                  ? `PAY 10% (${money(codAdvanceAmount)}) & CONFIRM`
-
-                  : paymentMethod === "cod"
-
-                    ? "PLACE COD ORDER"
-
-                    : "CONTINUE TO PAYMENT"}
+                : paymentMethod === "cod"
+                  ? "PLACE COD ORDER"
+                  : "CONTINUE TO PAYMENT"}
 
               {!placingOrder && <ArrowRight size={18} />}
-
             </button>
-
           </form>
 
-          <aside className="ax-checkout-summary">
+          {/* =================================================
+              RIGHT SUMMARY
+          ================================================= */}
 
+          <aside className="ax-checkout-summary">
             <div className="ax-checkout-summary-sticky">
+              {/* =============================================
+                  HEADER
+              ============================================= */}
 
               <div className="ax-checkout-summary-head">
-
                 <span>FINAL REVIEW</span>
 
                 <PackageCheck size={18} strokeWidth={1.5} />
-
               </div>
 
+              {/* =============================================
+                  PRODUCTS
+              ============================================= */}
+
               {loadingCart ? (
-
                 <div className="ax-checkout-loading">
-
                   <i></i>
-
                   LOADING YOUR BAG
-
                 </div>
-
-              ) : cartError ? (
-
-                <div className="ax-checkout-cart-error">{cartError}</div>
-
               ) : items.length === 0 ? (
-
                 <div className="ax-checkout-empty">
-
                   <p>Your bag is empty.</p>
 
-                  <button type="button" onClick={() => navigate("/shop")}>
-
+                  <button
+                    type="button"
+                    onClick={() => navigate("/best-sellers")}
+                  >
                     GO TO SHOP
-
                     <ArrowRight size={15} />
-
                   </button>
-
                 </div>
-
               ) : (
-
                 <div className="ax-checkout-summary-items">
-
                   {items.map((item, index) => (
-
                     <article
-
                       className="ax-checkout-summary-item"
-
-                      key={item?._id || item?.product?._id || index}
-
+                      key={
+                        item?._id ||
+                        item?.product?._id ||
+                        item?.productId?._id ||
+                        index
+                      }
                     >
+                      {/* IMAGE */}
 
                       <div className="ax-checkout-item-image">
-
                         {getItemImage(item) ? (
-
                           <img
-
                             src={getItemImage(item)}
-
                             alt={getItemName(item)}
-
                           />
-
                         ) : (
-
                           <span>UNBOUND</span>
-
                         )}
 
                         <b>{getItemQuantity(item)}</b>
-
                       </div>
 
-                      <div className="ax-checkout-item-copy">
+                      {/* INFO */}
 
+                      <div className="ax-checkout-item-copy">
                         <h3>{getItemName(item)}</h3>
 
                         <p>
-
                           {item?.size ? `SIZE ${item.size}` : ""}
 
                           {item?.size && item?.color ? " / " : ""}
 
                           {item?.color ? String(item.color).toUpperCase() : ""}
-
                         </p>
-
                       </div>
 
+                      {/* PRICE */}
+
                       <strong>
-
                         {money(getItemPrice(item) * getItemQuantity(item))}
-
                       </strong>
-
                     </article>
-
                   ))}
-
                 </div>
-
               )}
 
+              {/* =============================================
+                  COUPON
+              ============================================= */}
+
+              <div
+                style={{
+                  padding: "22px 30px",
+
+                  borderTop: "1px solid rgba(255,255,255,0.08)",
+
+                  borderBottom: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                {/* TITLE */}
+
+                <div
+                  style={{
+                    display: "flex",
+
+                    alignItems: "center",
+
+                    justifyContent: "space-between",
+
+                    gap: 12,
+
+                    marginBottom: 14,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 11,
+
+                      letterSpacing: "0.18em",
+
+                      color: "#8b94a3",
+                    }}
+                  >
+                    COUPON / OFFER
+                  </span>
+
+                  {appliedCoupon && (
+                    <button
+                      type="button"
+                      onClick={removeCoupon}
+                      style={{
+                        border: 0,
+
+                        background: "transparent",
+
+                        color: "#b9ff00",
+
+                        cursor: "pointer",
+
+                        fontSize: 10,
+
+                        letterSpacing: "0.12em",
+                      }}
+                    >
+                      REMOVE
+                    </button>
+                  )}
+                </div>
+
+                {/* ENTER CODE */}
+
+                <div
+                  style={{
+                    display: "flex",
+
+                    gap: 8,
+
+                    marginBottom: 14,
+                  }}
+                >
+                  <input
+                    type="text"
+                    value={couponCode}
+                    disabled={Boolean(appliedCoupon)}
+                    onChange={(event) => {
+                      setCouponCode(event.target.value.toUpperCase());
+
+                      setCouponError("");
+
+                      setCouponMessage("");
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+
+                        applyCoupon();
+                      }
+                    }}
+                    placeholder="ENTER COUPON CODE"
+                    style={{
+                      flex: 1,
+
+                      minWidth: 0,
+
+                      height: 44,
+
+                      padding: "0 14px",
+
+                      border: "1px solid rgba(255,255,255,0.14)",
+
+                      background: "rgba(255,255,255,0.025)",
+
+                      color: "#fff",
+
+                      outline: "none",
+
+                      fontSize: 12,
+
+                      letterSpacing: "0.08em",
+
+                      textTransform: "uppercase",
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => applyCoupon()}
+                    disabled={applyingCoupon || Boolean(appliedCoupon)}
+                    style={{
+                      minWidth: 92,
+
+                      height: 44,
+
+                      border: 0,
+
+                      background: appliedCoupon ? "#273000" : "#b9ff00",
+
+                      color: appliedCoupon ? "#b9ff00" : "#050505",
+
+                      cursor:
+                        applyingCoupon || appliedCoupon ? "default" : "pointer",
+
+                      fontSize: 11,
+
+                      fontWeight: 800,
+
+                      letterSpacing: "0.12em",
+                    }}
+                  >
+                    {applyingCoupon
+                      ? "CHECKING"
+                      : appliedCoupon
+                        ? "APPLIED"
+                        : "APPLY"}
+                  </button>
+                </div>
+
+                {/* SUCCESS */}
+
+                {couponMessage && (
+                  <div
+                    style={{
+                      marginBottom: 12,
+
+                      color: "#b9ff00",
+
+                      fontSize: 11,
+
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    ✓ {couponMessage}
+                  </div>
+                )}
+
+                {/* ERROR */}
+
+                {couponError && (
+                  <div
+                    style={{
+                      marginBottom: 12,
+
+                      color: "#ff6b6b",
+
+                      fontSize: 11,
+
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {couponError}
+                  </div>
+                )}
+
+                {/* ===========================================
+                    ACTIVE COUPONS
+                =========================================== */}
+
+                {couponLoading ? (
+                  <div
+                    style={{
+                      fontSize: 10,
+
+                      color: "#6f7885",
+                    }}
+                  >
+                    LOADING ACTIVE OFFERS...
+                  </div>
+                ) : availableCoupons.length > 0 ? (
+                  <div
+                    style={{
+                      display: "grid",
+
+                      gap: 8,
+                    }}
+                  >
+                    {availableCoupons.map((coupon) => {
+                      const isApplied = appliedCoupon?.code === coupon.code;
+
+                      const eligible = Boolean(coupon.eligible);
+
+                      return (
+                        <div
+                          key={coupon._id || coupon.code}
+                          style={{
+                            display: "grid",
+
+                            gridTemplateColumns: "1fr auto",
+
+                            alignItems: "center",
+
+                            gap: 12,
+
+                            padding: "12px 14px",
+
+                            border: isApplied
+                              ? "1px solid rgba(185,255,0,0.7)"
+                              : "1px solid rgba(255,255,255,0.08)",
+
+                            background: isApplied
+                              ? "rgba(185,255,0,0.05)"
+                              : "rgba(255,255,255,0.015)",
+                          }}
+                        >
+                          {/* INFO */}
+
+                          <div>
+                            <strong
+                              style={{
+                                display: "block",
+
+                                color: "#fff",
+
+                                fontSize: 12,
+
+                                letterSpacing: "0.08em",
+                              }}
+                            >
+                              {coupon.code}
+                            </strong>
+
+                            <span
+                              style={{
+                                display: "block",
+
+                                marginTop: 4,
+
+                                color: eligible ? "#8b94a3" : "#6f7885",
+
+                                fontSize: 10,
+
+                                lineHeight: 1.45,
+                              }}
+                            >
+                              {coupon.discountType === "percentage"
+                                ? `${coupon.discountValue}% OFF`
+                                : `${money(coupon.discountValue)} OFF`}
+
+                              {Number(coupon.minOrderAmount || 0) > 0
+                                ? ` · MIN ${money(coupon.minOrderAmount)}`
+                                : ""}
+
+                              {coupon.firstOrderOnly
+                                ? " · FIRST ORDER ONLY"
+                                : ""}
+                            </span>
+                          </div>
+
+                          {/* APPLY */}
+
+                          <button
+                            type="button"
+                            disabled={!eligible || applyingCoupon || isApplied}
+                            onClick={() => {
+                              setCouponCode(coupon.code);
+
+                              applyCoupon(coupon.code);
+                            }}
+                            style={{
+                              border: "1px solid rgba(185,255,0,0.45)",
+
+                              background: isApplied ? "#b9ff00" : "transparent",
+
+                              color: isApplied
+                                ? "#050505"
+                                : eligible
+                                  ? "#b9ff00"
+                                  : "#555",
+
+                              minWidth: 68,
+
+                              height: 32,
+
+                              cursor:
+                                eligible && !isApplied ? "pointer" : "default",
+
+                              fontSize: 9,
+
+                              fontWeight: 800,
+
+                              letterSpacing: "0.1em",
+                            }}
+                          >
+                            {isApplied
+                              ? "APPLIED"
+                              : eligible
+                                ? "APPLY"
+                                : "LOCKED"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      fontSize: 10,
+
+                      color: "#6f7885",
+                    }}
+                  >
+                    NO ACTIVE COUPONS RIGHT NOW
+                  </div>
+                )}
+              </div>
+
+              {/* =============================================
+                  TOTALS
+              ============================================= */}
+
               <div className="ax-checkout-price-lines">
+                {/* SUBTOTAL */}
 
                 <div>
-
                   <span>SUBTOTAL</span>
 
                   <strong>{money(subtotal)}</strong>
-
                 </div>
 
-                <div>
+                {/* DISCOUNT */}
 
+                {discountAmount > 0 && (
+                  <div>
+                    <span>
+                      DISCOUNT{" "}
+                      {appliedCoupon?.code ? `(${appliedCoupon.code})` : ""}
+                    </span>
+
+                    <strong
+                      style={{
+                        color: "#b9ff00",
+                      }}
+                    >
+                      - {money(discountAmount)}
+                    </strong>
+                  </div>
+                )}
+
+                {/* SHIPPING */}
+
+                <div>
                   <span>SHIPPING</span>
 
                   <strong className="ax-checkout-free">FREE</strong>
-
                 </div>
 
-                <div className="ax-checkout-total">
+                {/* TOTAL */}
 
+                <div className="ax-checkout-total">
                   <span>TOTAL</span>
 
                   <div>
-
                     <small>INR</small>
 
                     <strong>{money(total)}</strong>
-
                   </div>
-
                 </div>
-
               </div>
 
+              {/* =============================================
+                  ERROR
+              ============================================= */}
+
+              {cartError && (
+                <div className="ax-checkout-cart-error">{cartError}</div>
+              )}
+
+              {/* =============================================
+                  PLACE ORDER
+              ============================================= */}
+
               <button
-
                 type="button"
-
                 className="ax-checkout-place"
-
                 disabled={placingOrder || loadingCart || !items.length}
-
                 onClick={() => {
-
                   const formElement =
-
                     document.querySelector(".ax-checkout-form");
 
                   formElement?.requestSubmit();
-
                 }}
-
               >
-
                 {placingOrder
-
                   ? "PROCESSING..."
-
-                  : codAdvanceRequired
-
-                    ? `PAY 10% (${money(codAdvanceAmount)}) & CONFIRM`
-
-                    : paymentMethod === "cod"
-
-                      ? "PLACE COD ORDER"
-
-                      : "CONTINUE TO PAYMENT"}
+                  : paymentMethod === "cod"
+                    ? "PLACE COD ORDER"
+                    : "CONTINUE TO PAYMENT"}
 
                 {!placingOrder && <ArrowRight size={18} />}
-
               </button>
 
+              {/* =============================================
+                  TRUST
+              ============================================= */}
+
               <div className="ax-checkout-trust">
-
                 <span>
-
                   <LockKeyhole size={13} />
-
                   SECURE
-
                 </span>
 
                 <span>
-
                   <Truck size={13} />
-
                   INDIA DELIVERY
-
                 </span>
-
               </div>
-
             </div>
-
           </aside>
-
         </div>
-
       </section>
-
     </main>
-
   );
-
 }
 
 export default Checkout;

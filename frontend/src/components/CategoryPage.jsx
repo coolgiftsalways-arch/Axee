@@ -1790,24 +1790,64 @@ const API_BASE = (
 const resolveProductImageUrl = (value) => {
   if (!value) return "";
 
-  const url = String(value);
+  let imageValue = value;
 
-  if (url.startsWith("http://") || url.startsWith("https://")) {
+  /*
+    Support MongoDB/GridFS image objects as well as strings.
+  */
+  if (typeof imageValue === "object") {
+    const fileId = imageValue?.fileId || imageValue?._id || imageValue?.id;
+
+    if (fileId) {
+      imageValue = `/api/catalog/images/${String(fileId)}`;
+    } else {
+      imageValue = imageValue?.url || imageValue?.src || imageValue?.path || "";
+    }
+  }
+
+  let url = String(imageValue).trim().replace(/\\/g, "/");
+
+  if (!url) return "";
+
+  if (
+    url.startsWith("http://") ||
+    url.startsWith("https://") ||
+    url.startsWith("data:") ||
+    url.startsWith("blob:")
+  ) {
     return url;
   }
 
-  // Old URLs saved in MongoDB: /api/images/:id
+  /*
+    Old MongoDB path:
+    /api/images/:id
+
+    New path:
+    /api/catalog/images/:id
+  */
   if (url.startsWith("/api/images/")) {
-    return `${API_BASE}${url.replace("/api/images/", "/api/catalog/images/")}`;
+    url = url.replace("/api/images/", "/api/catalog/images/");
   }
 
-  // Current backend API URLs.
-  if (url.startsWith("/api/")) {
+  if (url.startsWith("api/images/")) {
+    url = `/${url.replace("api/images/", "api/catalog/images/")}`;
+  }
+
+  /*
+    API and uploaded images belong to the backend.
+  */
+  if (url.startsWith("/api/") || url.startsWith("/uploads/")) {
     return `${API_BASE}${url}`;
   }
 
-  // Vite /public image such as /products/track-1.jpg
-  return url;
+  if (url.startsWith("api/") || url.startsWith("uploads/")) {
+    return `${API_BASE}/${url}`;
+  }
+
+  /*
+    Frontend public assets keep their normal path.
+  */
+  return url.startsWith("/") ? url : `/${url}`;
 };
 
 function ProductHoverImage({ product }) {
@@ -1823,34 +1863,55 @@ function ProductHoverImage({ product }) {
     const addImage = (value) => {
       const resolved = resolveProductImageUrl(value);
 
-      if (resolved && !list.includes(resolved)) {
+      if (resolved && resolved !== "/" && !list.includes(resolved)) {
         list.push(resolved);
       }
     };
 
-    // MongoDB / GridFS images from imported ZIP products.
-    if (Array.isArray(product?.imageFiles)) {
-      [...product.imageFiles]
-        .sort((a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0))
-        .forEach((item) => {
-          const fileId = item?.fileId || item?._id || item?.id;
+    /*
+      IMPORTANT:
+      catalogRoutes.js already decides the BEST image order.
 
-          if (fileId) {
-            addImage(`${API_BASE}/api/catalog/images/${String(fileId)}`);
-          } else if (item?.url) {
-            addImage(item.url);
-          }
-        });
-    }
+      Therefore product.images MUST come first.
 
-    // Backend / local images array.
+      Previously this component put legacy imageFiles first.
+      For older MongoDB products those imageFiles can contain stale GridFS
+      references, which caused the product card to become black even though
+      product.images contained the correct working image.
+    */
+
+    // 1. Backend formatted / modern images - SOURCE OF TRUTH.
     if (Array.isArray(product?.images)) {
       product.images.forEach(addImage);
     }
 
-    // Single-image fallbacks.
-    addImage(product?.image);
+    // 2. Backend selected main-image fields.
     addImage(product?.mainImage);
+    addImage(product?.image);
+
+    // 3. Legacy GridFS/imageFiles only as a final fallback.
+    if (Array.isArray(product?.imageFiles)) {
+      [...product.imageFiles]
+        .sort((a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0))
+        .forEach(addImage);
+    }
+
+    // 4. Extra legacy GridFS IDs.
+    if (Array.isArray(product?.imageIds)) {
+      product.imageIds.forEach((fileId) => {
+        if (fileId) {
+          addImage({
+            fileId,
+          });
+        }
+      });
+    }
+
+    if (product?.imageId) {
+      addImage({
+        fileId: product.imageId,
+      });
+    }
 
     return list;
   }, [product]);
@@ -2112,6 +2173,37 @@ function ProductHoverImage({ product }) {
           opacity: 1,
           zIndex: 1,
           willChange: "transform, opacity, filter",
+        }}
+        data-fallback-index="0"
+        onError={(event) => {
+          const image = event.currentTarget;
+
+          const currentIndex = Number(image.dataset.fallbackIndex || "0");
+
+          const nextIndex = currentIndex + 1;
+
+          if (nextIndex < productImages.length) {
+            console.warn(
+              "Main product image failed. Trying fallback:",
+              productImages[currentIndex],
+              "->",
+              productImages[nextIndex],
+            );
+
+            image.dataset.fallbackIndex = String(nextIndex);
+
+            image.src = productImages[nextIndex];
+
+            return;
+          }
+
+          console.error(
+            "All product images failed:",
+            product?.name,
+            productImages,
+          );
+
+          image.style.display = "none";
         }}
       />
 
@@ -2385,6 +2477,278 @@ function CartAddedToast({ toast, setToast }) {
 }
 
 /* =========================================================
+   STABLE PRODUCT RATING + REVIEW COUNT
+
+   - Rating stays between 3.5 and 5.0
+   - Reviews stay between 50 and 200
+   - Values stay the same after refresh for the same product
+   - If MongoDB already has valid values in the requested range,
+     those values are preserved
+========================================================= */
+
+const getStableProductSeed = (product) => {
+  const source = String(
+    product?._id ||
+      product?.id ||
+      product?.slug ||
+      product?.sku ||
+      product?.name ||
+      "unbound-product",
+  );
+
+  let hash = 2166136261;
+
+  for (let index = 0; index < source.length; index += 1) {
+    hash ^= source.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
+};
+
+const getProductRatingData = (product) => {
+  const seed = getStableProductSeed(product);
+
+  const generatedRating = (35 + (seed % 16)) / 10;
+  const generatedReviews = 50 + (Math.floor(seed / 17) % 151);
+
+  const savedRating = Number(product?.rating);
+  const savedReviews = Number(product?.reviewCount ?? product?.reviews);
+
+  const rating =
+    Number.isFinite(savedRating) && savedRating >= 3.5 && savedRating <= 5
+      ? Math.round(savedRating * 10) / 10
+      : generatedRating;
+
+  const reviews =
+    Number.isFinite(savedReviews) && savedReviews >= 50 && savedReviews <= 200
+      ? Math.round(savedReviews)
+      : generatedReviews;
+
+  return {
+    rating,
+    reviews,
+  };
+};
+
+function RatingStars({ rating, reviews }) {
+  const percentage = Math.max(
+    0,
+    Math.min(100, (Number(rating || 0) / 5) * 100),
+  );
+
+  return (
+    <div
+      className="unbound-card-rating"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "7px",
+        marginTop: "7px",
+        minHeight: "18px",
+      }}
+    >
+      <span
+        aria-label={`${Number(rating || 0).toFixed(1)} out of 5 stars`}
+        style={{
+          position: "relative",
+          display: "inline-block",
+          width: "67px",
+          height: "15px",
+          lineHeight: "15px",
+          fontSize: "12px",
+          letterSpacing: "1.5px",
+          whiteSpace: "nowrap",
+        }}
+      >
+        <span
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            color: "rgba(255,255,255,0.18)",
+          }}
+        >
+          ★★★★★
+        </span>
+
+        <span
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: `${percentage}%`,
+            overflow: "hidden",
+            color: "#c7ff13",
+            whiteSpace: "nowrap",
+          }}
+        >
+          ★★★★★
+        </span>
+      </span>
+
+      <strong
+        style={{
+          color: "#ffffff",
+          fontSize: "9px",
+          fontWeight: 700,
+          letterSpacing: "0.02em",
+        }}
+      >
+        {Number(rating || 0).toFixed(1)}
+      </strong>
+
+      <span
+        style={{
+          color: "rgba(255,255,255,0.45)",
+          fontSize: "8px",
+          letterSpacing: "0.02em",
+        }}
+      >
+        ({Number(reviews || 0)} reviews)
+      </span>
+    </div>
+  );
+}
+
+/* =========================================================
+   SIZE CHART
+========================================================= */
+
+const TOP_SIZE_CHART = [
+  { size: "S", chest: '38"', length: '27"', shoulder: '17"' },
+  { size: "M", chest: '40"', length: '28"', shoulder: '18"' },
+  { size: "L", chest: '42"', length: '29"', shoulder: '19"' },
+  { size: "XL", chest: '44"', length: '30"', shoulder: '20"' },
+  { size: "XXL", chest: '46"', length: '31"', shoulder: '21"' },
+];
+
+const BOTTOM_SIZE_CHART = [
+  { size: "28", waist: '28"', hip: '38"', inseam: '29"' },
+  { size: "30", waist: '30"', hip: '40"', inseam: '29.5"' },
+  { size: "32", waist: '32"', hip: '42"', inseam: '30"' },
+  { size: "34", waist: '34"', hip: '44"', inseam: '30.5"' },
+  { size: "36", waist: '36"', hip: '46"', inseam: '31"' },
+];
+
+const BOTTOM_SIZE_CATEGORIES = new Set(["JEANS", "TRACK PANTS", "SHORTS"]);
+
+function SizeChartModal({ open, onClose, category }) {
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const isBottom = BOTTOM_SIZE_CATEGORIES.has(
+    String(category || "")
+      .trim()
+      .toUpperCase(),
+  );
+
+  const rows = isBottom ? BOTTOM_SIZE_CHART : TOP_SIZE_CHART;
+
+  return (
+    <div
+      className="shop-size-chart-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        className="shop-size-chart-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${category} size chart`}
+      >
+        <div className="shop-size-chart-top">
+          <div>
+            <span className="shop-size-chart-kicker">UNBOUND / FIT GUIDE</span>
+            <h3>{category} SIZE CHART</h3>
+          </div>
+
+          <button
+            type="button"
+            className="shop-size-chart-close"
+            onClick={onClose}
+            aria-label="Close size chart"
+          >
+            <X size={16} strokeWidth={1.5} />
+          </button>
+        </div>
+
+        <div className="shop-size-chart-table-wrap">
+          <table className="shop-size-chart-table">
+            <thead>
+              <tr>
+                <th>SIZE</th>
+
+                {isBottom ? (
+                  <>
+                    <th>WAIST</th>
+                    <th>HIP</th>
+                    <th>INSEAM</th>
+                  </>
+                ) : (
+                  <>
+                    <th>CHEST</th>
+                    <th>LENGTH</th>
+                    <th>SHOULDER</th>
+                  </>
+                )}
+              </tr>
+            </thead>
+
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.size}>
+                  <td>{row.size}</td>
+
+                  {isBottom ? (
+                    <>
+                      <td>{row.waist}</td>
+                      <td>{row.hip}</td>
+                      <td>{row.inseam}</td>
+                    </>
+                  ) : (
+                    <>
+                      <td>{row.chest}</td>
+                      <td>{row.length}</td>
+                      <td>{row.shoulder}</td>
+                    </>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="shop-size-chart-note">
+          MEASUREMENTS ARE IN INCHES. UPDATE THESE VALUES TO MATCH YOUR FINAL
+          GARMENT SPEC BEFORE PRODUCTION.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
    CATEGORY PAGE
 ========================================================= */
 
@@ -2412,6 +2776,8 @@ function CategoryPage({
 
   const [addedProductId, setAddedProductId] = useState("");
 
+  const [sizeChartOpen, setSizeChartOpen] = useState(false);
+
   /*
     Tracks product + size combinations that were successfully saved
     to the backend cart from this page. After an item has been added,
@@ -2434,7 +2800,7 @@ function CategoryPage({
         ? product.availableSizes
         : [];
 
-    return rawSizes
+    const realSizes = rawSizes
       .map((item) => {
         if (typeof item === "string") {
           return item.trim();
@@ -2446,6 +2812,26 @@ function CategoryPage({
       })
       .filter(Boolean)
       .filter((size, index, allSizes) => allSizes.indexOf(size) === index);
+
+    /*
+      MongoDB is the preferred source.
+      If an older/imported product has no sizes yet, show a category-safe
+      fallback so T-Shirts, Jeans, Track Pants, Shirts and Shorts do not
+      render with a missing size selector.
+    */
+    if (realSizes.length > 0) {
+      return realSizes;
+    }
+
+    const normalizedCategory = String(product?.category || category || "")
+      .trim()
+      .toUpperCase();
+
+    if (BOTTOM_SIZE_CATEGORIES.has(normalizedCategory)) {
+      return ["28", "30", "32", "34", "36"];
+    }
+
+    return ["S", "M", "L", "XL", "XXL"];
   };
 
   /* =======================================================
@@ -3040,6 +3426,12 @@ function CategoryPage({
   return (
     <main className="shop-page">
       <CartAddedToast toast={cartToast} setToast={setCartToast} />
+
+      <SizeChartModal
+        open={sizeChartOpen}
+        onClose={() => setSizeChartOpen(false)}
+        category={category}
+      />
       {/* ===================================================
           CATEGORY HERO
       =================================================== */}
@@ -3267,6 +3659,11 @@ function CategoryPage({
                         <p>
                           ₹{Number(product.price || 0).toLocaleString("en-IN")}
                         </p>
+
+                        <RatingStars
+                          rating={getProductRatingData(product).rating}
+                          reviews={getProductRatingData(product).reviews}
+                        />
                       </div>
 
                       <Link
@@ -3289,8 +3686,28 @@ function CategoryPage({
 
                     {/* SIZES */}
 
-                    {productSizes.length > 0 && (
-                      <div className="shop-size-list">
+                    <div className="shop-size-section">
+                      <div className="shop-size-header">
+                        <span>SIZE</span>
+
+                        <button
+                          type="button"
+                          className="shop-size-chart-trigger"
+                          onClick={() => setSizeChartOpen(true)}
+                        >
+                          SIZE CHART
+                        </button>
+                      </div>
+
+                      <div
+                        className="shop-size-list"
+                        style={{
+                          gridTemplateColumns: `repeat(${Math.min(
+                            Math.max(productSizes.length, 1),
+                            5,
+                          )}, minmax(0, 1fr))`,
+                        }}
+                      >
                         {productSizes.map((size) => (
                           <button
                             type="button"
@@ -3306,7 +3723,7 @@ function CategoryPage({
                           </button>
                         ))}
                       </div>
-                    )}
+                    </div>
 
                     {/* QUANTITY */}
 

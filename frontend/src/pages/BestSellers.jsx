@@ -395,6 +395,142 @@ const safeNumber = (value, fallback = 0) => {
   return Number.isFinite(number) ? number : fallback;
 };
 
+/* =========================================================
+   STABLE PRODUCT RATING + REVIEW COUNT
+
+   - Rating stays between 3.5 and 5.0
+   - Reviews stay between 50 and 200
+   - Values stay the same after refresh for the same product
+   - If MongoDB already has valid values in the requested range,
+     those values are preserved
+========================================================= */
+
+const getStableProductSeed = (product) => {
+  const source = String(
+    product?._id ||
+      product?.id ||
+      product?.slug ||
+      product?.sku ||
+      product?.name ||
+      "unbound-product",
+  );
+
+  let hash = 2166136261;
+
+  for (let index = 0; index < source.length; index += 1) {
+    hash ^= source.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
+};
+
+const getProductRatingData = (product) => {
+  const seed = getStableProductSeed(product);
+
+  const generatedRating = (35 + (seed % 16)) / 10;
+  const generatedReviews = 50 + (Math.floor(seed / 17) % 151);
+
+  const savedRating = Number(product?.rating);
+  const savedReviews = Number(product?.reviewCount ?? product?.reviews);
+
+  const rating =
+    Number.isFinite(savedRating) && savedRating >= 3.5 && savedRating <= 5
+      ? Math.round(savedRating * 10) / 10
+      : generatedRating;
+
+  const reviews =
+    Number.isFinite(savedReviews) && savedReviews >= 50 && savedReviews <= 200
+      ? Math.round(savedReviews)
+      : generatedReviews;
+
+  return {
+    rating,
+    reviews,
+  };
+};
+
+function RatingStars({ rating, reviews }) {
+  const percentage = Math.max(
+    0,
+    Math.min(100, (Number(rating || 0) / 5) * 100),
+  );
+
+  return (
+    <div
+      className="unbound-card-rating"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "7px",
+        marginTop: "7px",
+        minHeight: "18px",
+      }}
+    >
+      <span
+        aria-label={`${Number(rating || 0).toFixed(1)} out of 5 stars`}
+        style={{
+          position: "relative",
+          display: "inline-block",
+          width: "67px",
+          height: "15px",
+          lineHeight: "15px",
+          fontSize: "12px",
+          letterSpacing: "1.5px",
+          whiteSpace: "nowrap",
+        }}
+      >
+        <span
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            color: "rgba(255,255,255,0.18)",
+          }}
+        >
+          ★★★★★
+        </span>
+
+        <span
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: `${percentage}%`,
+            overflow: "hidden",
+            color: "#c7ff13",
+            whiteSpace: "nowrap",
+          }}
+        >
+          ★★★★★
+        </span>
+      </span>
+
+      <strong
+        style={{
+          color: "#ffffff",
+          fontSize: "9px",
+          fontWeight: 700,
+          letterSpacing: "0.02em",
+        }}
+      >
+        {Number(rating || 0).toFixed(1)}
+      </strong>
+
+      <span
+        style={{
+          color: "rgba(255,255,255,0.45)",
+          fontSize: "8px",
+          letterSpacing: "0.02em",
+        }}
+      >
+        ({Number(reviews || 0)} reviews)
+      </span>
+    </div>
+  );
+}
+
 const formatReviewCount = (value) => {
   const count = safeNumber(value);
 
@@ -493,9 +629,9 @@ const buildDisplayProduct = (product, salesMap) => {
 
     oldPrice,
 
-    rating: safeNumber(product?.rating),
+    rating: getProductRatingData(product).rating,
 
-    reviews: formatReviewCount(product?.reviewCount),
+    reviews: getProductRatingData(product).reviews,
 
     sold,
 
@@ -1819,13 +1955,10 @@ function BestSellers() {
 
                   <h3>{product.name}</h3>
 
-                  <div className="best-rating">
-                    <Star size={11} fill="currentColor" />
-
-                    <strong>{product.rating}</strong>
-
-                    <span>({product.reviews})</span>
-                  </div>
+                  <RatingStars
+                    rating={product.rating}
+                    reviews={product.reviews}
+                  />
 
                   <div className="best-sold">
                     {product.sold.toLocaleString("en-IN")}+ sold

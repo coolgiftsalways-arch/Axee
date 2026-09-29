@@ -1,13 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 
-import {
-  ShoppingBag,
-  UserRound,
-  Menu,
-  X,
-  ArrowRight,
-  ChevronDown,
-} from "lucide-react";
+import { ShoppingBag, Menu, X, ArrowRight, ChevronDown } from "lucide-react";
 
 import { Link, NavLink, useNavigate } from "react-router-dom";
 
@@ -158,59 +151,111 @@ function Navbar() {
   }, []);
 
   /* =========================================================
-   CART COUNT
-========================================================= */
+     API
+  ========================================================= */
 
-  const API_BASE =
-  import.meta.env.VITE_API_URL || "";
+  const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+
+  /* =========================================================
+     CART ID WATCHER
+  ========================================================= */
+
+  const lastCartIdRef = useRef(localStorage.getItem("axiee-cart-id"));
+
+  /* =========================================================
+     CALCULATE CART COUNT
+  ========================================================= */
+
+  const getCartQuantity = (cart) => {
+    const items = Array.isArray(cart?.items) ? cart.items : [];
+
+    return items.reduce(
+      (total, item) => total + Number(item?.quantity || 1),
+      0,
+    );
+  };
+
+  /* =========================================================
+     LOAD CART COUNT
+  ========================================================= */
 
   const updateCartCount = async () => {
     try {
       const cartId = localStorage.getItem("axiee-cart-id");
 
+      lastCartIdRef.current = cartId;
+
+      /* ===============================================
+           NO CART ID
+        =============================================== */
+
       if (!cartId) {
         setCartCount(0);
+
         return;
       }
 
-      const response = await fetch(`${API_URL}/api/cart/${cartId}`);
+      /* ===============================================
+           GET CART
+        =============================================== */
+
+      const response = await fetch(`${API_BASE}/api/cart/${cartId}`, {
+        cache: "no-store",
+
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      const contentType = response.headers.get("content-type") || "";
+
+      if (!contentType.includes("application/json")) {
+        throw new Error("Cart API did not return JSON");
+      }
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to get cart");
+        throw new Error(data?.message || "Failed to get cart");
       }
 
-      const items = data.cart?.items || [];
+      const updatedCart = data?.cart ||
+        data || {
+          items: [],
+        };
 
-      const totalQuantity = items.reduce(
-        (total, item) => total + Number(item.quantity || 1),
-        0,
-      );
-
-      setCartCount(totalQuantity);
+      setCartCount(getCartQuantity(updatedCart));
     } catch (error) {
       console.error("Navbar cart count error:", error);
 
-      setCartCount(0);
+      if (!localStorage.getItem("axiee-cart-id")) {
+        setCartCount(0);
+      }
     }
   };
 
+  /* =========================================================
+     CART AUTO SYNC
+  ========================================================= */
+
   useEffect(() => {
+    /* ===============================================
+       INITIAL COUNT
+    =============================================== */
+
     updateCartCount();
 
+    /* ===============================================
+       CART UPDATED EVENT
+    =============================================== */
+
     const handleCartUpdate = (event) => {
-      // If updated cart was sent with the event,
-      // calculate instantly without another request.
       const updatedCart = event?.detail;
 
-      if (updatedCart?.items) {
-        const totalQuantity = updatedCart.items.reduce(
-          (total, item) => total + Number(item.quantity || 1),
-          0,
-        );
+      if (updatedCart && Array.isArray(updatedCart.items)) {
+        setCartCount(getCartQuantity(updatedCart));
 
-        setCartCount(totalQuantity);
+        lastCartIdRef.current = localStorage.getItem("axiee-cart-id");
 
         return;
       }
@@ -218,20 +263,116 @@ function Navbar() {
       updateCartCount();
     };
 
+    /* ===============================================
+       CART CLEARED EVENT
+    =============================================== */
+
+    const handleCartCleared = () => {
+      lastCartIdRef.current = null;
+
+      setCartCount(0);
+    };
+
+    /* ===============================================
+       STORAGE EVENT
+    =============================================== */
+
     const handleStorage = (event) => {
-      if (event.key === "axiee-cart-id") {
+      if (event.key !== "axiee-cart-id") {
+        return;
+      }
+
+      if (!event.newValue) {
+        lastCartIdRef.current = null;
+
+        setCartCount(0);
+
+        return;
+      }
+
+      lastCartIdRef.current = event.newValue;
+
+      updateCartCount();
+    };
+
+    /* ===============================================
+       WINDOW FOCUS
+    =============================================== */
+
+    const handleWindowFocus = () => {
+      updateCartCount();
+    };
+
+    /* ===============================================
+       TAB VISIBILITY
+    =============================================== */
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
         updateCartCount();
       }
     };
 
+    /* ===============================================
+       SAME TAB CART WATCHER
+    =============================================== */
+
+    const cartIdWatcher = window.setInterval(() => {
+      const currentCartId = localStorage.getItem("axiee-cart-id");
+
+      if (currentCartId === lastCartIdRef.current) {
+        return;
+      }
+
+      lastCartIdRef.current = currentCartId;
+
+      /* =========================================
+             CART REMOVED
+          ========================================= */
+
+      if (!currentCartId) {
+        setCartCount(0);
+
+        return;
+      }
+
+      /* =========================================
+             NEW CART
+          ========================================= */
+
+      updateCartCount();
+    }, 250);
+
+    /* ===============================================
+       EVENTS
+    =============================================== */
+
     window.addEventListener("axiee-cart-updated", handleCartUpdate);
+
+    window.addEventListener("axiee-cart-cleared", handleCartCleared);
 
     window.addEventListener("storage", handleStorage);
 
+    window.addEventListener("focus", handleWindowFocus);
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    /* ===============================================
+       CLEANUP
+    =============================================== */
+
     return () => {
+      window.clearInterval(cartIdWatcher);
+
       window.removeEventListener("axiee-cart-updated", handleCartUpdate);
 
+      window.removeEventListener("axiee-cart-cleared", handleCartCleared);
+
       window.removeEventListener("storage", handleStorage);
+
+      window.removeEventListener("focus", handleWindowFocus);
+
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
@@ -276,17 +417,7 @@ function Navbar() {
   };
 
   /* =========================================================
-     ACCOUNT
-  ========================================================= */
-
-  const openAccount = () => {
-    closeAll();
-
-    navigate("/account");
-  };
-
-  /* =========================================================
-     CATEGORY NAVIGATION
+     CATEGORY
   ========================================================= */
 
   const goToCategory = (href) => {
@@ -295,6 +426,20 @@ function Navbar() {
     navigate(href);
   };
 
+  /* =========================================================
+     SHOP MORE
+  ========================================================= */
+
+  const openBestSellers = () => {
+    closeAll();
+
+    navigate("/best-sellers");
+  };
+
+  /* =========================================================
+     RETURN
+  ========================================================= */
+
   return (
     <>
       {/* =====================================================
@@ -302,7 +447,9 @@ function Navbar() {
       ===================================================== */}
 
       <header className="ax-navbar">
-        {/* LOGO */}
+        {/* ===============================================
+            LOGO
+        =============================================== */}
 
         <Link
           to="/"
@@ -312,9 +459,9 @@ function Navbar() {
           UNBOUND
         </Link>
 
-        {/* =================================================
+        {/* ===================================================
             NAV LINKS
-        ================================================= */}
+        =================================================== */}
 
         <nav className="ax-navbar-links">
           {/* HOME */}
@@ -327,7 +474,7 @@ function Navbar() {
           </NavLink>
 
           {/* =================================================
-              SHOP MEGA MENU
+              SHOP
           ================================================= */}
 
           <div
@@ -345,7 +492,9 @@ function Navbar() {
               <span className="ax-shop-trigger-dot"></span>
             </button>
 
-            {/* MEGA MENU */}
+            {/* ===============================================
+                SHOP MEGA MENU
+            =============================================== */}
 
             <div
               className={shopOpen ? "ax-shop-mega active" : "ax-shop-mega"}
@@ -353,7 +502,7 @@ function Navbar() {
               onMouseLeave={closeShopMenu}
             >
               {/* =============================================
-                  LEFT SIDE
+                  LEFT
               ============================================= */}
 
               <div className="ax-shop-mega-left">
@@ -403,23 +552,20 @@ function Navbar() {
                   ))}
                 </div>
 
-                {/* BOTTOM */}
+                {/* ===========================================
+                    BOTTOM
+                =========================================== */}
 
                 <div className="ax-shop-mega-bottom">
                   <span>
                     MORE THAN CLOTHES.
                     <br />A MINDSET.
                   </span>
-
-                  <button type="button" onClick={() => goToCategory("/shop")}>
-                    VIEW ALL
-                    <ArrowRight size={15} />
-                  </button>
                 </div>
               </div>
 
               {/* =============================================
-                  RIGHT SIDE
+                  RIGHT
               ============================================= */}
 
               <div className="ax-shop-mega-right">
@@ -487,23 +633,18 @@ function Navbar() {
           </NavLink>
         </nav>
 
-        {/* =================================================
-            NAVBAR ACTIONS
-        ================================================= */}
+        {/* ===================================================
+            DESKTOP ACTIONS
+        =================================================== */}
 
         <div className="ax-navbar-actions">
-          {/* ACCOUNT */}
+          {/* ===============================================
+              ACCOUNT REMOVED
+          =============================================== */}
 
-          <button
-            type="button"
-            className="ax-account-button"
-            aria-label="Account"
-            onClick={openAccount}
-          >
-            <UserRound size={20} strokeWidth={1.6} />
-          </button>
-
-          {/* CART */}
+          {/* ===============================================
+              CART
+          =============================================== */}
 
           <button
             type="button"
@@ -516,15 +657,23 @@ function Navbar() {
             <span className="ax-cart-count">{cartCount}</span>
           </button>
 
-          {/* EXPLORE */}
+          {/* ===============================================
+              SHOP MORE
+          =============================================== */}
 
-          <Link to="/shop" className="ax-explore-button" onClick={closeAll}>
-            <span>EXPLORE</span>
+          <Link
+            to="/best-sellers"
+            className="ax-explore-button"
+            onClick={closeAll}
+          >
+            <span>SHOP MORE</span>
 
             <ArrowRight size={17} strokeWidth={1.5} />
           </Link>
 
-          {/* MOBILE MENU BUTTON */}
+          {/* ===============================================
+              MENU
+          =============================================== */}
 
           <button
             type="button"
@@ -554,17 +703,13 @@ function Navbar() {
       ===================================================== */}
 
       <div className={`ax-mobile-menu ${menuOpen ? "active" : ""}`}>
-        {/* MOBILE HEADER */}
+        {/* ===================================================
+            MOBILE HEADER
+
+            SECOND UNBOUND LOGO REMOVED
+        =================================================== */}
 
         <div className="ax-mobile-menu-header">
-          <Link
-            to="/"
-            className="ax-navbar-logo ax-unbound-logo"
-            onClick={closeAll}
-          >
-            UNBOUND
-          </Link>
-
           <button
             type="button"
             className="ax-mobile-close"
@@ -575,9 +720,9 @@ function Navbar() {
           </button>
         </div>
 
-        {/* =================================================
+        {/* ===================================================
             MOBILE LINKS
-        ================================================= */}
+        =================================================== */}
 
         <nav className="ax-mobile-links">
           {/* HOME */}
@@ -591,7 +736,9 @@ function Navbar() {
             HOME
           </NavLink>
 
-          {/* MOBILE SHOP */}
+          {/* =================================================
+              MOBILE SHOP
+          ================================================= */}
 
           <div className={`ax-mobile-shop ${mobileShopOpen ? "active" : ""}`}>
             <button
@@ -608,7 +755,9 @@ function Navbar() {
               <ChevronDown size={20} strokeWidth={1.5} />
             </button>
 
-            {/* CATEGORY DROPDOWN */}
+            {/* ===============================================
+                MOBILE CATEGORY DROPDOWN
+            =============================================== */}
 
             <div className="ax-mobile-shop-dropdown">
               {shopCategories.map((item) => (
@@ -656,19 +805,27 @@ function Navbar() {
 
         <div className="ax-mobile-divider"></div>
 
-        {/* =================================================
+        {/* ===================================================
             MOBILE ACTIONS
-        ================================================= */}
+        =================================================== */}
 
         <div className="ax-mobile-actions">
-          {/* ACCOUNT */}
+          {/* ===============================================
+              MY ACCOUNT REMOVED
+          =============================================== */}
 
-          <button type="button" onClick={openAccount}>
-            <UserRound size={18} strokeWidth={1.6} />
-            My Account
+          {/* ===============================================
+              SHOP MORE
+          =============================================== */}
+
+          <button type="button" onClick={openBestSellers}>
+            SHOP MORE
+            <ArrowRight size={18} strokeWidth={1.6} />
           </button>
 
-          {/* CART */}
+          {/* ===============================================
+              CART
+          =============================================== */}
 
           <button type="button" onClick={openCart}>
             <ShoppingBag size={18} strokeWidth={1.6} />
@@ -676,7 +833,9 @@ function Navbar() {
           </button>
         </div>
 
-        {/* WORDS */}
+        {/* ===================================================
+            MOBILE WORDS
+        =================================================== */}
 
         <div className="ax-mobile-copy">
           <span>CLOTHES</span>

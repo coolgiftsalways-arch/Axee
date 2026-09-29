@@ -1,15 +1,10 @@
 import mongoose from "mongoose";
 
-/* =========================================================
-   ORDER ITEM
-========================================================= */
-
 const orderItemSchema = new mongoose.Schema(
   {
     productId: {
       type: String,
       default: "",
-      trim: true,
     },
 
     name: {
@@ -26,13 +21,11 @@ const orderItemSchema = new mongoose.Schema(
     size: {
       type: String,
       default: "",
-      trim: true,
     },
 
     color: {
       type: String,
       default: "",
-      trim: true,
     },
 
     quantity: {
@@ -60,142 +53,84 @@ const orderItemSchema = new mongoose.Schema(
   },
 );
 
-/* =========================================================
-   CUSTOMER
-========================================================= */
-
-const customerSchema = new mongoose.Schema(
-  {
-    firstName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    lastName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    email: {
-      type: String,
-      required: true,
-      trim: true,
-      lowercase: true,
-    },
-
-    phone: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-  },
-
-  {
-    _id: false,
-  },
-);
-
-/* =========================================================
-   SHIPPING ADDRESS
-========================================================= */
-
-const shippingAddressSchema = new mongoose.Schema(
-  {
-    address: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    apartment: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    city: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    state: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    pincode: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    country: {
-      type: String,
-      default: "India",
-      trim: true,
-    },
-  },
-
-  {
-    _id: false,
-  },
-);
-
-/* =========================================================
-   ORDER
-========================================================= */
-
 const orderSchema = new mongoose.Schema(
   {
-    /* =====================================================
-         ORDER NUMBER
-      ===================================================== */
-
     orderNumber: {
       type: String,
       required: true,
       unique: true,
       index: true,
-      trim: true,
     },
-
-    /* =====================================================
-         CART
-      ===================================================== */
 
     cartId: {
       type: String,
       default: "",
-      trim: true,
     },
-
-    /* =====================================================
-         CUSTOMER
-      ===================================================== */
 
     customer: {
-      type: customerSchema,
+      firstName: {
+        type: String,
+        required: true,
+        trim: true,
+      },
 
-      required: true,
+      lastName: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+
+      email: {
+        type: String,
+        required: true,
+        trim: true,
+        lowercase: true,
+      },
+
+      phone: {
+        type: String,
+        required: true,
+        trim: true,
+      },
     },
-
-    /* =====================================================
-         SHIPPING
-      ===================================================== */
 
     shippingAddress: {
-      type: shippingAddressSchema,
+      address: {
+        type: String,
+        required: true,
+        trim: true,
+      },
 
-      required: true,
+      apartment: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+
+      city: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+
+      state: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+
+      pincode: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+
+      country: {
+        type: String,
+        default: "India",
+        trim: true,
+      },
     },
-
-    /* =====================================================
-         PRODUCTS
-      ===================================================== */
 
     items: {
       type: [orderItemSchema],
@@ -206,10 +141,6 @@ const orderSchema = new mongoose.Schema(
         message: "Order must contain at least one item.",
       },
     },
-
-    /* =====================================================
-         MONEY
-      ===================================================== */
 
     subtotal: {
       type: Number,
@@ -223,15 +154,42 @@ const orderSchema = new mongoose.Schema(
       min: 0,
     },
 
+    /* =====================================================
+         COUPON
+      ===================================================== */
+
+    couponCode: {
+      type: String,
+      default: "",
+      trim: true,
+      uppercase: true,
+    },
+
+    discountType: {
+      type: String,
+
+      enum: ["", "percentage", "fixed"],
+
+      default: "",
+    },
+
+    discountValue: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    discountAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
     total: {
       type: Number,
       required: true,
       min: 0,
     },
-
-    /* =====================================================
-         PAYMENT METHOD
-      ===================================================== */
 
     paymentMethod: {
       type: String,
@@ -241,21 +199,13 @@ const orderSchema = new mongoose.Schema(
       required: true,
     },
 
-    /* =====================================================
-         PAYMENT STATUS
-      ===================================================== */
-
     paymentStatus: {
       type: String,
 
-      enum: ["pending", "paid", "failed", "refunded"],
+      enum: ["pending", "partially_paid", "paid", "failed", "refunded"],
 
       default: "pending",
     },
-
-    /* =====================================================
-         ORDER STATUS
-      ===================================================== */
 
     orderStatus: {
       type: String,
@@ -274,24 +224,40 @@ const orderSchema = new mongoose.Schema(
     },
 
     /* =====================================================
-         RAZORPAY
+         COD ADVANCE
       ===================================================== */
+
+    codAdvanceRequired: {
+      type: Boolean,
+      default: false,
+    },
+
+    advancePercentage: {
+      type: Number,
+      default: 0,
+    },
+
+    advanceAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    balanceDueOnDelivery: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
 
     razorpayOrderId: {
       type: String,
       default: "",
-      trim: true,
     },
 
     razorpayPaymentId: {
       type: String,
       default: "",
-      trim: true,
     },
-
-    /* =====================================================
-         NOTES
-      ===================================================== */
 
     notes: {
       type: String,
@@ -304,70 +270,6 @@ const orderSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
-
-/* =========================================================
-   INDEXES
-
-   Useful for:
-   Customers page
-   customer deletion
-   order searching
-========================================================= */
-
-orderSchema.index({
-  "customer.email": 1,
-});
-
-orderSchema.index({
-  "customer.phone": 1,
-});
-
-orderSchema.index({
-  createdAt: -1,
-});
-
-orderSchema.index({
-  orderStatus: 1,
-  createdAt: -1,
-});
-
-orderSchema.index({
-  "items.productId": 1,
-});
-
-/* =========================================================
-   NORMALIZE CUSTOMER BEFORE SAVE
-========================================================= */
-
-orderSchema.pre(
-  "save",
-
-  function (next) {
-    if (this.customer) {
-      if (this.customer.firstName) {
-        this.customer.firstName = String(this.customer.firstName).trim();
-      }
-
-      if (this.customer.lastName) {
-        this.customer.lastName = String(this.customer.lastName).trim();
-      }
-
-      if (this.customer.email) {
-        this.customer.email = String(this.customer.email).trim().toLowerCase();
-      }
-
-      if (this.customer.phone) {
-        this.customer.phone = String(this.customer.phone).trim();
-      }
-    }
-
-    next();
-  },
-);
-
-/* =========================================================
-   MODEL
-========================================================= */
 
 const Order = mongoose.models.Order || mongoose.model("Order", orderSchema);
 

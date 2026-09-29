@@ -30,7 +30,6 @@ import Footer from "./components/Footer.jsx";
 ========================================================= */
 
 import Home from "./pages/Home.jsx";
-import Shop from "./pages/Shop.jsx";
 import Tshirts from "./pages/Tshirts.jsx";
 import Shirts from "./pages/Shirts.jsx";
 import Hoodies from "./pages/Hoodies.jsx";
@@ -80,9 +79,11 @@ import "./styles/pageTransition.css";
 
 function Layout() {
   const location = useLocation();
+
   const navigationType = useNavigationType();
 
   const pathname = location.pathname;
+
   const pathnameLower = pathname.toLowerCase();
 
   const isHomePage = pathname === "/";
@@ -136,18 +137,23 @@ function Layout() {
 
     const possibleValues = [
       window.scrollY,
+
       window.pageYOffset,
 
       document.documentElement.scrollTop,
+
       document.body.scrollTop,
 
       locomotive?.lenis?.scroll,
+
       locomotive?.lenis?.animatedScroll,
 
       locomotive?.lenisInstance?.scroll,
+
       locomotive?.lenisInstance?.animatedScroll,
 
       locomotive?.scroll?.y,
+
       locomotive?.scroll?.instance?.scroll?.y,
     ]
       .map((value) => Number(value))
@@ -181,7 +187,9 @@ function Layout() {
 
     window.scrollTo({
       top,
+
       left: 0,
+
       behavior: "auto",
     });
 
@@ -196,8 +204,11 @@ function Layout() {
     try {
       locomotive.scrollTo?.(top, {
         duration: 0,
+
         offset: 0,
+
         disableLerp: true,
+
         immediate: true,
       });
     } catch (error) {
@@ -209,6 +220,7 @@ function Layout() {
     try {
       locomotive.lenis?.scrollTo?.(top, {
         immediate: true,
+
         force: true,
       });
     } catch (error) {
@@ -220,6 +232,7 @@ function Layout() {
     try {
       locomotive.lenisInstance?.scrollTo?.(top, {
         immediate: true,
+
         force: true,
       });
     } catch (error) {
@@ -270,6 +283,7 @@ function Layout() {
     const targetPosition = shouldRestore ? savedPosition : 0;
 
     let frameOne = null;
+
     let frameTwo = null;
 
     let cancelled = false;
@@ -316,16 +330,19 @@ function Layout() {
 
     window.addEventListener("wheel", cancelPendingRestore, {
       once: true,
+
       passive: true,
     });
 
     window.addEventListener("touchstart", cancelPendingRestore, {
       once: true,
+
       passive: true,
     });
 
     window.addEventListener("pointerdown", cancelPendingRestore, {
       once: true,
+
       passive: true,
     });
 
@@ -576,10 +593,6 @@ function Layout() {
 
   /* =========================================================
      ADMIN ROUTES
-
-     LOGIN REQUIRED ONLY:
-     /admin
-     /admin/dashboard
   ========================================================= */
 
   if (isAdminRoute) {
@@ -592,7 +605,7 @@ function Layout() {
         {/* ADMIN LAYOUT */}
 
         <Route path="/admin" element={<AdminLayout />}>
-          {/* DASHBOARD - PROTECTED */}
+          {/* DASHBOARD */}
 
           <Route
             index
@@ -612,7 +625,7 @@ function Layout() {
             }
           />
 
-          {/* OTHER ADMIN PAGES */}
+          {/* OTHER ADMIN */}
 
           <Route path="orders" element={<Orders />} />
 
@@ -671,10 +684,6 @@ function Layout() {
               />
             }
           />
-
-          {/* SHOP */}
-
-          <Route path="/shop" element={<Shop />} />
 
           {/* PRODUCT */}
 

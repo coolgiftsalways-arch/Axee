@@ -1864,3 +1864,210 @@
     font-size: 8px;
   }
 }
+
+
+/* =========================================================
+   SIZE SELECTOR HEADER + SIZE CHART
+========================================================= */
+
+.shop-size-section {
+  margin-top: 11px;
+}
+
+.shop-size-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+
+.shop-size-header>span {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 6px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+}
+
+.shop-size-chart-trigger {
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid rgba(199, 255, 19, 0.45);
+  background: transparent;
+  color: #c7ff13;
+  font-family: inherit;
+  font-size: 5.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  transition:
+    color 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.shop-size-chart-trigger:hover {
+  color: #ffffff;
+  border-color: #ffffff;
+}
+
+/* The JSX sets the exact number of columns for each product. */
+.shop-size-section .shop-size-list {
+  margin-top: 0;
+  width: 100%;
+}
+
+/* =========================================================
+   SIZE CHART MODAL
+========================================================= */
+
+.shop-size-chart-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.shop-size-chart-modal {
+  width: min(620px, 100%);
+  max-height: min(760px, calc(100vh - 44px));
+  overflow: auto;
+  border: 1px solid rgba(199, 255, 19, 0.35);
+  background:
+    radial-gradient(circle at 85% 10%,
+      rgba(199, 255, 19, 0.07),
+      transparent 24%),
+    #070707;
+  box-shadow:
+    0 28px 100px rgba(0, 0, 0, 0.65),
+    0 0 50px rgba(199, 255, 19, 0.04);
+}
+
+.shop-size-chart-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px 24px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.shop-size-chart-kicker {
+  display: block;
+  margin-bottom: 8px;
+  color: #c7ff13;
+  font-size: 6px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+}
+
+.shop-size-chart-top h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(18px, 3vw, 28px);
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+.shop-size-chart-close {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  transition:
+    border-color 0.25s ease,
+    color 0.25s ease,
+    background 0.25s ease;
+}
+
+.shop-size-chart-close:hover {
+  border-color: #c7ff13;
+  background: rgba(199, 255, 19, 0.06);
+  color: #c7ff13;
+}
+
+.shop-size-chart-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  padding: 22px 24px 10px;
+}
+
+.shop-size-chart-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 440px;
+}
+
+.shop-size-chart-table th,
+.shop-size-chart-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
+}
+
+.shop-size-chart-table th {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+}
+
+.shop-size-chart-table td {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 11px;
+}
+
+.shop-size-chart-table td:first-child {
+  color: #c7ff13;
+  font-weight: 700;
+}
+
+.shop-size-chart-note {
+  margin: 0;
+  padding: 14px 24px 24px;
+  color: rgba(255, 255, 255, 0.34);
+  font-size: 6px;
+  line-height: 1.7;
+  letter-spacing: 0.12em;
+}
+
+@media (max-width: 560px) {
+  .shop-size-section {
+    margin-top: 8px;
+  }
+
+  .shop-size-header {
+    margin-bottom: 5px;
+  }
+
+  .shop-size-header>span,
+  .shop-size-chart-trigger {
+    font-size: 4.5px;
+  }
+
+  .shop-size-chart-backdrop {
+    padding: 12px;
+  }
+
+  .shop-size-chart-top {
+    padding: 18px 16px 15px;
+  }
+
+  .shop-size-chart-table-wrap {
+    padding: 14px 12px 8px;
+  }
+
+  .shop-size-chart-note {
+    padding: 12px 16px 18px;
+  }
+}

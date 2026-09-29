@@ -53,11 +53,12 @@ const buildCategoryFilter = (category) => {
   }
 
   const cleanCategory = String(category).trim();
+
   const lowerCategory = cleanCategory.toLowerCase();
 
-  /* =======================================================
-     TRACK PANTS / OLD PANTS SUPPORT
-  ======================================================= */
+  /* ================================
+     TRACK PANTS / OLD PANTS
+  ================================ */
 
   if (
     lowerCategory === "pants" ||
@@ -67,13 +68,14 @@ const buildCategoryFilter = (category) => {
   ) {
     return {
       $regex: "^(pants|pant|track pants|track pant|trackpants)$",
+
       $options: "i",
     };
   }
 
-  /* =======================================================
-     T-SHIRTS SUPPORT
-  ======================================================= */
+  /* ================================
+     T-SHIRTS
+  ================================ */
 
   if (
     lowerCategory === "t-shirts" ||
@@ -83,6 +85,7 @@ const buildCategoryFilter = (category) => {
   ) {
     return {
       $regex: "^(t-shirts|t-shirt|tshirts|tshirt)$",
+
       $options: "i",
     };
   }
@@ -97,18 +100,6 @@ const buildCategoryFilter = (category) => {
 
 /* =========================================================
    NORMALIZE IMAGE PATH
-
-   OLD:
-   /api/images/ID
-
-   NEW:
-   /api/catalog/images/ID
-
-   FULL URL:
-   http://localhost:5000/api/catalog/images/ID
-
-   STORED / RETURNED:
-   /api/catalog/images/ID
 ========================================================= */
 
 const normalizeImagePath = (value) => {
@@ -116,9 +107,7 @@ const normalizeImagePath = (value) => {
     return "";
   }
 
-  /* =======================================================
-     IMAGE OBJECT
-  ======================================================= */
+  /* IMAGE OBJECT */
 
   if (typeof value === "object") {
     const fileId = value?.fileId || value?._id || value?.id;
@@ -136,9 +125,7 @@ const normalizeImagePath = (value) => {
     return "";
   }
 
-  /* =======================================================
-     OLD GRIDFS ROUTE
-  ======================================================= */
+  /* OLD GRIDFS ROUTE */
 
   if (text.startsWith("/api/images/")) {
     text = text.replace("/api/images/", "/api/catalog/images/");
@@ -148,17 +135,7 @@ const normalizeImagePath = (value) => {
     text = `/${text.replace("api/images/", "api/catalog/images/")}`;
   }
 
-  /* =======================================================
-     FULL GRIDFS URL
-
-     Example:
-
-     http://localhost:5000/api/catalog/images/abc123
-
-     becomes:
-
-     /api/catalog/images/abc123
-  ======================================================= */
+  /* FULL GRIDFS URL */
 
   const gridMatch = text.match(/\/api\/catalog\/images\/([a-f\d]{24})/i);
 
@@ -179,8 +156,6 @@ const isGridFsImage = (value) => {
 
 /* =========================================================
    IS RELIABLE IMAGE
-
-   These image types are usually safe to use immediately.
 ========================================================= */
 
 const isReliableImage = (value) => {
@@ -202,7 +177,7 @@ const isReliableImage = (value) => {
 };
 
 /* =========================================================
-   REMOVE DUPLICATE IMAGES
+   REMOVE DUPLICATES
 ========================================================= */
 
 const uniqueImages = (images = []) => {
@@ -225,11 +200,7 @@ const uniqueImages = (images = []) => {
 };
 
 /* =========================================================
-   STANDARD images ARRAY
-
-   This is the NEW system.
-
-   images[0] = MAIN
+   STANDARD images[]
 ========================================================= */
 
 const getStandardImages = (product) => {
@@ -242,15 +213,6 @@ const getStandardImages = (product) => {
 
 /* =========================================================
    LEGACY imageFiles
-
-   This is important for your OLD MongoDB products.
-
-   imageFiles: [
-     {
-       fileId: ObjectId(...),
-       order: 0
-     }
-   ]
 ========================================================= */
 
 const getLegacyImageFiles = (product) => {
@@ -269,6 +231,7 @@ const getLegacyImageFiles = (product) => {
 
     if (fileId) {
       images.push(imageUrl(fileId));
+
       return;
     }
 
@@ -319,42 +282,196 @@ const getSingleImageFields = (product) => {
 };
 
 /* =========================================================
-   ⭐ GET BEST PRODUCT IMAGES
-
-   IMPORTANT LOGIC:
-
-   NEW ADMIN PRODUCT:
-   images[0] is GridFS
-   => use images[].
-
-   OLD PRODUCT:
-   images[] may contain old/broken path,
-   but imageFiles contains real GridFS files
-   => use imageFiles.
-
-   AFTER YOU EDIT AN OLD PRODUCT:
-   Admin saves its selected images into images[] as GridFS URLs
-   => images[] becomes the new source automatically.
+   GET GRIDFS ID FROM IMAGE
 ========================================================= */
 
-const getProductImages = (product) => {
-  const standardImages = getStandardImages(product);
+const getGridFsIdFromImage = (value) => {
+  const normalized = normalizeImagePath(value);
 
-  const legacyImageFiles = getLegacyImageFiles(product);
+  const match = String(normalized || "").match(
+    /\/api\/catalog\/images\/([a-f\d]{24})/i,
+  );
 
-  const legacyImageIds = getLegacyImageIds(product);
+  return match?.[1] || "";
+};
 
-  const singleImageId = getSingleImageId(product);
+/* =========================================================
+   COLLECT ALL GRIDFS IDS
+========================================================= */
 
-  const singleFields = getSingleImageFields(product);
+const collectGridFsIdsForProduct = (product) => {
+  const ids = new Set();
+
+  const addValue = (value) => {
+    const id = getGridFsIdFromImage(value);
+
+    if (id) {
+      ids.add(id);
+    }
+  };
+
+  /* images[] */
+
+  if (Array.isArray(product?.images)) {
+    product.images.forEach(addValue);
+  }
+
+  /* main fields */
+
+  addValue(product?.mainImage);
+
+  addValue(product?.image);
+
+  /* imageFiles */
+
+  if (Array.isArray(product?.imageFiles)) {
+    product.imageFiles.forEach((item) => {
+      const fileId = item?.fileId || item?._id || item?.id;
+
+      if (fileId && mongoose.Types.ObjectId.isValid(String(fileId))) {
+        ids.add(String(fileId));
+      } else {
+        addValue(item?.url || item?.src || item?.path || "");
+      }
+    });
+  }
+
+  /* imageIds */
+
+  if (Array.isArray(product?.imageIds)) {
+    product.imageIds.forEach((id) => {
+      if (id && mongoose.Types.ObjectId.isValid(String(id))) {
+        ids.add(String(id));
+      }
+    });
+  }
+
+  /* imageId */
+
+  if (
+    product?.imageId &&
+    mongoose.Types.ObjectId.isValid(String(product.imageId))
+  ) {
+    ids.add(String(product.imageId));
+  }
+
+  return [...ids];
+};
+
+/* =========================================================
+   CHECK WHICH GRIDFS FILES REALLY EXIST
+========================================================= */
+
+const getExistingGridFsIds = async (db, products = []) => {
+  const allIds = new Set();
+
+  products.forEach((product) => {
+    collectGridFsIdsForProduct(product).forEach((id) => {
+      allIds.add(id);
+    });
+  });
+
+  const objectIds = [...allIds]
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+
+  if (objectIds.length === 0) {
+    return new Set();
+  }
+
+  const files = await db
+    .collection("productImages.files")
+    .find(
+      {
+        _id: {
+          $in: objectIds,
+        },
+      },
+      {
+        projection: {
+          _id: 1,
+        },
+      },
+    )
+    .toArray();
+
+  return new Set(files.map((file) => String(file._id)));
+};
+
+/* =========================================================
+   REMOVE MISSING GRIDFS IMAGES
+========================================================= */
+
+const removeMissingGridFsImages = (images = [], existingGridFsIds = null) => {
+  if (!(existingGridFsIds instanceof Set)) {
+    return uniqueImages(images);
+  }
+
+  return uniqueImages(images).filter((image) => {
+    const id = getGridFsIdFromImage(image);
+
+    /*
+       External URL,
+       uploads path,
+       public frontend path
+       = keep it.
+      */
+
+    if (!id) {
+      return true;
+    }
+
+    /*
+       GridFS path:
+       keep only if file exists.
+      */
+
+    return existingGridFsIds.has(id);
+  });
+};
+
+/* =========================================================
+   ⭐ GET BEST PRODUCT IMAGES
+========================================================= */
+
+const getProductImages = (product, existingGridFsIds = null) => {
+  /* MODERN images[] */
+
+  const standardImages = removeMissingGridFsImages(
+    getStandardImages(product),
+    existingGridFsIds,
+  );
+
+  /* LEGACY imageFiles */
+
+  const legacyImageFiles = removeMissingGridFsImages(
+    getLegacyImageFiles(product),
+    existingGridFsIds,
+  );
+
+  /* LEGACY imageIds */
+
+  const legacyImageIds = removeMissingGridFsImages(
+    getLegacyImageIds(product),
+    existingGridFsIds,
+  );
+
+  /* SINGLE imageId */
+
+  const singleImageId = removeMissingGridFsImages(
+    getSingleImageId(product),
+    existingGridFsIds,
+  );
+
+  /* mainImage / image */
+
+  const singleFields = removeMissingGridFsImages(
+    getSingleImageFields(product),
+    existingGridFsIds,
+  );
 
   /* =======================================================
-     1. NEW ADMIN / GRIDFS images ARRAY
-
-     If images[] already contains real GridFS images,
-     its exact order must win.
-
-     This makes "MAKE MAIN" work.
+     1. VALID MODERN GRIDFS
   ======================================================= */
 
   if (standardImages.length > 0 && standardImages.some(isGridFsImage)) {
@@ -362,9 +479,7 @@ const getProductImages = (product) => {
   }
 
   /* =======================================================
-     2. mainImage / image IS GRIDFS
-
-     Useful if a product was partly migrated.
+     2. VALID mainImage / image GRIDFS
   ======================================================= */
 
   const reliableSingle = singleFields.filter(isGridFsImage);
@@ -375,13 +490,12 @@ const getProductImages = (product) => {
       ...standardImages,
       ...legacyImageFiles,
       ...legacyImageIds,
+      ...singleImageId,
     ]);
   }
 
   /* =======================================================
-     3. OLD PRODUCT imageFiles
-
-     This fixes the many broken product images you're seeing.
+     3. LEGACY imageFiles
   ======================================================= */
 
   if (legacyImageFiles.length > 0) {
@@ -389,7 +503,7 @@ const getProductImages = (product) => {
   }
 
   /* =======================================================
-     4. OLD imageIds
+     4. imageIds
   ======================================================= */
 
   if (legacyImageIds.length > 0) {
@@ -397,7 +511,7 @@ const getProductImages = (product) => {
   }
 
   /* =======================================================
-     5. SINGLE imageId
+     5. imageId
   ======================================================= */
 
   if (singleImageId.length > 0) {
@@ -405,7 +519,7 @@ const getProductImages = (product) => {
   }
 
   /* =======================================================
-     6. MODERN EXTERNAL / UPLOAD images
+     6. EXTERNAL / UPLOAD images[]
   ======================================================= */
 
   if (standardImages.length > 0 && standardImages.some(isReliableImage)) {
@@ -413,10 +527,7 @@ const getProductImages = (product) => {
   }
 
   /* =======================================================
-     7. ANY images ARRAY
-
-     Example:
-     /products/tshirt-1.jpg
+     7. PUBLIC images[]
   ======================================================= */
 
   if (standardImages.length > 0) {
@@ -424,7 +535,7 @@ const getProductImages = (product) => {
   }
 
   /* =======================================================
-     8. SINGLE image / mainImage
+     8. SINGLE IMAGE FIELDS
   ======================================================= */
 
   if (singleFields.length > 0) {
@@ -436,23 +547,21 @@ const getProductImages = (product) => {
 
 /* =========================================================
    FORMAT PRODUCT
-
-   Whatever getProductImages returns at [0]
-   becomes main everywhere.
 ========================================================= */
 
-const formatProduct = (product) => {
+const formatProduct = (product, existingGridFsIds = null) => {
   if (!product) {
     return null;
   }
 
-  const images = getProductImages(product);
+  const images = getProductImages(product, existingGridFsIds);
 
-  const mainImage =
-    images[0] ||
-    normalizeImagePath(product?.mainImage) ||
-    normalizeImagePath(product?.image) ||
-    "";
+  const fallbackMainFields = removeMissingGridFsImages(
+    [product?.mainImage, product?.image],
+    existingGridFsIds,
+  );
+
+  const mainImage = images[0] || fallbackMainFields[0] || "";
 
   return {
     ...product,
@@ -463,7 +572,7 @@ const formatProduct = (product) => {
 
     image: mainImage,
 
-    mainImage,
+    mainImage: mainImage,
 
     images,
   };
@@ -482,6 +591,7 @@ router.get("/products", async (req, res) => {
     if (!db) {
       return res.status(500).json({
         success: false,
+
         message: "Database not connected",
       });
     }
@@ -494,9 +604,7 @@ router.get("/products", async (req, res) => {
       },
     };
 
-    /* =====================================================
-       CATEGORY
-    ===================================================== */
+    /* CATEGORY */
 
     if (category) {
       const categoryFilter = buildCategoryFilter(category);
@@ -506,9 +614,7 @@ router.get("/products", async (req, res) => {
       }
     }
 
-    /* =====================================================
-       SEARCH
-    ===================================================== */
+    /* SEARCH */
 
     if (search) {
       const safeSearch = escapeRegex(search);
@@ -517,6 +623,7 @@ router.get("/products", async (req, res) => {
         {
           name: {
             $regex: safeSearch,
+
             $options: "i",
           },
         },
@@ -524,6 +631,7 @@ router.get("/products", async (req, res) => {
         {
           sku: {
             $regex: safeSearch,
+
             $options: "i",
           },
         },
@@ -531,15 +639,14 @@ router.get("/products", async (req, res) => {
         {
           category: {
             $regex: safeSearch,
+
             $options: "i",
           },
         },
       ];
     }
 
-    /* =====================================================
-       QUERY
-    ===================================================== */
+    /* QUERY */
 
     let query = db.collection("products").find(filter).sort({
       createdAt: -1,
@@ -554,7 +661,19 @@ router.get("/products", async (req, res) => {
 
     const products = await query.toArray();
 
-    const formattedProducts = products.map(formatProduct);
+    /* ================================
+         CHECK ACTUAL GRIDFS FILES
+      ================================ */
+
+    const existingGridFsIds = await getExistingGridFsIds(db, products);
+
+    /* ================================
+         FORMAT
+      ================================ */
+
+    const formattedProducts = products.map((product) =>
+      formatProduct(product, existingGridFsIds),
+    );
 
     return res.status(200).json({
       success: true,
@@ -579,8 +698,7 @@ router.get("/products", async (req, res) => {
 /* =========================================================
    RELATED PRODUCTS
 
-   IMPORTANT:
-   Keep this route before /products/:id.
+   GET /api/catalog/products/:id/related
 ========================================================= */
 
 router.get("/products/:id/related", async (req, res) => {
@@ -607,9 +725,7 @@ router.get("/products/:id/related", async (req, res) => {
 
     const objectId = new mongoose.Types.ObjectId(id);
 
-    /* ===================================================
-         CURRENT PRODUCT
-      =================================================== */
+    /* CURRENT PRODUCT */
 
     const currentProduct = await db.collection("products").findOne({
       _id: objectId,
@@ -627,9 +743,7 @@ router.get("/products/:id/related", async (req, res) => {
       });
     }
 
-    /* ===================================================
-         RELATED FILTER
-      =================================================== */
+    /* FILTER */
 
     const filter = {
       _id: {
@@ -647,23 +761,33 @@ router.get("/products/:id/related", async (req, res) => {
       filter.category = categoryFilter;
     }
 
+    /* QUERY */
+
     const relatedProducts = await db
       .collection("products")
       .find(filter)
       .sort({
         featured: -1,
+
         soldCount: -1,
+
         createdAt: -1,
       })
       .limit(4)
       .toArray();
+
+    /* CHECK IMAGES */
+
+    const existingGridFsIds = await getExistingGridFsIds(db, relatedProducts);
 
     return res.status(200).json({
       success: true,
 
       count: relatedProducts.length,
 
-      products: relatedProducts.map(formatProduct),
+      products: relatedProducts.map((product) =>
+        formatProduct(product, existingGridFsIds),
+      ),
     });
   } catch (error) {
     console.error("❌ RELATED PRODUCTS ERROR:", error);
@@ -724,10 +848,14 @@ router.get("/products/:id", async (req, res) => {
       });
     }
 
+    /* CHECK GRIDFS */
+
+    const existingGridFsIds = await getExistingGridFsIds(db, [product]);
+
     return res.status(200).json({
       success: true,
 
-      product: formatProduct(product),
+      product: formatProduct(product, existingGridFsIds),
     });
   } catch (error) {
     console.error("❌ GET SINGLE PRODUCT ERROR:", error);
@@ -758,9 +886,7 @@ router.get("/images/:id", async (req, res) => {
 
     const { id } = req.params;
 
-    /* ===================================================
-         VALIDATE IMAGE ID
-      =================================================== */
+    /* VALIDATE ID */
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).send("Invalid image ID");
@@ -774,9 +900,7 @@ router.get("/images/:id", async (req, res) => {
       return res.status(500).send("GridFS unavailable");
     }
 
-    /* ===================================================
-         CHECK IMAGE EXISTS
-      =================================================== */
+    /* CHECK FILE EXISTS */
 
     const file = await db.collection("productImages.files").findOne({
       _id: objectId,
@@ -786,9 +910,7 @@ router.get("/images/:id", async (req, res) => {
       return res.status(404).send("Image not found");
     }
 
-    /* ===================================================
-         CONTENT TYPE
-      =================================================== */
+    /* CONTENT TYPE */
 
     const contentType =
       file?.metadata?.contentType || file?.contentType || "image/jpeg";
@@ -797,9 +919,7 @@ router.get("/images/:id", async (req, res) => {
 
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
 
-    /* ===================================================
-         STREAM
-      =================================================== */
+    /* STREAM */
 
     const stream = bucket.openDownloadStream(objectId);
 
