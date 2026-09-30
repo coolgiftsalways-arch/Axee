@@ -97,9 +97,14 @@ function Layout() {
 
   const [loadingComplete, setLoadingComplete] = useState(false);
 
+  const [heroStarted, setHeroStarted] = useState(false);
+
   const [heroComplete, setHeroComplete] = useState(false);
 
   const [heroAlreadyPlayed, setHeroAlreadyPlayed] = useState(false);
+
+  const [soundOn, setSoundOn] = useState(false);
+  const [soundBlocked, setSoundBlocked] = useState(false);
 
   const audioRef = useRef(null);
 
@@ -107,7 +112,7 @@ function Layout() {
 
   const scrollPositionsRef = useRef(new Map());
 
-  const shouldPlayHeroIntro = loadingComplete && !heroAlreadyPlayed;
+  const shouldPlayHeroIntro = heroStarted && !heroAlreadyPlayed;
 
   const locationKey =
     location.key || `${location.pathname}${location.search || ""}`;
@@ -371,10 +376,17 @@ function Layout() {
 
   /* =========================================================
      HERO AUDIO
+
+     IMPORTANT:
+     - Audio does NOT play during Loader.
+     - Loader must finish first.
+     - Home calls handleHeroAudioStart at hero timeline time 0.
+     - If the browser blocks autoplay, the side SOUND control
+       remains visible so the visitor can start it manually.
   ========================================================= */
 
   useEffect(() => {
-    if (isAdminRoute) {
+    if (!isHomePage || isAdminRoute) {
       return;
     }
 
@@ -385,12 +397,22 @@ function Layout() {
     }
 
     audio.preload = "auto";
-
     audio.volume = 1;
-
     audio.muted = false;
-
     audio.load();
+
+    const handlePlay = () => {
+      setSoundOn(true);
+      setSoundBlocked(false);
+    };
+
+    const handlePause = () => {
+      setSoundOn(false);
+    };
+
+    const handleEnded = () => {
+      setSoundOn(false);
+    };
 
     const handleReady = () => {
       console.log("✅ hero.mp3 ready");
@@ -398,21 +420,112 @@ function Layout() {
 
     const handleError = () => {
       console.error("❌ Could not load /audio/hero.mp3");
+      setSoundOn(false);
     };
 
+    audio.addEventListener("play", handlePlay);
+    audio.addEventListener("pause", handlePause);
+    audio.addEventListener("ended", handleEnded);
     audio.addEventListener("canplaythrough", handleReady);
-
     audio.addEventListener("error", handleError);
 
     return () => {
+      audio.removeEventListener("play", handlePlay);
+      audio.removeEventListener("pause", handlePause);
+      audio.removeEventListener("ended", handleEnded);
       audio.removeEventListener("canplaythrough", handleReady);
-
       audio.removeEventListener("error", handleError);
     };
-  }, [isAdminRoute]);
+  }, [isHomePage, isAdminRoute]);
+
+  const handleHeroAudioStart = useCallback(() => {
+    if (isAdminRoute || !isHomePage) {
+      return;
+    }
+
+    const audio = audioRef.current;
+
+    if (!audio) {
+      return;
+    }
+
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = 1;
+      audio.muted = false;
+
+      const playPromise = audio.play();
+
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setSoundOn(true);
+            setSoundBlocked(false);
+            console.log("🔊 HERO SOUND STARTED WITH HERO ANIMATION");
+          })
+          .catch((error) => {
+            setSoundOn(false);
+            setSoundBlocked(true);
+            console.warn("Browser blocked hero autoplay:", error);
+          });
+      }
+    } catch (error) {
+      setSoundOn(false);
+      setSoundBlocked(true);
+      console.error("Hero audio start error:", error);
+    }
+  }, [isAdminRoute, isHomePage]);
+
+  const toggleHeroSound = useCallback(() => {
+    const audio = audioRef.current;
+
+    if (!audio) {
+      return;
+    }
+
+    if (!audio.paused && !audio.muted) {
+      audio.pause();
+      setSoundOn(false);
+      return;
+    }
+
+    try {
+      audio.muted = false;
+      audio.volume = 1;
+
+      const playPromise = audio.play();
+
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setSoundOn(true);
+            setSoundBlocked(false);
+          })
+          .catch((error) => {
+            setSoundOn(false);
+            setSoundBlocked(true);
+            console.warn("Sound control play blocked:", error);
+          });
+      }
+    } catch (error) {
+      setSoundOn(false);
+      setSoundBlocked(true);
+      console.error("Sound control error:", error);
+    }
+  }, []);
 
   /* =========================================================
-     LOADER COMPLETE
+     LOADER REVEAL
+
+     The loader doors can open over the static hero background,
+     but the actual hero GSAP timeline waits for Loader onComplete.
+  ========================================================= */
+
+  /* =========================================================
+     LOADER FULLY COMPLETE
+
+     Only removes the loader after the black doors finish.
   ========================================================= */
 
   const handleLoaderComplete = useCallback(() => {
@@ -420,36 +533,16 @@ function Layout() {
       return;
     }
 
-    const audio = audioRef.current;
+    forceScrollToTop();
 
-    if (audio) {
-      try {
-        audio.pause();
-
-        audio.currentTime = 0;
-
-        audio.volume = 1;
-
-        audio.muted = false;
-
-        const playPromise = audio.play();
-
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              console.log("🔊 AXIEE SOUND PLAYING");
-            })
-            .catch((error) => {
-              console.warn("Browser blocked autoplay:", error);
-            });
-        }
-      } catch (error) {
-        console.error("Audio error:", error);
-      }
-    }
-
+    /*
+      Loader is now completely gone.
+      Start Home's visual timeline.
+      Home itself starts hero.mp3 at timeline position 0.
+    */
     setLoadingComplete(true);
-  }, [isAdminRoute]);
+    setHeroStarted(true);
+  }, [isAdminRoute, forceScrollToTop]);
 
   /* =========================================================
      HERO COMPLETE
@@ -459,7 +552,29 @@ function Layout() {
     setHeroComplete(true);
 
     setHeroAlreadyPlayed(true);
+
+    ScrollTrigger.refresh();
   }, []);
+
+  /* =========================================================
+     STOP HERO AUDIO WHEN LEAVING HOME
+  ========================================================= */
+
+  useEffect(() => {
+    if (isHomePage) {
+      return;
+    }
+
+    const audio = audioRef.current;
+
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+
+    setSoundOn(false);
+    setSoundBlocked(false);
+  }, [isHomePage]);
 
   /* =========================================================
      ADMIN CLEANUP
@@ -667,6 +782,8 @@ function Layout() {
         }}
       />
 
+      {/* Sound UI is rendered only by Home.jsx via .ax-sound-dock */}
+
       <div className="app">
         <Navbar />
 
@@ -680,6 +797,7 @@ function Layout() {
                 startAnimation={shouldPlayHeroIntro}
                 heroComplete={heroComplete}
                 heroAlreadyPlayed={heroAlreadyPlayed}
+                onHeroStart={handleHeroAudioStart}
                 onHeroComplete={handleHeroComplete}
               />
             }

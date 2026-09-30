@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import "../styles/loader.css";
 
-function Loader({ onComplete }) {
+function Loader({ onRevealStart, onComplete }) {
   const loaderRef = useRef(null);
   const lettersRef = useRef([]);
   const lineRef = useRef(null);
@@ -14,21 +14,18 @@ function Loader({ onComplete }) {
   const [percentage, setPercentage] = useState(0);
 
   const letters = ["U", "N", "B", "O", "U", "N", "D"];
-
-  // Middle O
   const centerIndex = 3;
 
   useEffect(() => {
     const counter = { value: 0 };
-
     let centerMoveX = 0;
     let centerMoveY = 0;
 
     const tl = gsap.timeline();
 
-    // ==============================
-    // INITIAL STATE
-    // ==============================
+    /* =======================================================
+       INITIAL STATE
+    ======================================================= */
 
     gsap.set(lettersRef.current, {
       y: 150,
@@ -46,9 +43,14 @@ function Loader({ onComplete }) {
       xPercent: 0,
     });
 
-    // ==============================
-    // 1. UNBOUND ENTER
-    // ==============================
+    gsap.set(bottomRef.current, {
+      opacity: 1,
+      y: 0,
+    });
+
+    /* =======================================================
+       1. UNBOUND ENTERS
+    ======================================================= */
 
     tl.to(lettersRef.current, {
       y: 0,
@@ -60,12 +62,9 @@ function Loader({ onComplete }) {
       ease: "power4.out",
     });
 
-    // Small impact
     tl.fromTo(
       lettersRef.current,
-      {
-        scale: 1.08,
-      },
+      { scale: 1.08 },
       {
         scale: 1,
         duration: 0.6,
@@ -75,9 +74,9 @@ function Loader({ onComplete }) {
       "-=0.45",
     );
 
-    // ==============================
-    // 2. LOADING BAR
-    // ==============================
+    /* =======================================================
+       2. LOADING BAR + 000 -> 100
+    ======================================================= */
 
     tl.to(
       lineRef.current,
@@ -89,17 +88,12 @@ function Loader({ onComplete }) {
       "-=0.2",
     );
 
-    // ==============================
-    // 3. 000 → 100
-    // ==============================
-
     tl.to(
       counter,
       {
         value: 100,
         duration: 2.8,
         ease: "power2.inOut",
-
         onUpdate: () => {
           setPercentage(Math.round(counter.value));
         },
@@ -107,9 +101,9 @@ function Loader({ onComplete }) {
       "<",
     );
 
-    // ==============================
-    // 4. 100% PUNCH
-    // ==============================
+    /* =======================================================
+       3. 100% PUNCH
+    ======================================================= */
 
     tl.to(percentageRef.current, {
       scale: 1.15,
@@ -123,11 +117,11 @@ function Loader({ onComplete }) {
       ease: "power2.in",
     });
 
-    tl.to({}, { duration: 0.15 });
+    tl.to({}, { duration: 0.12 });
 
-    // ==============================
-    // 5. HIDE ALL LETTERS EXCEPT O
-    // ==============================
+    /* =======================================================
+       4. KEEP ONLY THE MIDDLE O
+    ======================================================= */
 
     const lettersToHide = lettersRef.current.filter(
       (_, index) => index !== centerIndex,
@@ -146,10 +140,6 @@ function Loader({ onComplete }) {
       ease: "power3.inOut",
     });
 
-    // ==============================
-    // HIDE LOADING BOTTOM
-    // ==============================
-
     tl.to(
       bottomRef.current,
       {
@@ -161,14 +151,16 @@ function Loader({ onComplete }) {
       "<",
     );
 
-    // ==============================
-    // 6. FIND CENTER O POSITION
-    // ==============================
+    /* =======================================================
+       5. MOVE O TO EXACT SCREEN CENTER
+    ======================================================= */
 
     tl.add(() => {
       const centerLetter = lettersRef.current[centerIndex];
 
-      if (!centerLetter) return;
+      if (!centerLetter) {
+        return;
+      }
 
       const rect = centerLetter.getBoundingClientRect();
 
@@ -182,94 +174,96 @@ function Loader({ onComplete }) {
       centerMoveY = screenY - currentY;
     });
 
-    // ==============================
-    // 7. MOVE O EXACTLY CENTER
-    // ==============================
-
     tl.to(lettersRef.current[centerIndex], {
       x: () => centerMoveX,
       y: () => centerMoveY,
-      duration: 0.75,
+      duration: 0.72,
       ease: "power4.inOut",
     });
 
-    tl.to({}, { duration: 0.15 });
+    tl.to({}, { duration: 0.12 });
 
-    // ==============================
-    // 8. O BECOMES LIME
-    // ==============================
+    /* =======================================================
+       6. WHITE O -> LIME O
+    ======================================================= */
 
     tl.to(lettersRef.current[centerIndex], {
       color: "#c7ff13",
-
       textShadow:
         "0 0 15px rgba(199,255,19,.9), 0 0 45px rgba(199,255,19,.65), 0 0 90px rgba(199,255,19,.35)",
-
-      duration: 0.3,
+      duration: 0.28,
       ease: "power2.out",
     });
 
-    // ==============================
-    // 9. O COMPRESSES INTO DOOR
-    // ==============================
+    /* =======================================================
+       7. O -> VERTICAL GREEN LINE
+    ======================================================= */
 
     tl.to(lettersRef.current[centerIndex], {
       scaleX: 0.1,
       scaleY: 1.7,
-      duration: 0.5,
+      duration: 0.48,
       ease: "power4.inOut",
     });
 
-    // Extra glow
     tl.to(lettersRef.current[centerIndex], {
       scaleY: 2.4,
-
       textShadow:
         "0 0 25px rgba(199,255,19,1), 0 0 80px rgba(199,255,19,.8), 0 0 150px rgba(199,255,19,.5)",
-
-      duration: 0.3,
+      duration: 0.28,
       ease: "power3.out",
     });
-
-    // ==============================
-    // 10. REMOVE CENTER LETTER
-    // ==============================
 
     tl.to(lettersRef.current[centerIndex], {
       opacity: 0,
       scaleX: 0.03,
-      duration: 0.18,
+      duration: 0.16,
       ease: "power2.in",
     });
 
-    // Loader background becomes transparent
+    /* =======================================================
+       8. START HERO BEHIND THE BLACK DOORS
+
+       IMPORTANT:
+       This callback starts Home's hero timeline.
+       It DOES NOT remove the loader yet.
+    ======================================================= */
+
+    tl.call(() => {
+      onRevealStart?.();
+    });
+
     tl.set(loaderRef.current, {
       backgroundColor: "transparent",
     });
 
-    // ==============================
-    // 11. NETFLIX STYLE OPEN
-    // ==============================
+    /* =======================================================
+       9. BLACK DOORS OPEN
+    ======================================================= */
 
-    tl.to(leftPanelRef.current, {
-      xPercent: -100,
-      duration: 1.4,
-      ease: "power4.inOut",
-    });
+    tl.to(
+      leftPanelRef.current,
+      {
+        xPercent: -100,
+        duration: 1.35,
+        ease: "power4.inOut",
+      },
+      "+=0.04",
+    );
 
     tl.to(
       rightPanelRef.current,
       {
         xPercent: 100,
-        duration: 1.4,
+        duration: 1.35,
         ease: "power4.inOut",
       },
       "<",
     );
 
-    // ==============================
-    // 12. REMOVE LOADER
-    // ==============================
+    /* =======================================================
+       10. REMOVE LOADER ONLY AFTER DOORS ARE OPEN
+    ======================================================= */
 
     tl.set(loaderRef.current, {
       pointerEvents: "none",
@@ -277,20 +271,16 @@ function Loader({ onComplete }) {
     });
 
     tl.call(() => {
-      if (onComplete) {
-        onComplete();
-      }
+      onComplete?.();
     });
 
     return () => {
       tl.kill();
     };
-  }, [onComplete]);
+  }, [onRevealStart, onComplete]);
 
   return (
     <div ref={loaderRef} className="axiee-loader">
-      {/* BLACK OPENING PANELS */}
-
       <div ref={leftPanelRef} className="loader-door-panel loader-door-left" />
 
       <div
@@ -299,8 +289,6 @@ function Loader({ onComplete }) {
       />
 
       <div className="loader-inner">
-        {/* UNBOUND */}
-
         <div className="loader-logo">
           {letters.map((letter, index) => (
             <span
@@ -318,8 +306,6 @@ function Loader({ onComplete }) {
             </span>
           ))}
         </div>
-
-        {/* BOTTOM LOADER */}
 
         <div ref={bottomRef} className="loader-bottom">
           <div className="loader-progress">

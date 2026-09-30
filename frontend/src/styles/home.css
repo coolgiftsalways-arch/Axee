@@ -30,6 +30,15 @@ body {
      overflow-x: hidden;
 }
 
+.app {
+     width: 100%;
+     min-height: 100vh;
+     margin: 0;
+     padding: 0;
+     background: #020202;
+     overflow-x: hidden;
+}
+
 *,
 *::before,
 *::after {
@@ -68,8 +77,9 @@ body {
 .ax-hero {
      position: relative;
      width: 100%;
-     height: 100svh;
-     min-height: 700px;
+     height: 100vh;
+     height: 100dvh;
+     min-height: 0;
      margin: 0;
      padding: 0;
      overflow: hidden;
@@ -314,7 +324,7 @@ body {
      position: absolute;
 
      left: 50%;
-     bottom: -7%;
+     bottom: 0;
 
      z-index: 7;
 
@@ -322,7 +332,7 @@ body {
           min(31vw,
                530px);
 
-     height: 87%;
+     height: 84%;
 
      max-width: none;
 
@@ -503,7 +513,7 @@ body {
      position: absolute;
 
      left: 4.5vw;
-     bottom: 31px;
+     bottom: max(28px, env(safe-area-inset-bottom));
 
      z-index: 20;
 
@@ -569,7 +579,7 @@ body {
      position: absolute;
 
      right: 4.5vw;
-     bottom: 29px;
+     bottom: max(28px, env(safe-area-inset-bottom));
 
      z-index: 20;
 
@@ -1891,8 +1901,9 @@ body {
 
 @media (max-width: 900px) {
      .ax-hero {
-          min-height:
-               650px;
+          height: 100vh;
+          height: 100dvh;
+          min-height: 0;
      }
 
      .hero-unbound {
@@ -1978,15 +1989,15 @@ body {
      .ax-hero {
           width: 100%;
 
-          height:
-               100svh;
-
-          min-height:
-               650px;
+          height: 100vh;
+          height: 100dvh;
+          min-height: 0;
 
           margin: 0;
 
           padding: 0;
+
+          overflow: hidden;
      }
 
      .hero-space {
@@ -2017,13 +2028,13 @@ body {
      }
 
      .hero-model {
-          bottom: -4%;
+          bottom: 0;
 
           width:
-               88vw;
+               82vw;
 
           height:
-               78%;
+               74%;
 
           object-position:
                center bottom;
@@ -2098,7 +2109,7 @@ body {
 
           right: 20px;
 
-          bottom: 24px;
+          bottom: max(20px, env(safe-area-inset-bottom));
 
           width: auto;
 

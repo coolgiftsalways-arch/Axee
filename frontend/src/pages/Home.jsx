@@ -18,8 +18,16 @@ import heroNeon from "../assets/hero-neon.png";
 import heroFog from "../assets/hero-fog.png";
 
 import "../styles/home.css";
+import "../styles/audioControl.css";
 
 gsap.registerPlugin(ScrollTrigger);
+
+/* =========================================================
+   CINEMATIC HERO SOUND
+
+   Self-contained Web Audio cue. No MP3 file is required.
+   Browsers may block audio until the visitor interacts once.
+========================================================= */
 
 /* =========================================================
    API
@@ -582,6 +590,277 @@ const getProductHoverImage = (product) => {
 };
 
 /* =========================================================
+   HOME PRODUCT GROUP ROTATION + MANUAL SLIDER
+
+   FINAL BEHAVIOR:
+   - Show 4 products per category.
+   - ALL 4 cards change TOGETHER every 10 seconds.
+   - Refresh starts from a different group of 4.
+   - Arrow buttons + mobile swipe jump by one full group.
+   - Every product is eventually included in the rotation.
+========================================================= */
+
+const HOME_PRODUCTS_PER_SECTION = 4;
+
+const HOME_PRODUCT_ROTATE_MS = 10000;
+
+const greatestCommonDivisor = (a, b) => {
+  let x = Math.abs(Number(a) || 0);
+  let y = Math.abs(Number(b) || 0);
+
+  while (y) {
+    const next = x % y;
+    x = y;
+    y = next;
+  }
+
+  return x || 1;
+};
+
+const getProductGroupCount = (productCount) => {
+  const count = Math.max(0, Number(productCount) || 0);
+
+  if (count <= HOME_PRODUCTS_PER_SECTION) {
+    return 1;
+  }
+
+  /*
+    We move the start position by 4 every time.
+    n / gcd(n, 4) gives the full cycle length so every
+    product eventually becomes part of a visible group.
+  */
+  return Math.max(
+    1,
+    Math.floor(count / greatestCommonDivisor(count, HOME_PRODUCTS_PER_SECTION)),
+  );
+};
+
+const normalizeRotationTick = (tick, productCount) => {
+  const groupCount = getProductGroupCount(productCount);
+
+  return ((Number(tick || 0) % groupCount) + groupCount) % groupCount;
+};
+
+const getGroupProductIndexes = (productCount, rotationTick) => {
+  const count = Math.max(0, Number(productCount) || 0);
+
+  if (count === 0) {
+    return [];
+  }
+
+  const visibleCount = Math.min(HOME_PRODUCTS_PER_SECTION, count);
+
+  if (count <= visibleCount) {
+    return Array.from({ length: visibleCount }, (_, index) => index);
+  }
+
+  const safeTick = normalizeRotationTick(rotationTick, count);
+  const startIndex = (safeTick * HOME_PRODUCTS_PER_SECTION) % count;
+
+  return Array.from(
+    { length: visibleCount },
+    (_, index) => (startIndex + index) % count,
+  );
+};
+
+const getRotatingProducts = (products, rotationTick) => {
+  if (!Array.isArray(products) || products.length === 0) {
+    return [];
+  }
+
+  return getGroupProductIndexes(products.length, rotationTick).map(
+    (productIndex) => products[productIndex],
+  );
+};
+
+const groupsDoNotOverlap = (productCount, firstTick, secondTick) => {
+  const first = new Set(getGroupProductIndexes(productCount, firstTick));
+  const second = getGroupProductIndexes(productCount, secondTick);
+
+  return second.every((index) => !first.has(index));
+};
+
+const getFreshRotationTick = (sectionId, productCount) => {
+  const count = Math.max(0, Number(productCount) || 0);
+
+  if (count <= HOME_PRODUCTS_PER_SECTION) {
+    return 0;
+  }
+
+  const groupCount = getProductGroupCount(count);
+  const storageKey = `unbound-home-rotation-${sectionId}`;
+
+  let previousTick = -1;
+
+  try {
+    const savedTick = window.sessionStorage.getItem(storageKey);
+    previousTick = savedTick === null ? -1 : Number(savedTick);
+  } catch {
+    previousTick = -1;
+  }
+
+  const allTicks = Array.from({ length: groupCount }, (_, index) => index);
+
+  let candidates = allTicks;
+
+  if (Number.isFinite(previousTick) && previousTick >= 0 && groupCount > 1) {
+    const previousSafeTick = normalizeRotationTick(previousTick, count);
+
+    /*
+      If the category has enough products, prefer a refresh group
+      where NONE of the previous 4 products are visible.
+    */
+    const completelyDifferent = allTicks.filter(
+      (candidateTick) =>
+        candidateTick !== previousSafeTick &&
+        groupsDoNotOverlap(count, previousSafeTick, candidateTick),
+    );
+
+    if (completelyDifferent.length > 0) {
+      candidates = completelyDifferent;
+    } else {
+      candidates = allTicks.filter((tick) => tick !== previousSafeTick);
+    }
+  }
+
+  const nextTick =
+    candidates[Math.floor(Math.random() * Math.max(1, candidates.length))] ?? 0;
+
+  try {
+    window.sessionStorage.setItem(storageKey, String(nextTick));
+  } catch {
+    // sessionStorage can be unavailable in strict privacy modes.
+  }
+
+  return nextTick;
+};
+
+const createFreshSectionTicks = (products) => {
+  const nextTicks = {};
+
+  sectionConfig.forEach((section) => {
+    const categoryProducts = products.filter((product) =>
+      matchCategory(product, section.type),
+    );
+
+    nextTicks[section.id] = getFreshRotationTick(
+      section.id,
+      categoryProducts.length,
+    );
+  });
+
+  return nextTicks;
+};
+
+const HOME_SLIDER_STYLES = `
+  .ax-home-slider-shell {
+    position: relative;
+  }
+
+  .ax-home-slider-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin: 0 0 16px;
+  }
+
+  .ax-home-slider-status {
+    margin-right: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: rgba(255,255,255,.38);
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+  }
+
+  .ax-home-slider-status-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #c7ff13;
+    box-shadow: 0 0 10px rgba(199,255,19,.65);
+  }
+
+  .ax-home-slider-counter {
+    min-width: 68px;
+    color: rgba(255,255,255,.56);
+    font-size: 8px;
+    letter-spacing: .14em;
+    text-align: center;
+  }
+
+  .ax-home-slider-arrow {
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: rgba(255,255,255,.025);
+    color: #f5f2ea;
+    font-size: 17px;
+    cursor: pointer;
+    transition: transform .25s ease, background .25s ease, border-color .25s ease, color .25s ease;
+  }
+
+  .ax-home-slider-arrow:hover:not(:disabled) {
+    transform: translateY(-2px);
+    background: #c7ff13;
+    border-color: #c7ff13;
+    color: #050505;
+  }
+
+  .ax-home-slider-arrow:disabled {
+    opacity: .22;
+    cursor: default;
+  }
+
+  .ax-home-slider-grid {
+    touch-action: pan-y;
+    user-select: none;
+  }
+
+  @media (max-width: 768px) {
+    .ax-home-slider-toolbar {
+      margin-bottom: 12px;
+    }
+
+    .ax-home-slider-arrow {
+      width: 38px;
+      height: 38px;
+    }
+
+    .ax-home-slider-status {
+      font-size: 6px;
+      letter-spacing: .14em;
+    }
+  }
+`;
+
+/* =========================================================
+   HERO AUDIO ELEMENT
+   Uses the real /audio/hero.mp3 already mounted by App.jsx.
+========================================================= */
+
+const getHeroAudioElement = () => {
+  const directAudio = document.querySelector(
+    'audio[data-hero-audio="true"], audio[src="/audio/hero.mp3"]',
+  );
+
+  if (directAudio) {
+    return directAudio;
+  }
+
+  const source = document.querySelector('audio source[src="/audio/hero.mp3"]');
+
+  return source?.closest("audio") || null;
+};
+
+/* =========================================================
    CART ID
 ========================================================= */
 
@@ -606,6 +885,10 @@ function ProductCard({
 }) {
   const navigate = useNavigate();
 
+  const cardRef = useRef(null);
+
+  const previousProductIdRef = useRef("");
+
   const productId = getProductId(product);
 
   const sizes = getProductSizes(product);
@@ -619,6 +902,52 @@ function ProductCard({
   const quantity = quantities[productId] ?? 0;
 
   const ratingData = getProductRatingData(product);
+
+  /* =======================================================
+     10 SECOND / MANUAL CARD SWAP ANIMATION
+  ======================================================= */
+
+  useLayoutEffect(() => {
+    const card = cardRef.current;
+
+    if (!card || !productId) {
+      return;
+    }
+
+    const previousProductId = previousProductIdRef.current;
+
+    previousProductIdRef.current = productId;
+
+    /*
+      Do not run this animation on the first render.
+      The normal section scroll animation handles that.
+    */
+
+    if (!previousProductId || previousProductId === productId) {
+      return;
+    }
+
+    const animation = gsap.fromTo(
+      card,
+      {
+        opacity: 0.15,
+        y: 18,
+        scale: 0.985,
+      },
+      {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        duration: 0.55,
+        ease: "power2.out",
+        clearProps: "transform",
+      },
+    );
+
+    return () => {
+      animation.kill();
+    };
+  }, [productId]);
 
   /* =======================================================
      QUANTITY
@@ -749,7 +1078,7 @@ function ProductCard({
   }
 
   return (
-    <article className="ax-product-card">
+    <article ref={cardRef} className="ax-product-card">
       <Link
         to={`/product/${productId}`}
         className="ax-product-image-wrap"
@@ -905,7 +1234,94 @@ function ProductSection({
   setSelectedSizes,
   quantities,
   setQuantities,
+  onSlide,
 }) {
+  const touchStartXRef = useRef(null);
+  const gridRef = useRef(null);
+
+  const sliderEnabled = section.totalProducts > HOME_PRODUCTS_PER_SECTION;
+
+  /* =======================================================
+     GSAP PRODUCT GROUP ENTER
+
+     Whenever the group changes, all 4 NEW cards enter
+     together from below. No stagger: all four move as one.
+  ======================================================= */
+
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+
+    if (!grid) {
+      return;
+    }
+
+    const cards = Array.from(grid.querySelectorAll(".ax-product-card"));
+
+    if (!cards.length) {
+      return;
+    }
+
+    gsap.killTweensOf(cards);
+
+    gsap.set(cards, {
+      opacity: 0,
+      y: 46,
+      scale: 0.955,
+      rotateX: -9,
+      filter: "blur(7px)",
+      transformOrigin: "center top",
+    });
+
+    const tween = gsap.to(cards, {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      rotateX: 0,
+      filter: "blur(0px)",
+      duration: 0.62,
+      ease: "power4.out",
+      clearProps: "transform,filter",
+    });
+
+    return () => {
+      tween.kill();
+    };
+  }, [section.rotationTick]);
+
+  const visibleCount = Math.min(
+    HOME_PRODUCTS_PER_SECTION,
+    section.totalProducts || 0,
+  );
+
+  const safeTick = normalizeRotationTick(
+    section.rotationTick || 0,
+    Math.max(1, section.totalProducts || 1),
+  );
+
+  const handleTouchStart = (event) => {
+    touchStartXRef.current = event.touches?.[0]?.clientX ?? null;
+  };
+
+  const handleTouchEnd = (event) => {
+    const startX = touchStartXRef.current;
+    const endX = event.changedTouches?.[0]?.clientX;
+
+    touchStartXRef.current = null;
+
+    if (!sliderEnabled || startX == null || endX == null) {
+      return;
+    }
+
+    const distance = endX - startX;
+
+    if (Math.abs(distance) < 45) {
+      return;
+    }
+
+    // Swipe left = next group of 4. Swipe right = previous group of 4.
+    onSlide?.(section.id, distance < 0 ? 1 : -1);
+  };
+
   return (
     <section className="ax-product-section" id={section.id}>
       <div className="ax-product-section-top">
@@ -922,21 +1338,60 @@ function ProductSection({
         </div>
       </div>
 
-      <div className="ax-products-grid">
-        {section.products.map((product) => {
-          const productId = getProductId(product);
+      <div className="ax-home-slider-shell">
+        <div className="ax-home-slider-toolbar">
+          <div className="ax-home-slider-status">
+            <span className="ax-home-slider-status-dot" />
+            <span>AUTO / 10 SEC</span>
+          </div>
 
-          return (
+          {sliderEnabled && (
+            <>
+              <span className="ax-home-slider-counter">
+                {String(safeTick + 1).padStart(2, "0")}
+                {" / "}
+                {String(section.groupCount || 1).padStart(2, "0")}
+              </span>
+
+              <button
+                type="button"
+                className="ax-home-slider-arrow"
+                aria-label={`Previous ${section.title} product`}
+                onClick={() => onSlide?.(section.id, -1)}
+              >
+                ←
+              </button>
+
+              <button
+                type="button"
+                className="ax-home-slider-arrow"
+                aria-label={`Next ${section.title} product`}
+                onClick={() => onSlide?.(section.id, 1)}
+              >
+                →
+              </button>
+            </>
+          )}
+        </div>
+
+        <div
+          ref={gridRef}
+          data-product-grid={section.id}
+          className="ax-products-grid ax-home-slider-grid"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
+          {section.products.map((product, slotIndex) => (
             <ProductCard
-              key={productId}
+              key={`${section.id}-group-${safeTick}-${getProductId(product)}-${slotIndex}`}
               product={product}
               selectedSizes={selectedSizes}
               setSelectedSizes={setSelectedSizes}
               quantities={quantities}
               setQuantities={setQuantities}
             />
-          );
-        })}
+          ))}
+        </div>
       </div>
 
       <div className="ax-shop-more-wrap">
@@ -964,7 +1419,12 @@ function ProductSection({
    HOME
 ========================================================= */
 
-function Home({ startAnimation, heroAlreadyPlayed, onHeroComplete }) {
+function Home({
+  startAnimation = false,
+  heroAlreadyPlayed = false,
+  onHeroStart,
+  onHeroComplete,
+} = {}) {
   const homeRef = useRef(null);
 
   const heroRef = useRef(null);
@@ -991,6 +1451,19 @@ function Home({ startAnimation, heroAlreadyPlayed, onHeroComplete }) {
 
   const engineeredRef = useRef(null);
 
+  const onHeroStartRef = useRef(onHeroStart);
+  const onHeroCompleteRef = useRef(onHeroComplete);
+
+  useEffect(() => {
+    onHeroStartRef.current = onHeroStart;
+  }, [onHeroStart]);
+
+  useEffect(() => {
+    onHeroCompleteRef.current = onHeroComplete;
+  }, [onHeroComplete]);
+
+  const [heroIntroDone, setHeroIntroDone] = useState(false);
+
   const [catalogProducts, setCatalogProducts] = useState([]);
 
   const [productsLoading, setProductsLoading] = useState(true);
@@ -1002,6 +1475,190 @@ function Home({ startAnimation, heroAlreadyPlayed, onHeroComplete }) {
   const [selectedSizes, setSelectedSizes] = useState({});
 
   const [quantities, setQuantities] = useState({});
+
+  const [sectionRotationTicks, setSectionRotationTicks] = useState({});
+
+  const productGroupAnimatingRef = useRef(false);
+
+  /* =======================================================
+     RETRACTABLE SOUND CONTROL
+  ======================================================= */
+
+  const [soundControlOpen, setSoundControlOpen] = useState(false);
+  const [soundControlReady, setSoundControlReady] = useState(false);
+  const [soundPlaying, setSoundPlaying] = useState(false);
+
+  // Sound dock must exist ONLY while the hero section is on screen.
+  const [heroSoundDockVisible, setHeroSoundDockVisible] = useState(true);
+
+  const soundCollapseTimerRef = useRef(null);
+
+  const soundControlVisible =
+    Boolean(startAnimation || heroAlreadyPlayed) && heroSoundDockVisible;
+
+  const clearSoundCollapseTimer = () => {
+    if (soundCollapseTimerRef.current) {
+      window.clearTimeout(soundCollapseTimerRef.current);
+      soundCollapseTimerRef.current = null;
+    }
+  };
+
+  const scheduleSoundControlCollapse = () => {
+    clearSoundCollapseTimer();
+
+    soundCollapseTimerRef.current = window.setTimeout(() => {
+      setSoundControlOpen(false);
+    }, 4200);
+  };
+
+  const openSoundControl = () => {
+    setSoundControlOpen(true);
+    scheduleSoundControlCollapse();
+  };
+
+  const toggleHeroSound = async () => {
+    const audio = getHeroAudioElement();
+
+    if (!audio) {
+      setSoundControlReady(false);
+      return;
+    }
+
+    try {
+      if (audio.paused) {
+        audio.muted = false;
+        audio.volume = 1;
+
+        const playPromise = audio.play();
+
+        if (playPromise && typeof playPromise.then === "function") {
+          await playPromise;
+        }
+      } else {
+        audio.pause();
+      }
+    } catch (error) {
+      console.warn("Hero audio toggle blocked:", error);
+    }
+
+    setSoundPlaying(!audio.paused && !audio.muted);
+  };
+
+  const handleSoundControlClick = () => {
+    /*
+      First click while tucked away:
+      ONLY open the full pill.
+
+      Once the pill is open:
+      clicking it toggles SOUND ON / SOUND OFF.
+    */
+    if (!soundControlOpen) {
+      openSoundControl();
+      return;
+    }
+
+    toggleHeroSound();
+    scheduleSoundControlCollapse();
+  };
+
+  /* =======================================================
+     SHOW SOUND DOCK ONLY INSIDE HERO
+
+     The dock is fixed while the hero is visible, but it is
+     completely removed as soon as the visitor scrolls into
+     the collection/product area. This prevents it sitting on
+     top of product cards.
+  ======================================================= */
+
+  useEffect(() => {
+    const hero = heroRef.current;
+
+    if (!hero) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const visible = entry.isIntersecting && entry.intersectionRatio > 0.04;
+
+        setHeroSoundDockVisible(visible);
+
+        if (!visible) {
+          setSoundControlOpen(false);
+          clearSoundCollapseTimer();
+        }
+      },
+      {
+        threshold: [0, 0.04, 0.12, 0.25],
+      },
+    );
+
+    observer.observe(hero);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!soundControlVisible) {
+      setSoundControlOpen(false);
+      return;
+    }
+
+    let audio = null;
+    let retryTimer = null;
+    let attempts = 0;
+
+    const syncAudioState = () => {
+      if (!audio) {
+        return;
+      }
+
+      setSoundControlReady(true);
+      setSoundPlaying(!audio.paused && !audio.muted);
+    };
+
+    const connectToAudio = () => {
+      audio = getHeroAudioElement();
+
+      if (!audio) {
+        attempts += 1;
+
+        if (attempts < 24) {
+          retryTimer = window.setTimeout(connectToAudio, 250);
+        }
+
+        return;
+      }
+
+      syncAudioState();
+
+      audio.addEventListener("play", syncAudioState);
+      audio.addEventListener("playing", syncAudioState);
+      audio.addEventListener("pause", syncAudioState);
+      audio.addEventListener("ended", syncAudioState);
+      audio.addEventListener("volumechange", syncAudioState);
+    };
+
+    connectToAudio();
+
+    return () => {
+      if (retryTimer) {
+        window.clearTimeout(retryTimer);
+      }
+
+      clearSoundCollapseTimer();
+
+      if (audio) {
+        audio.removeEventListener("play", syncAudioState);
+        audio.removeEventListener("playing", syncAudioState);
+        audio.removeEventListener("pause", syncAudioState);
+        audio.removeEventListener("ended", syncAudioState);
+        audio.removeEventListener("volumechange", syncAudioState);
+      }
+    };
+  }, [soundControlVisible]);
 
   /* =======================================================
      LOAD PRODUCTS
@@ -1049,6 +1706,8 @@ function Home({ startAnimation, heroAlreadyPlayed, onHeroComplete }) {
             if (!cancelled) {
               setCatalogProducts(products);
 
+              setSectionRotationTicks(createFreshSectionTicks(products));
+
               setProductsError("");
             }
 
@@ -1084,30 +1743,297 @@ function Home({ startAnimation, heroAlreadyPlayed, onHeroComplete }) {
   }, [reloadKey]);
 
   /* =======================================================
+     GSAP PRODUCT GROUP TRANSITION
+
+     OUT:  all current cards move up + fade + blur together.
+     SWAP: React changes the whole group of 4.
+     IN:   ProductSection layout effect brings all 4 new cards
+           from below together.
+  ======================================================= */
+
+  const transitionProductGroups = (sectionIds, updateState) => {
+    if (productGroupAnimatingRef.current) {
+      return;
+    }
+
+    const ids = Array.isArray(sectionIds) ? sectionIds : [sectionIds];
+
+    const cards = ids.flatMap((sectionId) => {
+      const grid = document.querySelector(`[data-product-grid="${sectionId}"]`);
+
+      if (!grid) {
+        return [];
+      }
+
+      return Array.from(grid.querySelectorAll(".ax-product-card"));
+    });
+
+    if (!cards.length) {
+      updateState?.();
+      return;
+    }
+
+    productGroupAnimatingRef.current = true;
+
+    gsap.killTweensOf(cards);
+
+    gsap.to(cards, {
+      opacity: 0,
+      y: -42,
+      scale: 0.955,
+      rotateX: 9,
+      filter: "blur(7px)",
+      transformOrigin: "center bottom",
+      duration: 0.38,
+      ease: "power3.in",
+      onComplete: () => {
+        updateState?.();
+
+        // Give React one frame to render the next 4 cards.
+        window.requestAnimationFrame(() => {
+          window.setTimeout(() => {
+            productGroupAnimatingRef.current = false;
+          }, 680);
+        });
+      },
+    });
+  };
+
+  /* =======================================================
+     AUTO-ROTATE HOME PRODUCTS EVERY 10 SECONDS
+
+     ALL FOUR cards animate OUT together, then the next
+     group of four animates IN together with GSAP.
+  ======================================================= */
+
+  useEffect(() => {
+    if (catalogProducts.length === 0) {
+      return;
+    }
+
+    const rotatableSections = sectionConfig.filter((section) => {
+      const categoryCount = catalogProducts.filter((product) =>
+        matchCategory(product, section.type),
+      ).length;
+
+      return categoryCount > HOME_PRODUCTS_PER_SECTION;
+    });
+
+    if (!rotatableSections.length) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      transitionProductGroups(
+        rotatableSections.map((section) => section.id),
+        () => {
+          setSectionRotationTicks((previous) => {
+            const next = { ...previous };
+
+            rotatableSections.forEach((section) => {
+              const categoryProducts = catalogProducts.filter((product) =>
+                matchCategory(product, section.type),
+              );
+
+              next[section.id] = normalizeRotationTick(
+                Number(previous[section.id] || 0) + 1,
+                categoryProducts.length,
+              );
+            });
+
+            return next;
+          });
+        },
+      );
+    }, HOME_PRODUCT_ROTATE_MS);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [catalogProducts]);
+
+  /* =======================================================
+     REMEMBER CURRENT GROUP
+
+     This makes refresh choose a different group from the one
+     the visitor was actually viewing before refreshing.
+  ======================================================= */
+
+  useEffect(() => {
+    Object.entries(sectionRotationTicks).forEach(
+      ([sectionId, rotationTick]) => {
+        try {
+          window.sessionStorage.setItem(
+            `unbound-home-rotation-${sectionId}`,
+            String(rotationTick),
+          );
+        } catch {
+          // Ignore storage errors.
+        }
+      },
+    );
+  }, [sectionRotationTicks]);
+
+  /* =======================================================
+     MANUAL SLIDER
+
+     Arrow click / mobile swipe changes the full group of 4 immediately.
+  ======================================================= */
+
+  const slideProductSection = (sectionId, direction) => {
+    const section = sectionConfig.find((item) => item.id === sectionId);
+
+    if (!section) {
+      return;
+    }
+
+    const categoryProducts = catalogProducts.filter((product) =>
+      matchCategory(product, section.type),
+    );
+
+    if (categoryProducts.length <= HOME_PRODUCTS_PER_SECTION) {
+      return;
+    }
+
+    transitionProductGroups(sectionId, () => {
+      setSectionRotationTicks((previous) => ({
+        ...previous,
+        [sectionId]: normalizeRotationTick(
+          Number(previous[sectionId] || 0) + Number(direction || 0),
+          categoryProducts.length,
+        ),
+      }));
+    });
+  };
+
+  /* =======================================================
      PRODUCT SECTIONS
   ======================================================= */
 
   const productSections = useMemo(
     () =>
-      sectionConfig.map((section) => ({
-        ...section,
+      sectionConfig.map((section) => {
+        const categoryProducts = catalogProducts.filter((product) =>
+          matchCategory(product, section.type),
+        );
 
-        products: catalogProducts
-          .filter((product) => matchCategory(product, section.type))
-          .slice(0, 4),
-      })),
+        const rotationTick = Number(sectionRotationTicks[section.id] || 0);
 
-    [catalogProducts],
+        return {
+          ...section,
+          totalProducts: categoryProducts.length,
+          groupCount: getProductGroupCount(categoryProducts.length),
+          rotationTick,
+          products: getRotatingProducts(categoryProducts, rotationTick),
+        };
+      }),
+
+    [catalogProducts, sectionRotationTicks],
   );
 
   /* =======================================================
      HERO INTRO
+
+     IMPORTANT:
+     - Home is mounted behind the loader.
+     - It waits until Loader has completely finished.
+     - Hero animation starts only after the loader disappears.
+     - Home starts /audio/hero.mp3 at timeline time 0.
+     - Visuals and sound therefore use the same start beat.
   ======================================================= */
 
   useLayoutEffect(() => {
-    const elements = [
+    const navbarElement = document.querySelector(".ax-navbar");
+
+    const setHeroFinalState = () => {
+      gsap.set(spaceRef.current, {
+        opacity: 1,
+        scale: 1,
+        yPercent: 0,
+      });
+
+      gsap.set(unboundWrapRef.current, {
+        opacity: 1,
+        xPercent: 0,
+        yPercent: 0,
+      });
+
+      gsap.set(unboundRef.current, {
+        filter: "blur(0px)",
+      });
+
+      gsap.set(mountainRef.current, {
+        opacity: 1,
+        yPercent: 0,
+        scale: 1,
+      });
+
+      gsap.set(modelRef.current, {
+        opacity: 1,
+        yPercent: 0,
+        scale: 1,
+      });
+
+      gsap.set(neonRef.current, {
+        opacity: 1,
+        yPercent: 0,
+        scale: 1,
+        rotation: 0,
+      });
+
+      gsap.set(fogBackRef.current, {
+        opacity: 0.72,
+        yPercent: 0,
+      });
+
+      gsap.set(fogFrontRef.current, {
+        opacity: 0.84,
+        yPercent: 0,
+      });
+
+      gsap.set([leftUIRef.current, exploreRef.current, engineeredRef.current], {
+        opacity: 1,
+        y: 0,
+      });
+
+      if (navbarElement) {
+        gsap.set(navbarElement, {
+          opacity: 1,
+          y: 0,
+        });
+      }
+    };
+
+    /*
+      Returning to Home after the intro has already played:
+      do not replay the loader/hero.
+    */
+
+    if (heroAlreadyPlayed) {
+      setHeroFinalState();
+      setHeroIntroDone(true);
+      return;
+    }
+
+    /*
+      First page load:
+      Home exists behind Loader, but the hero timeline must wait
+      until Loader's green line has finished and its doors begin
+      opening.
+    */
+
+    if (!startAnimation) {
+      return;
+    }
+
+    const heroElements = [
       spaceRef.current,
       unboundWrapRef.current,
+      unboundRef.current,
       mountainRef.current,
       modelRef.current,
       neonRef.current,
@@ -1118,218 +2044,372 @@ function Home({ startAnimation, heroAlreadyPlayed, onHeroComplete }) {
       engineeredRef.current,
     ].filter(Boolean);
 
-    if (!elements.length) {
+    if (!heroRef.current || heroElements.length === 0) {
       return;
     }
 
     const ctx = gsap.context(() => {
-      /*
-            If hero has already played
-            OR App says do not run animation,
-            immediately show final state.
-          */
+      /* ================================================
+         STEP-BY-STEP TOP-DOWN HERO
 
-      if (heroAlreadyPlayed || !startAnimation) {
-        gsap.set(spaceRef.current, {
-          opacity: 1,
-          scale: 1,
-          yPercent: 0,
-        });
+         Nothing enters together.
 
-        gsap.set(unboundWrapRef.current, {
-          opacity: 1,
-          xPercent: 0,
-          yPercent: 0,
-        });
+         Order:
+         1. UNBOUND
+         2. Space/background
+         3. Mountain
+         4. Green ring
+         5. Back fog
+         6. Model / man
+         7. Front fog
+         8. Navbar
+         9. Small UI
 
-        gsap.set(unboundRef.current, {
-          filter: "blur(0px)",
-        });
-
-        gsap.set(mountainRef.current, {
-          opacity: 1,
-          yPercent: 0,
-        });
-
-        gsap.set(modelRef.current, {
-          opacity: 1,
-          yPercent: 0,
-        });
-
-        gsap.set(neonRef.current, {
-          opacity: 1,
-          scale: 1,
-          rotation: 0,
-        });
-
-        gsap.set(fogBackRef.current, {
-          opacity: 0.72,
-          y: 0,
-        });
-
-        gsap.set(fogFrontRef.current, {
-          opacity: 0.84,
-          y: 0,
-        });
-
-        gsap.set(
-          [leftUIRef.current, exploreRef.current, engineeredRef.current],
-          {
-            opacity: 1,
-            y: 0,
-          },
-        );
-
-        return;
-      }
-
-      /*
-            INITIAL STATE
-          */
+         Every foreground layer starts ABOVE the viewport.
+      ================================================ */
 
       gsap.set(spaceRef.current, {
         opacity: 0,
+        yPercent: -8,
         scale: 1.08,
       });
 
       gsap.set(unboundWrapRef.current, {
         opacity: 0,
-        xPercent: 110,
+        yPercent: -38,
+        scale: 0.96,
       });
 
       gsap.set(unboundRef.current, {
-        filter: "blur(14px)",
+        filter: "blur(18px)",
       });
 
       gsap.set(mountainRef.current, {
         opacity: 0,
-        yPercent: -80,
-      });
-
-      gsap.set(modelRef.current, {
-        opacity: 0,
-        yPercent: -80,
+        yPercent: -105,
+        scale: 1.08,
       });
 
       gsap.set(neonRef.current, {
         opacity: 0,
-        scale: 0.7,
+        yPercent: -88,
+        scale: 0.78,
+        rotation: -12,
+        filter:
+          "brightness(1.2) saturate(1.35) blur(9px) drop-shadow(0 0 38px rgba(199,255,19,.5))",
       });
 
-      gsap.set([fogBackRef.current, fogFrontRef.current], {
+      gsap.set(fogBackRef.current, {
         opacity: 0,
-        y: 100,
+        yPercent: -90,
+        scaleX: 1.16,
+        scaleY: 1.1,
+      });
+
+      gsap.set(modelRef.current, {
+        opacity: 0,
+        yPercent: -135,
+        scale: 0.92,
+        filter: "brightness(.52) contrast(1.18) blur(8px)",
+      });
+
+      gsap.set(fogFrontRef.current, {
+        opacity: 0,
+        yPercent: -115,
+        scaleX: 1.2,
+        scaleY: 1.12,
       });
 
       gsap.set([leftUIRef.current, exploreRef.current, engineeredRef.current], {
         opacity: 0,
-        y: 20,
+        y: -34,
+        filter: "blur(7px)",
       });
 
+      if (navbarElement) {
+        gsap.set(navbarElement, {
+          opacity: 0,
+          y: -70,
+        });
+      }
+
+      /* ================================================
+         ONE MASTER TIMELINE
+
+         The loader is already completely gone before this
+         timeline starts.
+
+         Sound:
+         App's real hero.mp3 starts at timeline time 0 through
+         onHeroStartRef.current().
+      ================================================ */
+
       const tl = gsap.timeline({
+        defaults: {
+          ease: "power4.out",
+        },
         onComplete: () => {
-          onHeroComplete?.();
+          setHeroIntroDone(true);
+
+          requestAnimationFrame(() => {
+            ScrollTrigger.refresh();
+          });
+
+          onHeroCompleteRef.current?.();
         },
       });
+
+      /*
+        SOUND + HERO START TOGETHER.
+      */
+      tl.call(
+        () => {
+          onHeroStartRef.current?.();
+        },
+        null,
+        0,
+      );
+
+      /* ------------------------------------------------
+         1. BIG UNBOUND COMES FROM TOP
+      ------------------------------------------------ */
 
       tl.to(
         unboundWrapRef.current,
         {
           opacity: 1,
-          xPercent: 0,
-          duration: 1.1,
+          yPercent: 0,
+          scale: 1,
+          duration: 0.95,
           ease: "expo.out",
         },
-        0,
+        0.05,
       );
 
       tl.to(
         unboundRef.current,
         {
           filter: "blur(0px)",
-          duration: 0.8,
+          duration: 0.72,
+          ease: "power3.out",
         },
-        0,
+        0.18,
       );
+
+      /* ------------------------------------------------
+         2. SPACE / BACKGROUND COMES DOWN
+      ------------------------------------------------ */
 
       tl.to(
         spaceRef.current,
         {
           opacity: 1,
+          yPercent: 0,
           scale: 1,
-          duration: 1,
+          duration: 1.0,
+          ease: "power3.out",
         },
-        0.45,
+        0.72,
       );
+
+      /* ------------------------------------------------
+         3. MOUNTAIN DROPS FROM TOP
+      ------------------------------------------------ */
 
       tl.to(
         mountainRef.current,
         {
           opacity: 1,
           yPercent: 0,
-          duration: 0.9,
-          ease: "power3.out",
+          scale: 1,
+          duration: 1.18,
+          ease: "expo.out",
         },
-        1.15,
+        1.05,
       );
+
+      /*
+        Tiny settle so it feels heavy instead of floating.
+      */
+      tl.to(
+        mountainRef.current,
+        {
+          yPercent: 2,
+          duration: 0.16,
+          ease: "power2.in",
+        },
+        1.96,
+      );
+
+      tl.to(
+        mountainRef.current,
+        {
+          yPercent: 0,
+          duration: 0.28,
+          ease: "power2.out",
+        },
+        2.12,
+      );
+
+      /* ------------------------------------------------
+         4. GREEN RING FALLS IN AFTER MOUNTAIN
+      ------------------------------------------------ */
+
+      tl.to(
+        neonRef.current,
+        {
+          opacity: 1,
+          yPercent: 0,
+          scale: 1,
+          rotation: 0,
+          filter:
+            "brightness(.9) saturate(1.15) blur(0px) drop-shadow(0 0 14px rgba(199,255,19,.25))",
+          duration: 0.95,
+          ease: "expo.out",
+        },
+        1.72,
+      );
+
+      /*
+        Energy pulse AFTER it reaches position.
+      */
+      tl.to(
+        neonRef.current,
+        {
+          scale: 1.06,
+          duration: 0.14,
+          ease: "power2.out",
+        },
+        2.42,
+      );
+
+      tl.to(
+        neonRef.current,
+        {
+          scale: 1,
+          duration: 0.3,
+          ease: "power2.inOut",
+        },
+        2.56,
+      );
+
+      /* ------------------------------------------------
+         5. BACK FOG COMES FROM TOP
+      ------------------------------------------------ */
+
+      tl.to(
+        fogBackRef.current,
+        {
+          opacity: 0.72,
+          yPercent: 0,
+          scaleX: 1,
+          scaleY: 1,
+          duration: 1.05,
+          ease: "power4.out",
+        },
+        2.15,
+      );
+
+      /* ------------------------------------------------
+         6. MODEL / MAN DROPS FROM TOP
+
+         This is deliberately later than mountain + ring + back fog.
+         So the environment exists FIRST, then the man enters.
+      ------------------------------------------------ */
 
       tl.to(
         modelRef.current,
         {
           opacity: 1,
           yPercent: 0,
-          duration: 0.9,
-          ease: "power3.out",
-        },
-        1.35,
-      );
-
-      tl.to(
-        neonRef.current,
-        {
-          opacity: 1,
           scale: 1,
-          duration: 0.8,
+          filter: "brightness(.9) contrast(1.1) blur(0px)",
+          duration: 1.25,
+          ease: "expo.out",
         },
-        1.5,
+        2.78,
+      );
+
+      /*
+        Heavy landing / settle.
+      */
+      tl.to(
+        modelRef.current,
+        {
+          yPercent: 1.8,
+          duration: 0.13,
+          ease: "power2.in",
+        },
+        3.73,
       );
 
       tl.to(
-        fogBackRef.current,
+        modelRef.current,
         {
-          opacity: 0.72,
-          y: 0,
-          duration: 0.7,
+          yPercent: 0,
+          duration: 0.28,
+          ease: "power2.out",
         },
-        1.55,
+        3.86,
       );
+
+      /* ------------------------------------------------
+         7. FRONT FOG DROPS AFTER MODEL
+         This fog sits IN FRONT of him.
+      ------------------------------------------------ */
 
       tl.to(
         fogFrontRef.current,
         {
           opacity: 0.84,
-          y: 0,
-          duration: 0.7,
+          yPercent: 0,
+          scaleX: 1,
+          scaleY: 1,
+          duration: 1.02,
+          ease: "power4.out",
         },
-        1.65,
+        3.48,
       );
+
+      /* ------------------------------------------------
+         8. NAVBAR COMES FROM TOP
+      ------------------------------------------------ */
+
+      if (navbarElement) {
+        tl.to(
+          navbarElement,
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.72,
+            ease: "expo.out",
+          },
+          4.02,
+        );
+      }
+
+      /* ------------------------------------------------
+         9. LEFT / BOTTOM UI COMES LAST
+      ------------------------------------------------ */
 
       tl.to(
         [leftUIRef.current, exploreRef.current, engineeredRef.current],
         {
           opacity: 1,
           y: 0,
-          stagger: 0.08,
-          duration: 0.55,
+          filter: "blur(0px)",
+          stagger: 0.14,
+          duration: 0.68,
+          ease: "power4.out",
         },
-        1.7,
+        4.2,
       );
     }, homeRef);
 
     return () => {
       ctx.revert();
     };
-  }, [startAnimation, heroAlreadyPlayed, onHeroComplete]);
+  }, [startAnimation, heroAlreadyPlayed]);
 
   /* =======================================================
      DESKTOP HERO SCROLL
@@ -1338,6 +2418,10 @@ function Home({ startAnimation, heroAlreadyPlayed, onHeroComplete }) {
   ======================================================= */
 
   useLayoutEffect(() => {
+    if (!heroIntroDone) {
+      return;
+    }
+
     const mobile = window.matchMedia("(max-width: 768px)").matches;
 
     if (mobile) {
@@ -1414,7 +2498,7 @@ function Home({ startAnimation, heroAlreadyPlayed, onHeroComplete }) {
     return () => {
       ctx.revert();
     };
-  }, []);
+  }, [heroIntroDone]);
 
   /* =======================================================
      PRODUCT ANIMATION
@@ -1569,6 +2653,7 @@ function Home({ startAnimation, heroAlreadyPlayed, onHeroComplete }) {
 
   return (
     <main ref={homeRef} className="ax-home">
+      <style>{HOME_SLIDER_STYLES}</style>
       {/* =================================================
           HERO
       ================================================= */}
@@ -1643,6 +2728,91 @@ function Home({ startAnimation, heroAlreadyPlayed, onHeroComplete }) {
       </section>
 
       {/* =================================================
+          RETRACTABLE HERO SOUND CONTROL
+
+          Closed:
+          only the equalizer tab peeks from the right edge.
+
+          Click:
+          full AUDIO / SOUND ON-OFF pill slides into view.
+      ================================================= */}
+
+      {soundControlVisible && (
+        <div
+          className={[
+            "ax-sound-dock",
+            soundControlOpen ? "is-open" : "is-collapsed",
+            soundPlaying ? "is-playing" : "is-paused",
+            soundControlReady ? "is-ready" : "is-waiting",
+          ].join(" ")}
+          onMouseEnter={() => {
+            if (soundControlOpen) {
+              clearSoundCollapseTimer();
+            }
+          }}
+          onMouseLeave={() => {
+            if (soundControlOpen) {
+              scheduleSoundControlCollapse();
+            }
+          }}
+        >
+          <button
+            type="button"
+            className="ax-sound-panel"
+            onClick={() => {
+              toggleHeroSound();
+              scheduleSoundControlCollapse();
+            }}
+            aria-label={
+              soundPlaying ? "Turn hero sound off" : "Turn hero sound on"
+            }
+          >
+            <span className="ax-sound-panel-bars" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+              <i />
+            </span>
+
+            <span className="ax-sound-control-copy">
+              <small>AUDIO</small>
+              <strong>
+                {!soundControlReady
+                  ? "AUDIO READY"
+                  : soundPlaying
+                    ? "SOUND ON"
+                    : "SOUND OFF"}
+              </strong>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className="ax-sound-handle"
+            onClick={() => {
+              if (soundControlOpen) {
+                clearSoundCollapseTimer();
+                setSoundControlOpen(false);
+              } else {
+                openSoundControl();
+              }
+            }}
+            aria-label={
+              soundControlOpen ? "Close sound control" : "Open sound control"
+            }
+            aria-expanded={soundControlOpen}
+          >
+            <span className="ax-sound-handle-bars" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+              <i />
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* =================================================
           INTRO
       ================================================= */}
 
@@ -1712,6 +2882,7 @@ function Home({ startAnimation, heroAlreadyPlayed, onHeroComplete }) {
                 setSelectedSizes={setSelectedSizes}
                 quantities={quantities}
                 setQuantities={setQuantities}
+                onSlide={slideProductSection}
               />
             );
           })}

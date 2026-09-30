@@ -1,0 +1,408 @@
+/* =========================================================
+   UNBOUND AUDIO DOCK
+
+   OPEN:
+   [ equalizer | AUDIO / SOUND OFF ][ round equalizer handle ]
+
+   CLOSED:
+   only the round handle remains visible on the right edge.
+========================================================= */
+
+.ax-sound-dock {
+     --ax-panel-width: 196px;
+     --ax-handle-size: 64px;
+     --ax-overlap: 14px;
+     --ax-lime: #c7ff13;
+
+     position: fixed;
+     top: 50%;
+     right: 0;
+     z-index: 12000;
+
+     width: calc(var(--ax-panel-width) + var(--ax-handle-size) - var(--ax-overlap));
+     height: var(--ax-handle-size);
+
+     transform: translateY(-50%);
+
+     pointer-events: none;
+}
+
+/* =========================================================
+   MAIN PILL
+========================================================= */
+
+.ax-sound-panel {
+     position: absolute;
+     top: 0;
+     right: calc(var(--ax-handle-size) - var(--ax-overlap));
+
+     width: var(--ax-panel-width);
+     height: var(--ax-handle-size);
+
+     padding: 0 26px 0 20px;
+
+     display: flex;
+     align-items: center;
+     gap: 18px;
+
+     border: 1px solid rgba(199, 255, 19, 0.46);
+     border-radius: 999px;
+
+     background:
+          radial-gradient(circle at 16% 50%, rgba(199, 255, 19, .07), transparent 34%),
+          linear-gradient(180deg, rgba(10, 10, 10, .96), rgba(2, 2, 2, .93));
+
+     color: #f7f5ef;
+
+     box-shadow:
+          0 0 0 1px rgba(255, 255, 255, .025) inset,
+          0 12px 34px rgba(0, 0, 0, .46),
+          0 0 34px rgba(199, 255, 19, .08);
+
+     backdrop-filter: blur(18px);
+     -webkit-backdrop-filter: blur(18px);
+
+     cursor: pointer;
+     pointer-events: auto;
+     overflow: hidden;
+
+     transform: translateX(0);
+     opacity: 1;
+
+     transition:
+          transform .68s cubic-bezier(.22, 1, .36, 1),
+          opacity .35s ease,
+          border-color .25s ease,
+          box-shadow .25s ease;
+
+     will-change: transform, opacity;
+}
+
+/* hide the full pill behind the right edge */
+.ax-sound-dock.is-collapsed .ax-sound-panel {
+     transform: translateX(calc(100% + var(--ax-handle-size)));
+     opacity: 0;
+     pointer-events: none;
+}
+
+.ax-sound-dock.is-open .ax-sound-panel {
+     transform: translateX(0);
+     opacity: 1;
+}
+
+.ax-sound-panel:hover {
+     border-color: rgba(199, 255, 19, .76);
+
+     box-shadow:
+          0 0 0 1px rgba(255, 255, 255, .035) inset,
+          0 14px 42px rgba(0, 0, 0, .52),
+          0 0 40px rgba(199, 255, 19, .15);
+}
+
+.ax-sound-panel:active {
+     transform: scale(.985);
+}
+
+/* =========================================================
+   ROUND HANDLE
+   This ALWAYS stays on screen.
+========================================================= */
+
+.ax-sound-handle {
+     position: absolute;
+     top: 0;
+     right: -10px;
+     z-index: 3;
+
+     width: var(--ax-handle-size);
+     height: var(--ax-handle-size);
+
+     display: grid;
+     place-items: center;
+
+     border: 1px solid rgba(199, 255, 19, .46);
+     border-radius: 50%;
+
+     background:
+          radial-gradient(circle at 42% 44%, rgba(199, 255, 19, .085), transparent 42%),
+          linear-gradient(180deg, rgba(10, 10, 10, .97), rgba(2, 2, 2, .95));
+
+     color: var(--ax-lime);
+
+     box-shadow:
+          0 0 0 1px rgba(255, 255, 255, .025) inset,
+          0 10px 32px rgba(0, 0, 0, .48),
+          0 0 34px rgba(199, 255, 19, .1);
+
+     backdrop-filter: blur(18px);
+     -webkit-backdrop-filter: blur(18px);
+
+     cursor: pointer;
+     pointer-events: auto;
+
+     transition:
+          right .3s ease,
+          transform .3s ease,
+          border-color .25s ease,
+          box-shadow .25s ease;
+}
+
+.ax-sound-dock.is-open .ax-sound-handle {
+     right: -6px;
+}
+
+.ax-sound-handle:hover {
+     border-color: rgba(199, 255, 19, .82);
+     box-shadow:
+          0 0 0 1px rgba(255, 255, 255, .035) inset,
+          0 12px 36px rgba(0, 0, 0, .52),
+          0 0 42px rgba(199, 255, 19, .19);
+}
+
+.ax-sound-handle:active {
+     transform: scale(.94);
+}
+
+/* =========================================================
+   PANEL COPY
+========================================================= */
+
+.ax-sound-control-copy {
+     min-width: 0;
+
+     display: flex;
+     flex-direction: column;
+     align-items: flex-start;
+     justify-content: center;
+
+     gap: 5px;
+     text-align: left;
+     white-space: nowrap;
+}
+
+.ax-sound-control-copy small {
+     color: rgba(255, 255, 255, .36);
+
+     font-size: 7px;
+     font-weight: 800;
+     line-height: 1;
+
+     letter-spacing: .22em;
+}
+
+.ax-sound-control-copy strong {
+     color: #f6f3ec;
+
+     font-size: 10px;
+     font-weight: 800;
+     line-height: 1;
+
+     letter-spacing: .15em;
+}
+
+.ax-sound-dock.is-playing .ax-sound-control-copy strong {
+     color: var(--ax-lime);
+}
+
+/* =========================================================
+   EQUALIZER BARS — PANEL + HANDLE
+========================================================= */
+
+.ax-sound-panel-bars,
+.ax-sound-handle-bars {
+     position: relative;
+
+     display: flex;
+     align-items: center;
+     justify-content: center;
+
+     gap: 2px;
+
+     flex: 0 0 auto;
+}
+
+.ax-sound-panel-bars {
+     width: 24px;
+     height: 24px;
+}
+
+.ax-sound-handle-bars {
+     width: 26px;
+     height: 26px;
+}
+
+.ax-sound-panel-bars::before,
+.ax-sound-handle-bars::before {
+     content: "";
+
+     position: absolute;
+     inset: -11px;
+
+     border-radius: 50%;
+
+     background: radial-gradient(circle, rgba(199, 255, 19, .13), transparent 67%);
+
+     pointer-events: none;
+}
+
+.ax-sound-panel-bars i,
+.ax-sound-handle-bars i {
+     position: relative;
+     z-index: 2;
+
+     display: block;
+
+     width: 2px;
+     height: 5px;
+
+     border-radius: 999px;
+
+     background: var(--ax-lime);
+
+     box-shadow:
+          0 0 7px rgba(199, 255, 19, .78),
+          0 0 17px rgba(199, 255, 19, .28);
+
+     transform-origin: center;
+
+     animation: axSoundBarIdle 1.2s ease-in-out infinite;
+}
+
+.ax-sound-panel-bars i:nth-child(2),
+.ax-sound-handle-bars i:nth-child(2) {
+     animation-delay: -.18s;
+}
+
+.ax-sound-panel-bars i:nth-child(3),
+.ax-sound-handle-bars i:nth-child(3) {
+     animation-delay: -.36s;
+}
+
+.ax-sound-panel-bars i:nth-child(4),
+.ax-sound-handle-bars i:nth-child(4) {
+     animation-delay: -.54s;
+}
+
+.ax-sound-dock.is-playing .ax-sound-panel-bars i,
+.ax-sound-dock.is-playing .ax-sound-handle-bars i {
+     animation-name: axSoundBarPlaying;
+     animation-duration: .72s;
+}
+
+.ax-sound-dock.is-paused .ax-sound-panel-bars i,
+.ax-sound-dock.is-paused .ax-sound-handle-bars i {
+     height: 4px;
+     opacity: .56;
+     animation: none;
+}
+
+.ax-sound-dock.is-waiting .ax-sound-panel-bars i,
+.ax-sound-dock.is-waiting .ax-sound-handle-bars i {
+     opacity: .35;
+}
+
+/* =========================================================
+   SMALL GREEN EDGE ACCENT
+========================================================= */
+
+.ax-sound-panel::after {
+     content: "";
+
+     position: absolute;
+     left: 28px;
+     right: 40px;
+     bottom: 0;
+
+     height: 1px;
+
+     background: linear-gradient(90deg, transparent, rgba(199, 255, 19, .62), transparent);
+     opacity: .42;
+}
+
+/* =========================================================
+   ANIMATIONS
+========================================================= */
+
+@keyframes axSoundBarIdle {
+
+     0%,
+     100% {
+          height: 4px;
+     }
+
+     50% {
+          height: 8px;
+     }
+}
+
+@keyframes axSoundBarPlaying {
+
+     0%,
+     100% {
+          height: 4px;
+     }
+
+     25% {
+          height: 16px;
+     }
+
+     50% {
+          height: 8px;
+     }
+
+     75% {
+          height: 20px;
+     }
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+     .ax-sound-dock {
+          --ax-panel-width: 172px;
+          --ax-handle-size: 56px;
+          --ax-overlap: 12px;
+
+          top: auto;
+          right: 0;
+          bottom: 18px;
+
+          height: var(--ax-handle-size);
+          transform: none;
+     }
+
+     .ax-sound-panel {
+          height: var(--ax-handle-size);
+          padding: 0 22px 0 16px;
+          gap: 13px;
+     }
+
+     .ax-sound-handle {
+          right: -8px;
+     }
+
+     .ax-sound-control-copy small {
+          font-size: 6px;
+     }
+
+     .ax-sound-control-copy strong {
+          font-size: 8px;
+     }
+}
+
+/* =========================================================
+   REDUCED MOTION
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+     .ax-sound-panel,
+     .ax-sound-handle,
+     .ax-sound-panel-bars i,
+     .ax-sound-handle-bars i {
+          animation: none !important;
+          transition-duration: .01ms !important;
+     }
+}
