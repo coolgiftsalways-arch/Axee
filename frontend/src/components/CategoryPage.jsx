@@ -1781,73 +1781,30 @@ function CategoryVisual({ type }) {
    Image 2 = mouse hover
 ========================================================= */
 
-const DEV_API_BASE = `http://${window.location.hostname}:5000`;
-
-const API_BASE = (
-  import.meta.env.DEV ? DEV_API_BASE : import.meta.env.VITE_API_URL || ""
-).replace(/\/+$/, "");
+const API_BASE =
+  import.meta.env.VITE_API_URL || "";
 
 const resolveProductImageUrl = (value) => {
   if (!value) return "";
 
-  let imageValue = value;
+  const url = String(value);
 
-  /*
-    Support MongoDB/GridFS image objects as well as strings.
-  */
-  if (typeof imageValue === "object") {
-    const fileId = imageValue?.fileId || imageValue?._id || imageValue?.id;
-
-    if (fileId) {
-      imageValue = `/api/catalog/images/${String(fileId)}`;
-    } else {
-      imageValue = imageValue?.url || imageValue?.src || imageValue?.path || "";
-    }
-  }
-
-  let url = String(imageValue).trim().replace(/\\/g, "/");
-
-  if (!url) return "";
-
-  if (
-    url.startsWith("http://") ||
-    url.startsWith("https://") ||
-    url.startsWith("data:") ||
-    url.startsWith("blob:")
-  ) {
+  if (url.startsWith("http://") || url.startsWith("https://")) {
     return url;
   }
 
-  /*
-    Old MongoDB path:
-    /api/images/:id
-
-    New path:
-    /api/catalog/images/:id
-  */
+  // Old URLs saved in MongoDB: /api/images/:id
   if (url.startsWith("/api/images/")) {
-    url = url.replace("/api/images/", "/api/catalog/images/");
+    return `${API_BASE}${url.replace("/api/images/", "/api/catalog/images/")}`;
   }
 
-  if (url.startsWith("api/images/")) {
-    url = `/${url.replace("api/images/", "api/catalog/images/")}`;
-  }
-
-  /*
-    API and uploaded images belong to the backend.
-  */
-  if (url.startsWith("/api/") || url.startsWith("/uploads/")) {
+  // Current backend API URLs.
+  if (url.startsWith("/api/")) {
     return `${API_BASE}${url}`;
   }
 
-  if (url.startsWith("api/") || url.startsWith("uploads/")) {
-    return `${API_BASE}/${url}`;
-  }
-
-  /*
-    Frontend public assets keep their normal path.
-  */
-  return url.startsWith("/") ? url : `/${url}`;
+  // Vite /public image such as /products/track-1.jpg
+  return url;
 };
 
 function ProductHoverImage({ product }) {
@@ -1857,60 +1814,73 @@ function ProductHoverImage({ product }) {
   const sweepRef = useRef(null);
   const labelRef = useRef(null);
 
-  const productImages = useMemo(() => {
+    const productImages = useMemo(() => {
     const list = [];
 
     const addImage = (value) => {
       const resolved = resolveProductImageUrl(value);
 
-      if (resolved && resolved !== "/" && !list.includes(resolved)) {
+      if (resolved && !list.includes(resolved)) {
         list.push(resolved);
       }
     };
 
-    /*
-      IMPORTANT:
-      catalogRoutes.js already decides the BEST image order.
+    /* =========================================================
+       1. NEW HOSTINGER / BACKEND IMAGES FIRST
+    ========================================================= */
 
-      Therefore product.images MUST come first.
-
-      Previously this component put legacy imageFiles first.
-      For older MongoDB products those imageFiles can contain stale GridFS
-      references, which caused the product card to become black even though
-      product.images contained the correct working image.
-    */
-
-    // 1. Backend formatted / modern images - SOURCE OF TRUTH.
     if (Array.isArray(product?.images)) {
       product.images.forEach(addImage);
     }
 
-    // 2. Backend selected main-image fields.
+    /* =========================================================
+       2. SINGLE IMAGE FALLBACKS
+    ========================================================= */
+
     addImage(product?.mainImage);
     addImage(product?.image);
 
-    // 3. Legacy GridFS/imageFiles only as a final fallback.
-    if (Array.isArray(product?.imageFiles)) {
+    /* =========================================================
+       3. OLD GRIDFS ONLY AS LAST FALLBACK
+    ========================================================= */
+
+    if (
+      list.length === 0 &&
+      Array.isArray(product?.imageFiles)
+    ) {
       [...product.imageFiles]
-        .sort((a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0))
-        .forEach(addImage);
-    }
+        .sort(
+          (a, b) =>
+            Number(a?.order ?? 0) -
+            Number(b?.order ?? 0)
+        )
+        .forEach((item) => {
+          /*
+            Prefer saved URL first.
+          */
 
-    // 4. Extra legacy GridFS IDs.
-    if (Array.isArray(product?.imageIds)) {
-      product.imageIds.forEach((fileId) => {
-        if (fileId) {
-          addImage({
-            fileId,
-          });
-        }
-      });
-    }
+          if (item?.url) {
+            addImage(item.url);
+            return;
+          }
 
-    if (product?.imageId) {
-      addImage({
-        fileId: product.imageId,
-      });
+          /*
+            Old MongoDB GridFS file ID fallback.
+          */
+
+          const fileId =
+            item?.fileId ||
+            item?._id ||
+            item?.id;
+
+          if (fileId) {
+            addImage(
+              `${API_BASE}/api/catalog/images/${String(
+                fileId,
+              )}`,
+            );
+          }
+        });
     }
 
     return list;
@@ -2173,37 +2143,6 @@ function ProductHoverImage({ product }) {
           opacity: 1,
           zIndex: 1,
           willChange: "transform, opacity, filter",
-        }}
-        data-fallback-index="0"
-        onError={(event) => {
-          const image = event.currentTarget;
-
-          const currentIndex = Number(image.dataset.fallbackIndex || "0");
-
-          const nextIndex = currentIndex + 1;
-
-          if (nextIndex < productImages.length) {
-            console.warn(
-              "Main product image failed. Trying fallback:",
-              productImages[currentIndex],
-              "->",
-              productImages[nextIndex],
-            );
-
-            image.dataset.fallbackIndex = String(nextIndex);
-
-            image.src = productImages[nextIndex];
-
-            return;
-          }
-
-          console.error(
-            "All product images failed:",
-            product?.name,
-            productImages,
-          );
-
-          image.style.display = "none";
         }}
       />
 
@@ -2477,278 +2416,6 @@ function CartAddedToast({ toast, setToast }) {
 }
 
 /* =========================================================
-   STABLE PRODUCT RATING + REVIEW COUNT
-
-   - Rating stays between 3.5 and 5.0
-   - Reviews stay between 50 and 200
-   - Values stay the same after refresh for the same product
-   - If MongoDB already has valid values in the requested range,
-     those values are preserved
-========================================================= */
-
-const getStableProductSeed = (product) => {
-  const source = String(
-    product?._id ||
-      product?.id ||
-      product?.slug ||
-      product?.sku ||
-      product?.name ||
-      "unbound-product",
-  );
-
-  let hash = 2166136261;
-
-  for (let index = 0; index < source.length; index += 1) {
-    hash ^= source.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-
-  return hash >>> 0;
-};
-
-const getProductRatingData = (product) => {
-  const seed = getStableProductSeed(product);
-
-  const generatedRating = (35 + (seed % 16)) / 10;
-  const generatedReviews = 50 + (Math.floor(seed / 17) % 151);
-
-  const savedRating = Number(product?.rating);
-  const savedReviews = Number(product?.reviewCount ?? product?.reviews);
-
-  const rating =
-    Number.isFinite(savedRating) && savedRating >= 3.5 && savedRating <= 5
-      ? Math.round(savedRating * 10) / 10
-      : generatedRating;
-
-  const reviews =
-    Number.isFinite(savedReviews) && savedReviews >= 50 && savedReviews <= 200
-      ? Math.round(savedReviews)
-      : generatedReviews;
-
-  return {
-    rating,
-    reviews,
-  };
-};
-
-function RatingStars({ rating, reviews }) {
-  const percentage = Math.max(
-    0,
-    Math.min(100, (Number(rating || 0) / 5) * 100),
-  );
-
-  return (
-    <div
-      className="unbound-card-rating"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "7px",
-        marginTop: "7px",
-        minHeight: "18px",
-      }}
-    >
-      <span
-        aria-label={`${Number(rating || 0).toFixed(1)} out of 5 stars`}
-        style={{
-          position: "relative",
-          display: "inline-block",
-          width: "67px",
-          height: "15px",
-          lineHeight: "15px",
-          fontSize: "12px",
-          letterSpacing: "1.5px",
-          whiteSpace: "nowrap",
-        }}
-      >
-        <span
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            inset: 0,
-            color: "rgba(255,255,255,0.18)",
-          }}
-        >
-          ★★★★★
-        </span>
-
-        <span
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            left: 0,
-            top: 0,
-            width: `${percentage}%`,
-            overflow: "hidden",
-            color: "#c7ff13",
-            whiteSpace: "nowrap",
-          }}
-        >
-          ★★★★★
-        </span>
-      </span>
-
-      <strong
-        style={{
-          color: "#ffffff",
-          fontSize: "9px",
-          fontWeight: 700,
-          letterSpacing: "0.02em",
-        }}
-      >
-        {Number(rating || 0).toFixed(1)}
-      </strong>
-
-      <span
-        style={{
-          color: "rgba(255,255,255,0.45)",
-          fontSize: "8px",
-          letterSpacing: "0.02em",
-        }}
-      >
-        ({Number(reviews || 0)} reviews)
-      </span>
-    </div>
-  );
-}
-
-/* =========================================================
-   SIZE CHART
-========================================================= */
-
-const TOP_SIZE_CHART = [
-  { size: "S", chest: '38"', length: '27"', shoulder: '17"' },
-  { size: "M", chest: '40"', length: '28"', shoulder: '18"' },
-  { size: "L", chest: '42"', length: '29"', shoulder: '19"' },
-  { size: "XL", chest: '44"', length: '30"', shoulder: '20"' },
-  { size: "XXL", chest: '46"', length: '31"', shoulder: '21"' },
-];
-
-const BOTTOM_SIZE_CHART = [
-  { size: "28", waist: '28"', hip: '38"', inseam: '29"' },
-  { size: "30", waist: '30"', hip: '40"', inseam: '29.5"' },
-  { size: "32", waist: '32"', hip: '42"', inseam: '30"' },
-  { size: "34", waist: '34"', hip: '44"', inseam: '30.5"' },
-  { size: "36", waist: '36"', hip: '46"', inseam: '31"' },
-];
-
-const BOTTOM_SIZE_CATEGORIES = new Set(["JEANS", "TRACK PANTS", "SHORTS"]);
-
-function SizeChartModal({ open, onClose, category }) {
-  useEffect(() => {
-    if (!open) return undefined;
-
-    const handleEscape = (event) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [open, onClose]);
-
-  if (!open) return null;
-
-  const isBottom = BOTTOM_SIZE_CATEGORIES.has(
-    String(category || "")
-      .trim()
-      .toUpperCase(),
-  );
-
-  const rows = isBottom ? BOTTOM_SIZE_CHART : TOP_SIZE_CHART;
-
-  return (
-    <div
-      className="shop-size-chart-backdrop"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div
-        className="shop-size-chart-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${category} size chart`}
-      >
-        <div className="shop-size-chart-top">
-          <div>
-            <span className="shop-size-chart-kicker">UNBOUND / FIT GUIDE</span>
-            <h3>{category} SIZE CHART</h3>
-          </div>
-
-          <button
-            type="button"
-            className="shop-size-chart-close"
-            onClick={onClose}
-            aria-label="Close size chart"
-          >
-            <X size={16} strokeWidth={1.5} />
-          </button>
-        </div>
-
-        <div className="shop-size-chart-table-wrap">
-          <table className="shop-size-chart-table">
-            <thead>
-              <tr>
-                <th>SIZE</th>
-
-                {isBottom ? (
-                  <>
-                    <th>WAIST</th>
-                    <th>HIP</th>
-                    <th>INSEAM</th>
-                  </>
-                ) : (
-                  <>
-                    <th>CHEST</th>
-                    <th>LENGTH</th>
-                    <th>SHOULDER</th>
-                  </>
-                )}
-              </tr>
-            </thead>
-
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.size}>
-                  <td>{row.size}</td>
-
-                  {isBottom ? (
-                    <>
-                      <td>{row.waist}</td>
-                      <td>{row.hip}</td>
-                      <td>{row.inseam}</td>
-                    </>
-                  ) : (
-                    <>
-                      <td>{row.chest}</td>
-                      <td>{row.length}</td>
-                      <td>{row.shoulder}</td>
-                    </>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <p className="shop-size-chart-note">
-          MEASUREMENTS ARE IN INCHES. UPDATE THESE VALUES TO MATCH YOUR FINAL
-          GARMENT SPEC BEFORE PRODUCTION.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
    CATEGORY PAGE
 ========================================================= */
 
@@ -2776,8 +2443,6 @@ function CategoryPage({
 
   const [addedProductId, setAddedProductId] = useState("");
 
-  const [sizeChartOpen, setSizeChartOpen] = useState(false);
-
   /*
     Tracks product + size combinations that were successfully saved
     to the backend cart from this page. After an item has been added,
@@ -2794,44 +2459,11 @@ function CategoryPage({
     String(product?._id || product?.id || product?.slug || product?.name || "");
 
   const getProductSizes = (product) => {
-    const rawSizes = Array.isArray(product?.sizes)
-      ? product.sizes
-      : Array.isArray(product?.availableSizes)
-        ? product.availableSizes
-        : [];
+    if (!Array.isArray(product?.sizes)) return [];
 
-    const realSizes = rawSizes
-      .map((item) => {
-        if (typeof item === "string") {
-          return item.trim();
-        }
-
-        return String(
-          item?.size ?? item?.label ?? item?.name ?? item?.value ?? "",
-        ).trim();
-      })
-      .filter(Boolean)
-      .filter((size, index, allSizes) => allSizes.indexOf(size) === index);
-
-    /*
-      MongoDB is the preferred source.
-      If an older/imported product has no sizes yet, show a category-safe
-      fallback so T-Shirts, Jeans, Track Pants, Shirts and Shorts do not
-      render with a missing size selector.
-    */
-    if (realSizes.length > 0) {
-      return realSizes;
-    }
-
-    const normalizedCategory = String(product?.category || category || "")
-      .trim()
-      .toUpperCase();
-
-    if (BOTTOM_SIZE_CATEGORIES.has(normalizedCategory)) {
-      return ["28", "30", "32", "34", "36"];
-    }
-
-    return ["S", "M", "L", "XL", "XXL"];
+    return product.sizes
+      .map((item) => (typeof item === "string" ? item : item?.size))
+      .filter(Boolean);
   };
 
   /* =======================================================
@@ -3094,8 +2726,11 @@ function CategoryPage({
   };
 
   /*
-    If a product/size has already been added from this page,
-    keep the real backend cart quantity in sync with the card controls.
+    If this product/size has already been added from this page,
+    keep the real MongoDB cart quantity in sync with the card controls.
+
+    2 -> 1 = PATCH cart item
+    1 -> 0 = DELETE cart item completely
   */
   const syncBackendCartQuantity = async (productId, size, nextQuantity) => {
     const cartId = localStorage.getItem("axiee-cart-id");
@@ -3106,9 +2741,6 @@ function CategoryPage({
 
     const getResponse = await fetch(`${API_BASE}/api/cart/${cartId}`, {
       cache: "no-store",
-      headers: {
-        Accept: "application/json",
-      },
     });
 
     const getData = await getResponse.json();
@@ -3190,6 +2822,10 @@ function CategoryPage({
 
     const syncKey = makeCartSyncKey(productId, size);
 
+    /*
+      Before ADD TO CART has been pressed, + / - are only a selector.
+      After ADD TO CART succeeds, + / - update the real cart.
+    */
     if (!cartSyncedItemsRef.current.has(syncKey)) {
       return;
     }
@@ -3205,168 +2841,193 @@ function CategoryPage({
         cartSyncedItemsRef.current.delete(syncKey);
 
         setAddedProductId((current) => (current === productId ? "" : current));
-
-        return;
-      }
-
-      if (!updatedCart) {
+      } else if (!updatedCart) {
+        /*
+          The item disappeared from the backend cart somehow.
+          Stop treating this selector as cart-synced.
+        */
         cartSyncedItemsRef.current.delete(syncKey);
       }
     } catch (error) {
       console.error("❌ Cart quantity sync error:", error);
 
+      /*
+        Roll the visible selector back if the backend update failed,
+        so UI and cart do not show different quantities.
+      */
       setQuantities((previous) => ({
         ...previous,
         [productId]: currentQuantity,
       }));
 
-      alert(error?.message || "Unable to update cart quantity.");
+      alert(error.message || "Unable to update cart quantity.");
     }
   };
 
-  /* =======================================================
-     GET PRODUCT IMAGE FOR CART
-  ======================================================= */
+/* =======================================================
+   ADD TO CART
+======================================================= */
 
-  const getCartProductImage = (product) => {
-    if (!product) {
-      return "";
-    }
+const addToCart = async (product) => {
+  try {
+    /* ================================================
+       PRODUCT DETAILS
+    ================================================ */
 
-    const resolveValue = (value) => {
-      if (!value) {
-        return "";
-      }
+    const productId =
+      getProductId(product);
 
-      if (typeof value === "object") {
-        if (value?.url) return String(value.url);
-        if (value?.src) return String(value.src);
-        if (value?.path) return String(value.path);
+    const sizes =
+      getProductSizes(product);
 
-        const fileId = value?.fileId || value?._id || value?.id;
+    const size =
+      selectedSizes[productId];
 
-        if (fileId) {
-          return `/api/catalog/images/${String(fileId)}`;
-        }
+    const quantity =
+      getQuantity(productId);
 
-        return "";
-      }
+    /* ================================================
+       VALIDATION
+    ================================================ */
 
-      return String(value);
-    };
-
-    if (Array.isArray(product?.imageFiles) && product.imageFiles.length > 0) {
-      const sortedImageFiles = [...product.imageFiles].sort(
-        (a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0),
+    if (sizes.length === 0) {
+      alert(
+        "Sizes are not configured for this product yet.",
       );
 
-      const firstImage = resolveValue(sortedImageFiles[0]);
-
-      if (firstImage) {
-        return firstImage;
-      }
+      return;
     }
 
-    if (Array.isArray(product?.images) && product.images.length > 0) {
-      for (const image of product.images) {
-        const resolved = resolveValue(image);
+    if (!size) {
+      alert(
+        "Please select a size first.",
+      );
 
-        if (resolved) {
-          return resolved;
-        }
-      }
+      return;
     }
 
-    const mainImage = resolveValue(product?.mainImage);
+    if (quantity <= 0) {
+      alert(
+        "Please select quantity first.",
+      );
 
-    if (mainImage) {
-      return mainImage;
+      return;
     }
 
-    return resolveValue(product?.image);
-  };
+    /* ================================================
+       CART ID
+    ================================================ */
 
-  /* =======================================================
-     ADD TO CART
-  ======================================================= */
+    let cartId =
+      localStorage.getItem(
+        "axiee-cart-id",
+      );
 
-  const addToCart = async (product) => {
-    try {
-      const productId = getProductId(product);
+    if (!cartId) {
+      cartId =
+        crypto.randomUUID();
 
-      const sizes = getProductSizes(product);
+      localStorage.setItem(
+        "axiee-cart-id",
+        cartId,
+      );
+    }
 
-      const size = selectedSizes[productId];
+    /* ================================================
+       PRODUCT IMAGE
+    ================================================ */
 
-      const quantity = getQuantity(productId);
+    const productImage =
+      getCartProductImage(product);
 
-      if (!productId) {
-        alert("Product ID is missing.");
-        return;
-      }
+    console.log(
+      "🛒 ADDING TO CART:",
+      {
+        productId,
+        name: product?.name,
+        image: productImage,
+        imageFiles:
+          product?.imageFiles,
+        images:
+          product?.images,
+        mainImage:
+          product?.mainImage,
+        originalImage:
+          product?.image,
+      },
+    );
 
-      if (sizes.length === 0) {
-        alert("Sizes are not configured for this product yet.");
-        return;
-      }
+    /* ================================================
+       SEND TO BACKEND
+    ================================================ */
 
-      if (!size) {
-        alert("Please select a size first.");
-        return;
-      }
-
-      if (quantity <= 0) {
-        alert("Please select quantity first.");
-        return;
-      }
-
-      let cartId = localStorage.getItem("axiee-cart-id");
-
-      if (!cartId) {
-        cartId = crypto.randomUUID();
-
-        localStorage.setItem("axiee-cart-id", cartId);
-      }
-
-      const productImage = getCartProductImage(product);
-
-      const response = await fetch(`${API_BASE}/api/cart/add`, {
+    const response = await fetch(
+      `${API_BASE}/api/cart/add`,
+      {
         method: "POST",
+
         headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
+          "Content-Type":
+            "application/json",
         },
+
         body: JSON.stringify({
           cartId,
-          productId,
-          size,
-          quantity,
-          name: product?.name || "AXIEE Product",
-          price: Number(product?.price || 0),
-          image: productImage,
-          category: product?.category || category || "",
-        }),
-      });
 
-      const data = await response.json();
+          productId,
+
+          size,
+
+          quantity,
+
+          name:
+            product?.name ||
+            "AXIEE Product",
+
+          price: Number(
+            product?.price || 0,
+          ),
+
+          image:
+            productImage,
+
+          category:
+            product?.category ||
+            category ||
+            "",
+        }),
+      },
+    );
+
+    /* ================================================
+       RESPONSE
+    ================================================ */
+
+    const data =
+      await response.json();
 
       if (!response.ok) {
-        throw new Error(data?.message || "Unable to add to cart");
+        throw new Error(data.message || "Unable to add to cart");
       }
 
-      const savedCart = data?.cart ||
-        data || {
-          items: [],
-        };
+      console.log("✅ CART SAVED:", data.cart);
+
+      const savedCart = data?.cart || {
+        items: [],
+      };
 
       const savedItem = findMatchingCartItem(savedCart, productId, size);
 
+      /*
+        This product + size is now a real backend cart item.
+        From this point the + / - controls will PATCH / DELETE it.
+      */
       if (savedItem?._id) {
         const syncKey = makeCartSyncKey(productId, size);
 
         cartSyncedItemsRef.current.add(syncKey);
 
-        const savedQuantity = Number(savedItem?.quantity || quantity);
+        const savedQuantity = Number(savedItem.quantity || quantity);
 
         setQuantities((previous) => ({
           ...previous,
@@ -3374,29 +3035,53 @@ function CategoryPage({
         }));
       }
 
+      /*
+        Tell Navbar / Cart that the backend cart changed.
+      */
       window.dispatchEvent(
         new CustomEvent("axiee-cart-updated", {
           detail: savedCart,
         }),
       );
 
-      setCartToast({
-        name: product?.name || "AXIEE Product",
-        size,
-        quantity: Number(savedItem?.quantity || quantity),
-      });
+    /* ================================================
+       SUCCESS TOAST
+    ================================================ */
 
-      setAddedProductId(productId);
+    setCartToast({
+      name:
+        product?.name ||
+        "AXIEE Product",
 
-      window.setTimeout(() => {
-        setAddedProductId((current) => (current === productId ? "" : current));
-      }, 1400);
-    } catch (error) {
-      console.error("❌ Add to cart error:", error);
+      size,
 
-      alert(error?.message || "Unable to add to cart");
-    }
-  };
+      quantity,
+    });
+
+    setAddedProductId(
+      productId,
+    );
+
+    window.setTimeout(() => {
+      setAddedProductId(
+        (current) =>
+          current === productId
+            ? ""
+            : current,
+      );
+    }, 1400);
+  } catch (error) {
+    console.error(
+      "❌ Add to cart error:",
+      error,
+    );
+
+    alert(
+      error?.message ||
+        "Unable to add to cart",
+    );
+  }
+};
 
   /* =======================================================
      BUY NOW
@@ -3426,12 +3111,6 @@ function CategoryPage({
   return (
     <main className="shop-page">
       <CartAddedToast toast={cartToast} setToast={setCartToast} />
-
-      <SizeChartModal
-        open={sizeChartOpen}
-        onClose={() => setSizeChartOpen(false)}
-        category={category}
-      />
       {/* ===================================================
           CATEGORY HERO
       =================================================== */}
@@ -3659,11 +3338,6 @@ function CategoryPage({
                         <p>
                           ₹{Number(product.price || 0).toLocaleString("en-IN")}
                         </p>
-
-                        <RatingStars
-                          rating={getProductRatingData(product).rating}
-                          reviews={getProductRatingData(product).reviews}
-                        />
                       </div>
 
                       <Link
@@ -3686,28 +3360,8 @@ function CategoryPage({
 
                     {/* SIZES */}
 
-                    <div className="shop-size-section">
-                      <div className="shop-size-header">
-                        <span>SIZE</span>
-
-                        <button
-                          type="button"
-                          className="shop-size-chart-trigger"
-                          onClick={() => setSizeChartOpen(true)}
-                        >
-                          SIZE CHART
-                        </button>
-                      </div>
-
-                      <div
-                        className="shop-size-list"
-                        style={{
-                          gridTemplateColumns: `repeat(${Math.min(
-                            Math.max(productSizes.length, 1),
-                            5,
-                          )}, minmax(0, 1fr))`,
-                        }}
-                      >
+                    {productSizes.length > 0 && (
+                      <div className="shop-size-list">
                         {productSizes.map((size) => (
                           <button
                             type="button"
@@ -3723,7 +3377,7 @@ function CategoryPage({
                           </button>
                         ))}
                       </div>
-                    </div>
+                    )}
 
                     {/* QUANTITY */}
 
