@@ -73,6 +73,24 @@ try {
 const app = express();
 
 /* =========================================================
+   PERMANENT PRODUCT IMAGES
+========================================================= */
+
+const productImagesPath =
+  process.env.PRODUCT_IMAGES_PATH ||
+  path.join(__dirname, "product-images");
+
+console.log("📸 Product images path:", productImagesPath);
+
+app.use(
+  "/product-images",
+  express.static(productImagesPath, {
+    maxAge: "7d",
+    immutable: false,
+  })
+);
+
+/* =========================================================
    CORS
 ========================================================= */
 
