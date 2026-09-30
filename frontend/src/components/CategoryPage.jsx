@@ -2864,6 +2864,67 @@ function CategoryPage({
     }
   };
 
+  /* =========================================================
+   CART PRODUCT IMAGE
+   Hostinger images first, old GridFS only as fallback
+========================================================= */
+
+const getCartProductImage = (product = {}) => {
+  /* 1. NEW HOSTINGER IMAGES */
+  if (Array.isArray(product?.images) && product.images.length > 0) {
+    const firstImage = product.images.find(Boolean);
+
+    if (typeof firstImage === "string") {
+      return resolveProductImageUrl(firstImage);
+    }
+
+    if (firstImage?.url) {
+      return resolveProductImageUrl(firstImage.url);
+    }
+
+    if (firstImage?.src) {
+      return resolveProductImageUrl(firstImage.src);
+    }
+  }
+
+  /* 2. MAIN IMAGE */
+  if (product?.mainImage) {
+    return resolveProductImageUrl(product.mainImage);
+  }
+
+  /* 3. SINGLE IMAGE */
+  if (product?.image) {
+    return resolveProductImageUrl(product.image);
+  }
+
+  /* 4. OLD GRIDFS / LEGACY FALLBACK */
+  if (Array.isArray(product?.imageFiles) && product.imageFiles.length > 0) {
+    const sortedFiles = [...product.imageFiles].sort(
+      (a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0),
+    );
+
+    const firstFile = sortedFiles[0];
+
+    if (typeof firstFile === "string") {
+      return resolveProductImageUrl(firstFile);
+    }
+
+    if (firstFile?.url) {
+      return resolveProductImageUrl(firstFile.url);
+    }
+
+    const fileId =
+      firstFile?.fileId ||
+      firstFile?._id ||
+      firstFile?.id;
+
+    if (fileId) {
+      return `${API_BASE}/api/catalog/images/${String(fileId)}`;
+    }
+  }
+
+  return "";
+};
 /* =======================================================
    ADD TO CART
 ======================================================= */
