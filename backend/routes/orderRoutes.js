@@ -6,6 +6,7 @@ import Order from "../models/Order.js";
 import { validateCouponForOrder } from "../controllers/couponController.js";
 
 import { sendOrderEmails } from "../utils/orderEmail.js";
+import ShiprocketShipment from "../models/ShiprocketShipment.js";
 
 const router = express.Router();
 
@@ -874,39 +875,389 @@ router.delete(
 /* =========================================================
    TRACK ORDER
 ========================================================= */
+/* =========================================================
+   TRACK ORDER
+
+   GET /api/orders/track/:orderNumber
+========================================================= */
 
 router.get(
   "/track/:orderNumber",
 
   async (req, res) => {
     try {
-      const order = await Order.findOne({
-        orderNumber: req.params.orderNumber,
-      });
+      const orderNumber =
+        String(
+          req.params.orderNumber ||
+            "",
+        ).trim();
 
-      if (!order) {
-        return res.status(404).json({
-          success: false,
-
-          message: "Order not found.",
-        });
+      if (!orderNumber) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message:
+              "Order number is required.",
+          });
       }
 
-      return res.status(200).json({
-        success: true,
+      /* =====================================================
+         FIND ORDER
+      ===================================================== */
 
-        order,
-      });
+      const order =
+        await Order.findOne({
+          orderNumber,
+        }).lean();
+
+      if (!order) {
+        return res
+          .status(404)
+          .json({
+            success: false,
+            message:
+              "Order not found.",
+          });
+      }
+
+      /* =====================================================
+         FIND SHIPROCKET SHIPMENT
+      ===================================================== */
+
+      const shipment =
+        await ShiprocketShipment
+          .findOne({
+            orderId:
+              order._id,
+          })
+          .lean();
+
+      /* =====================================================
+         CUSTOMER NAME
+      ===================================================== */
+
+      const customerName =
+        [
+          order?.customer
+            ?.firstName,
+
+          order?.customer
+            ?.lastName,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+
+      /* =====================================================
+         DESTINATION
+      ===================================================== */
+
+      const destination =
+        [
+          order
+            ?.shippingAddress
+            ?.city,
+
+          order
+            ?.shippingAddress
+            ?.state,
+
+          order
+            ?.shippingAddress
+            ?.country ||
+            "India",
+        ]
+          .filter(Boolean)
+          .join(", ");
+
+      /* =====================================================
+         SHIPROCKET STATUS
+      ===================================================== */
+
+      const shippingStatus =
+        shipment?.status ||
+        "not_sent";
+
+      const currentStatus =
+        shipment?.currentStatus ||
+        shipment?.shipmentStatus ||
+        shippingStatus;
+
+      /* =====================================================
+         STATUS STEP
+      ===================================================== */
+
+      let trackingStep = 1;
+
+      const normalizedStatus =
+        String(
+          currentStatus || "",
+        )
+          .trim()
+          .toUpperCase();
+
+      const normalizedLocal =
+        String(
+          shippingStatus || "",
+        )
+          .trim()
+          .toLowerCase();
+
+      if (
+        normalizedLocal ===
+          "delivered" ||
+        normalizedStatus.includes(
+          "DELIVERED",
+        )
+      ) {
+        trackingStep = 8;
+      } else if (
+        normalizedStatus.includes(
+          "OUT FOR DELIVERY",
+        )
+      ) {
+        trackingStep = 7;
+      } else if (
+        normalizedLocal ===
+          "in_transit" ||
+        normalizedStatus.includes(
+          "IN TRANSIT",
+        )
+      ) {
+        trackingStep = 6;
+      } else if (
+        normalizedStatus.includes(
+          "REACHED DESTINATION",
+        ) ||
+        normalizedStatus.includes(
+          "DESTINATION HUB",
+        )
+      ) {
+        trackingStep = 6;
+      } else if (
+        normalizedStatus.includes(
+          "FLIGHT",
+        ) ||
+        normalizedStatus.includes(
+          "AIR TRANSIT",
+        )
+      ) {
+        trackingStep = 5;
+      } else if (
+        normalizedStatus.includes(
+          "HUB",
+        )
+      ) {
+        trackingStep = 4;
+      } else if (
+        normalizedLocal ===
+          "pickup_scheduled" ||
+        normalizedStatus.includes(
+          "PICKED",
+        ) ||
+        normalizedStatus.includes(
+          "PICKUP",
+        )
+      ) {
+        trackingStep = 3;
+      } else if (
+        normalizedLocal ===
+          "awb_assigned" ||
+        normalizedLocal ===
+          "order_created" ||
+        order.orderStatus ===
+          "processing" ||
+        order.orderStatus ===
+          "confirmed"
+      ) {
+        trackingStep = 2;
+      }
+
+      /* =====================================================
+         ESTIMATED DELIVERY
+      ===================================================== */
+
+      const estimatedDelivery =
+        shipment?.tracking
+          ?.tracking_data
+          ?.etd ||
+        shipment?.tracking
+          ?.etd ||
+        shipment
+          ?.lastWebhookPayload
+          ?.etd ||
+        null;
+
+      /* =====================================================
+         RESPONSE
+      ===================================================== */
+
+      return res
+        .status(200)
+        .json({
+          success: true,
+
+          order: {
+            _id:
+              order._id,
+
+            orderNumber:
+              order.orderNumber,
+
+            customerName,
+
+            phone:
+              order?.customer
+                ?.phone ||
+              "",
+
+            email:
+              order?.customer
+                ?.email ||
+              "",
+
+            destination,
+
+            city:
+              order
+                ?.shippingAddress
+                ?.city ||
+              "",
+
+            state:
+              order
+                ?.shippingAddress
+                ?.state ||
+              "",
+
+            country:
+              order
+                ?.shippingAddress
+                ?.country ||
+              "India",
+
+            orderStatus:
+              order.orderStatus,
+
+            paymentStatus:
+              order.paymentStatus,
+
+            paymentMethod:
+              order.paymentMethod,
+
+            total:
+              Number(
+                order.total ||
+                  0,
+              ),
+
+            createdAt:
+              order.createdAt,
+
+            items:
+              order.items ||
+              [],
+          },
+
+          shipping: {
+            available:
+              Boolean(
+                shipment,
+              ),
+
+            status:
+              shippingStatus,
+
+            currentStatus,
+
+            currentStatusId:
+              shipment
+                ?.currentStatusId ??
+              null,
+
+            shipmentStatus:
+              shipment
+                ?.shipmentStatus ||
+              "",
+
+            shipmentStatusId:
+              shipment
+                ?.shipmentStatusId ??
+              null,
+
+            trackingStep,
+
+            awb:
+              shipment?.awb ||
+              "",
+
+            courier:
+              shipment
+                ?.courierName ||
+              "",
+
+            courierId:
+              shipment
+                ?.courierId ||
+              "",
+
+            shiprocketOrderId:
+              shipment
+                ?.shiprocketOrderId ||
+              "",
+
+            shipmentId:
+              shipment
+                ?.shipmentId ||
+              "",
+
+            pickupScheduled:
+              Boolean(
+                shipment
+                  ?.pickupScheduled,
+              ),
+
+            pickupScheduledAt:
+              shipment
+                ?.pickupScheduledAt ||
+              null,
+
+            labelUrl:
+              shipment
+                ?.labelUrl ||
+              "",
+
+            estimatedDelivery,
+
+            tracking:
+              shipment
+                ?.tracking ||
+              null,
+
+            lastWebhookAt:
+              shipment
+                ?.lastWebhookAt ||
+              null,
+          },
+        });
     } catch (error) {
-      console.error("❌ Track order error:", error);
+      console.error(
+        "❌ Track order error:",
+        error,
+      );
 
-      return res.status(500).json({
-        success: false,
+      return res
+        .status(500)
+        .json({
+          success: false,
 
-        message: "Failed to track order.",
+          message:
+            "Failed to track order.",
 
-        error: error.message,
-      });
+          error:
+            error.message,
+        });
     }
   },
 );

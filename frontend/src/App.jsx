@@ -59,6 +59,7 @@ import Coupons from "./Admin/Coupons.jsx";
 import Sliders from "./Admin/Sliders.jsx";
 import Banners from "./Admin/Banners.jsx";
 import Settings from "./Admin/Settings.jsx";
+import Shipping from "./Admin/Shipping.jsx";
 
 /* =========================================================
    ADMIN LOGIN
@@ -757,6 +758,11 @@ function Layout() {
           <Route path="banners" element={<Banners />} />
 
           <Route path="settings" element={<Settings />} />
+
+          <Route
+  path="/admin/shipping"
+  element={<Shipping />}
+/>
 
           <Route
             path="*"

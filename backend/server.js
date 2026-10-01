@@ -21,6 +21,7 @@ import orderRoutes from "./routes/orderRoutes.js";
 import adminAuthRoutes from "./routes/adminAuthRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import couponRoutes from "./routes/couponRoutes.js";
+import shiprocketRoutes from "./routes/shiprocketRoutes.js";
 
 /* =========================================================
    MODELS
@@ -80,6 +81,10 @@ app.use(
 
     immutable: false,
   }),
+);
+app.use(
+  "/api/shiprocket",
+  shiprocketRoutes,
 );
 
 /* =========================================================

@@ -7,6 +7,7 @@ import {
   Package,
   Users,
   TicketPercent,
+  Truck,
   Settings,
   LogOut,
   X,
@@ -14,7 +15,10 @@ import {
 
 import "../AdminCss/admin-sidebar.css";
 
-const AdminSidebar = ({ sidebarOpen, closeSidebar }) => {
+const AdminSidebar = ({
+  sidebarOpen,
+  closeSidebar,
+}) => {
   const menuItems = [
     {
       name: "Dashboard",
@@ -22,26 +26,41 @@ const AdminSidebar = ({ sidebarOpen, closeSidebar }) => {
       icon: LayoutDashboard,
       end: true,
     },
+
     {
       name: "Orders",
       path: "/admin/orders",
       icon: ShoppingBag,
     },
+
     {
       name: "Products",
       path: "/admin/products",
       icon: Package,
     },
+
     {
       name: "Customers",
       path: "/admin/customers",
       icon: Users,
     },
+
     {
       name: "Coupons",
       path: "/admin/coupons",
       icon: TicketPercent,
     },
+
+    /* =====================================================
+       SHIPROCKET / SHIPPING
+    ===================================================== */
+
+    {
+      name: "Shipping",
+      path: "/admin/shipping",
+      icon: Truck,
+    },
+
     {
       name: "Settings",
       path: "/admin/settings",
@@ -51,14 +70,23 @@ const AdminSidebar = ({ sidebarOpen, closeSidebar }) => {
 
   return (
     <aside
-      className={`admin-sidebar ${sidebarOpen ? "admin-sidebar-open" : ""}`}
+      className={`admin-sidebar ${
+        sidebarOpen
+          ? "admin-sidebar-open"
+          : ""
+      }`}
     >
-      {/* HEADER */}
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
 
       <div className="admin-sidebar-header">
         <div>
           <h1>AXIEE</h1>
-          <span>ADMIN PANEL</span>
+
+          <span>
+            ADMIN PANEL
+          </span>
         </div>
 
         <button
@@ -71,37 +99,63 @@ const AdminSidebar = ({ sidebarOpen, closeSidebar }) => {
         </button>
       </div>
 
-      {/* NAVIGATION */}
+      {/* =====================================================
+          NAVIGATION
+      ===================================================== */}
 
       <nav className="admin-sidebar-nav">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
+        {menuItems.map(
+          (item) => {
+            const Icon =
+              item.icon;
 
-          return (
-            <NavLink
-              key={item.name}
-              to={item.path}
-              end={item.end}
-              onClick={closeSidebar}
-              className={({ isActive }) =>
-                `admin-nav-link ${isActive ? "admin-nav-active" : ""}`
-              }
-            >
-              <Icon size={19} />
+            return (
+              <NavLink
+                key={item.name}
+                to={item.path}
+                end={item.end}
+                onClick={
+                  closeSidebar
+                }
+                className={({
+                  isActive,
+                }) =>
+                  `admin-nav-link ${
+                    isActive
+                      ? "admin-nav-active"
+                      : ""
+                  }`
+                }
+              >
+                <Icon
+                  size={19}
+                />
 
-              <span>{item.name}</span>
-            </NavLink>
-          );
-        })}
+                <span>
+                  {item.name}
+                </span>
+              </NavLink>
+            );
+          },
+        )}
       </nav>
 
-      {/* FOOTER */}
+      {/* =====================================================
+          FOOTER
+      ===================================================== */}
 
       <div className="admin-sidebar-footer">
-        <button type="button" className="admin-logout-button">
-          <LogOut size={19} />
+        <button
+          type="button"
+          className="admin-logout-button"
+        >
+          <LogOut
+            size={19}
+          />
 
-          <span>Logout</span>
+          <span>
+            Logout
+          </span>
         </button>
       </div>
     </aside>

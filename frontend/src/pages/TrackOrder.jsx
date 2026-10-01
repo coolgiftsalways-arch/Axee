@@ -16,6 +16,11 @@ import {
 import "../styles/trackOrder.css";
 
 gsap.registerPlugin(ScrollTrigger);
+const API_BASE =
+  import.meta.env.VITE_API_URL || "";
+
+const apiUrl = (path) =>
+  `${API_BASE}${path}`;
 
 /* =========================================================
    AXIEE CARGO VAN
@@ -682,15 +687,15 @@ const steps = [
   },
   {
     number: "04",
-    title: "AIR HUB",
+    title: "IN TRANSIT",
   },
   {
     number: "05",
-    title: "FLIGHT",
+    title: "TRANSIT HUB",
   },
   {
     number: "06",
-    title: "LANDED",
+    title: "DESTINATION HUB",
   },
   {
     number: "07",
@@ -703,582 +708,1190 @@ const steps = [
 ];
 
 /* =========================================================
+   HELPERS
+========================================================= */
+
+const getStepStatusText = (
+  step,
+  currentStatus = "",
+) => {
+  if (currentStatus) {
+    return String(currentStatus)
+      .replaceAll("_", " ")
+      .toUpperCase();
+  }
+
+  const fallback = {
+    1: "ORDER RECEIVED",
+    2: "PACKING YOUR ORDER",
+    3: "COURIER PICKUP",
+    4: "PACKAGE IN TRANSIT",
+    5: "PACKAGE AT TRANSIT HUB",
+    6: "PACKAGE AT DESTINATION HUB",
+    7: "OUT FOR DELIVERY",
+    8: "ORDER DELIVERED ✓",
+  };
+
+  return fallback[step] || "ORDER RECEIVED";
+};
+
+const formatEstimatedDelivery = (
+  value,
+) => {
+  if (!value) {
+    return "AWAITING UPDATE";
+  }
+
+  try {
+    const date =
+      new Date(value);
+
+    if (
+      Number.isNaN(
+        date.getTime(),
+      )
+    ) {
+      return String(value)
+        .toUpperCase();
+    }
+
+    return date
+      .toLocaleDateString(
+        "en-IN",
+        {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        },
+      )
+      .toUpperCase();
+  } catch {
+    return String(value)
+      .toUpperCase();
+  }
+};
+
+/* =========================================================
    PAGE
 ========================================================= */
 
 function TrackOrder() {
-  const [orderId, setOrderId] = useState("");
+  const [
+    orderId,
+    setOrderId,
+  ] = useState("");
 
-  const [trackedOrder, setTrackedOrder] = useState("AXIEE-2026-00125");
+  const [
+    trackedOrder,
+    setTrackedOrder,
+  ] = useState("ENTER ORDER ID");
 
-  const pageRef = useRef(null);
+  const [
+    trackingData,
+    setTrackingData,
+  ] = useState(null);
 
-  const sellerRef = useRef(null);
-  const packageRef = useRef(null);
-  const vanRef = useRef(null);
-  const airportOneRef = useRef(null);
-  const planeRef = useRef(null);
-  const airportTwoRef = useRef(null);
-  const riderRef = useRef(null);
-  const customerRef = useRef(null);
+  const [
+    trackingStep,
+    setTrackingStep,
+  ] = useState(1);
 
-  const routeRef = useRef(null);
-  const routeDotRef = useRef(null);
+  const [
+    loading,
+    setLoading,
+  ] = useState(false);
 
-  const statusRef = useRef(null);
+  const [
+    error,
+    setError,
+  ] = useState("");
+
+  const pageRef =
+    useRef(null);
+
+  const sellerRef =
+    useRef(null);
+
+  const packageRef =
+    useRef(null);
+
+  const vanRef =
+    useRef(null);
+
+  const airportOneRef =
+    useRef(null);
+
+  const planeRef =
+    useRef(null);
+
+  const airportTwoRef =
+    useRef(null);
+
+  const riderRef =
+    useRef(null);
+
+  const customerRef =
+    useRef(null);
+
+  const routeRef =
+    useRef(null);
+
+  const routeDotRef =
+    useRef(null);
+
+  const statusRef =
+    useRef(null);
 
   /* =========================================================
-     ANIMATION
+     REAL DATA
+  ========================================================= */
+
+  const order =
+    trackingData?.order ||
+    null;
+
+  const shipping =
+    trackingData?.shipping ||
+    null;
+
+  const currentStatus =
+    shipping?.currentStatus ||
+    shipping?.status ||
+    "";
+
+  const courier =
+    shipping?.courier ||
+    "NOT ASSIGNED";
+
+  const awb =
+    shipping?.awb ||
+    "";
+
+  const destination =
+    order?.destination ||
+    "AWAITING ORDER";
+
+  const estimatedDelivery =
+    formatEstimatedDelivery(
+      shipping
+        ?.estimatedDelivery,
+    );
+
+  /* =========================================================
+     TRACKING ANIMATION
   ========================================================= */
 
   useLayoutEffect(() => {
-    const ctx = gsap.context(() => {
-      const seller = sellerRef.current;
-      const box = packageRef.current;
-      const van = vanRef.current;
-      const airportOne = airportOneRef.current;
-      const plane = planeRef.current;
-      const airportTwo = airportTwoRef.current;
-      const rider = riderRef.current;
-      const customer = customerRef.current;
+    const ctx =
+      gsap.context(() => {
+        const seller =
+          sellerRef.current;
 
-      /* =====================================================
-         HERO INTRO
-      ===================================================== */
+        const box =
+          packageRef.current;
 
-      gsap.from(".ax-track-heading > span", {
-        opacity: 0,
-        y: 10,
-        duration: 0.4,
-      });
+        const van =
+          vanRef.current;
 
-      gsap.from(".ax-track-heading h1", {
-        opacity: 0,
-        y: 45,
-        duration: 0.8,
-        ease: "power3.out",
-      });
+        const airportOne =
+          airportOneRef.current;
 
-      gsap.from(".ax-track-heading p", {
-        opacity: 0,
-        y: 15,
-        duration: 0.5,
-        delay: 0.2,
-      });
+        const plane =
+          planeRef.current;
 
-      gsap.from(".ax-status-card", {
-        opacity: 0,
-        y: -15,
-        stagger: 0.1,
-        duration: 0.5,
-        delay: 0.2,
-      });
+        const airportTwo =
+          airportTwoRef.current;
 
-      /* =====================================================
-         INITIAL STATES
-      ===================================================== */
+        const rider =
+          riderRef.current;
 
-      gsap.set(
-        [seller, box, van, airportOne, plane, airportTwo, rider, customer],
-        {
-          opacity: 0,
-          visibility: "visible",
-        },
-      );
+        const customer =
+          customerRef.current;
 
-      gsap.set(seller, {
-        y: 12,
-      });
+        /* =====================================================
+           RESET
+        ===================================================== */
 
-      gsap.set(box, {
-        scale: 0.65,
-      });
+        gsap.killTweensOf([
+          seller,
+          box,
+          van,
+          airportOne,
+          plane,
+          airportTwo,
+          rider,
+          customer,
+          routeRef.current,
+          routeDotRef.current,
+          ".ax-step",
+        ]);
 
-      gsap.set(van, {
-        x: -150,
-      });
+        gsap.set(
+          [
+            seller,
+            box,
+            van,
+            airportOne,
+            plane,
+            airportTwo,
+            rider,
+            customer,
+          ],
+          {
+            opacity: 0,
+            visibility:
+              "visible",
+            clearProps:
+              "transform",
+          },
+        );
 
-      gsap.set(airportOne, {
-        y: 15,
-      });
+        gsap.set(
+          seller,
+          {
+            y: 12,
+          },
+        );
 
-      gsap.set(plane, {
-        x: -220,
-        y: 35,
-        scale: 0.78,
-        rotate: -5,
-      });
+        gsap.set(
+          box,
+          {
+            scale: 0.65,
+          },
+        );
 
-      gsap.set(airportTwo, {
-        y: 15,
-      });
+        gsap.set(
+          van,
+          {
+            x: -150,
+          },
+        );
 
-      /* IMPORTANT
-         rider starts farther left
-      */
+        gsap.set(
+          airportOne,
+          {
+            y: 15,
+          },
+        );
 
-      gsap.set(rider, {
-        x: -150,
-      });
+        gsap.set(
+          plane,
+          {
+            x: -220,
+            y: 35,
+            scale: 0.78,
+            rotate: -5,
+          },
+        );
 
-      gsap.set(customer, {
-        scale: 0.8,
-      });
+        gsap.set(
+          airportTwo,
+          {
+            y: 15,
+          },
+        );
 
-      gsap.set(routeRef.current, {
-        scaleX: 0,
-        transformOrigin: "left center",
-      });
+        gsap.set(
+          rider,
+          {
+            x: -150,
+          },
+        );
 
-      gsap.set(routeDotRef.current, {
-        left: "0%",
-        opacity: 0,
-      });
+        gsap.set(
+          customer,
+          {
+            scale: 0.8,
+          },
+        );
 
-      gsap.set(".ax-step", {
-        opacity: 0.23,
-      });
+        gsap.set(
+          routeRef.current,
+          {
+            scaleX: 0,
+            transformOrigin:
+              "left center",
+          },
+        );
 
-      /* =====================================================
-         HELPERS
-      ===================================================== */
+        gsap.set(
+          routeDotRef.current,
+          {
+            left: "0%",
+            opacity: 0,
+          },
+        );
 
-      const status = (text) => {
-        if (!statusRef.current) return;
+        gsap.set(
+          ".ax-step",
+          {
+            opacity: 0.23,
+          },
+        );
 
-        gsap.to(statusRef.current, {
-          opacity: 0,
-          duration: 0.1,
+        /* =====================================================
+           HELPERS
+        ===================================================== */
 
-          onComplete: () => {
-            statusRef.current.textContent = text;
+        const status = (
+          text,
+        ) => {
+          if (
+            !statusRef.current
+          ) {
+            return;
+          }
 
-            gsap.to(statusRef.current, {
+          statusRef.current
+            .textContent =
+            text;
+        };
+
+        const activeStep = (
+          number,
+        ) => {
+          gsap.set(
+            ".ax-step",
+            {
+              opacity: 0.23,
+            },
+          );
+
+          gsap.set(
+            `.ax-step[data-step="${number}"]`,
+            {
               opacity: 1,
-              duration: 0.18,
-            });
+            },
+          );
+        };
+
+        const completeSteps = (
+          number,
+        ) => {
+          for (
+            let i = 1;
+            i <= number;
+            i += 1
+          ) {
+            gsap.set(
+              `.ax-step[data-step="${String(
+                i,
+              ).padStart(
+                2,
+                "0",
+              )}"]`,
+              {
+                opacity:
+                  i === number
+                    ? 1
+                    : 0.62,
+              },
+            );
+          }
+        };
+
+        const routeTo = (
+          percent,
+        ) => {
+          gsap.to(
+            routeRef.current,
+            {
+              scaleX:
+                percent /
+                100,
+
+              duration:
+                0.45,
+
+              ease:
+                "power2.inOut",
+            },
+          );
+
+          gsap.to(
+            routeDotRef.current,
+            {
+              left:
+                `${percent}%`,
+
+              opacity:
+                1,
+
+              duration:
+                0.45,
+
+              ease:
+                "power2.inOut",
+            },
+          );
+        };
+
+        /* =====================================================
+           INTRO
+        ===================================================== */
+
+        gsap.from(
+          ".ax-track-heading > span",
+          {
+            opacity: 0,
+            y: 10,
+            duration: 0.4,
           },
-        });
-      };
-
-      const activeStep = (number) => {
-        gsap.to(".ax-step", {
-          opacity: 0.23,
-          duration: 0.2,
-        });
-
-        gsap.to(`.ax-step[data-step="${number}"]`, {
-          opacity: 1,
-          duration: 0.25,
-        });
-      };
-
-      const routeTo = (percent) => {
-        gsap.to(routeRef.current, {
-          scaleX: percent / 100,
-          duration: 0.55,
-          ease: "power2.inOut",
-        });
-
-        gsap.to(routeDotRef.current, {
-          left: `${percent}%`,
-          opacity: 1,
-          duration: 0.55,
-          ease: "power2.inOut",
-        });
-      };
-
-      /* =====================================================
-         MAIN TIMELINE
-      ===================================================== */
-
-      const tl = gsap.timeline({
-        delay: 0.7,
-
-        defaults: {
-          ease: "power2.inOut",
-        },
-      });
-
-      /* =====================================================
-         01 ORDER RECEIVED
-      ===================================================== */
-
-      tl.call(() => {
-        status("ORDER RECEIVED");
-        activeStep("01");
-      });
-
-      tl.to(seller, {
-        opacity: 1,
-        y: 0,
-        duration: 0.45,
-      });
-
-      tl.call(() => {
-        routeTo(7);
-      });
-
-      /* =====================================================
-         02 PACKING
-      ===================================================== */
-
-      tl.call(() => {
-        status("PACKING YOUR ORDER");
-        activeStep("02");
-      });
-
-      tl.to(box, {
-        opacity: 1,
-        scale: 1,
-        duration: 0.45,
-        ease: "back.out(1.7)",
-      });
-
-      tl.to(box, {
-        y: -7,
-        duration: 0.12,
-        repeat: 1,
-        yoyo: true,
-      });
-
-      tl.call(() => {
-        routeTo(18);
-      });
-
-      /* =====================================================
-         03 VAN
-      ===================================================== */
-
-      tl.call(() => {
-        status("COURIER PICKED UP PACKAGE");
-        activeStep("03");
-      });
-
-      tl.to(van, {
-        opacity: 1,
-        x: 0,
-        duration: 0.6,
-        ease: "power3.out",
-      });
-
-      tl.to(
-        box,
-        {
-          x: 120,
-          y: 8,
-          scale: 0.65,
-          duration: 0.45,
-        },
-        "-=0.25",
-      );
-
-      tl.to(box, {
-        opacity: 0,
-        duration: 0.15,
-      });
-
-      tl.call(() => {
-        routeTo(31);
-      });
-
-      tl.to(van, {
-        x: 100,
-        duration: 0.65,
-      });
-
-      /* =====================================================
-         04 AIR HUB
-      ===================================================== */
-
-      tl.call(() => {
-        status("PACKAGE AT AIR HUB");
-        activeStep("04");
-      });
-
-      tl.to(
-        airportOne,
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.45,
-        },
-        "-=0.3",
-      );
-
-      tl.to(van, {
-        opacity: 0.18,
-        duration: 0.2,
-      });
-
-      tl.call(() => {
-        routeTo(44);
-      });
-
-      /* =====================================================
-         05 FLIGHT
-      ===================================================== */
-
-      tl.call(() => {
-        status("FLIGHT DEPARTED");
-        activeStep("05");
-      });
-
-      tl.to(plane, {
-        opacity: 1,
-        duration: 0.2,
-      });
-
-      tl.to(plane, {
-        x: -50,
-        y: 10,
-        scale: 0.85,
-        duration: 0.45,
-      });
-
-      tl.to(plane, {
-        x: 40,
-        y: -38,
-        rotate: -4,
-        scale: 0.92,
-        duration: 0.55,
-        ease: "power3.out",
-      });
-
-      tl.to(plane, {
-        x: 150,
-        y: -72,
-        rotate: 0,
-        scale: 1,
-        duration: 0.7,
-        ease: "sine.inOut",
-      });
-
-      tl.call(() => {
-        status("PACKAGE IN AIR TRANSIT");
-        routeTo(58);
-      });
-
-      /* =====================================================
-         06 LANDING
-      ===================================================== */
-
-      tl.call(() => {
-        activeStep("06");
-      });
-
-      tl.to(
-        airportTwo,
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.45,
-        },
-        "-=0.25",
-      );
-
-      tl.to(plane, {
-        x: 245,
-        y: -38,
-        rotate: 3,
-        scale: 0.9,
-        duration: 0.55,
-      });
-
-      tl.to(plane, {
-        x: 305,
-        y: 15,
-        rotate: 0,
-        scale: 0.8,
-        duration: 0.45,
-      });
-
-      tl.call(() => {
-        status("PACKAGE LANDED");
-        routeTo(71);
-      });
-
-      tl.to(plane, {
-        opacity: 0,
-        duration: 0.22,
-      });
-
-      /* =====================================================
-         07 RIDER
-      ===================================================== */
-
-      tl.call(() => {
-        status("OUT FOR DELIVERY");
-        activeStep("07");
-      });
-
-      /*
-        Rider enters from left
-      */
-
-      tl.to(rider, {
-        opacity: 1,
-        x: 0,
-        duration: 0.6,
-        ease: "power3.out",
-      });
-
-      tl.call(() => {
-        routeTo(84);
-      });
-
-      /*
-        Bike now drives MUCH FARTHER.
-      */
-
-      tl.to(rider, {
-        x: 115,
-        duration: 0.65,
-        ease: "power1.inOut",
-      });
-
-      tl.call(() => {
-        status("DELIVERY PARTNER NEAR YOUR ADDRESS");
-      });
-
-      tl.to(rider, {
-        x: 205,
-        duration: 0.65,
-        ease: "power2.inOut",
-      });
-
-      tl.call(() => {
-        routeTo(94);
-      });
-
-      /*
-        final approach to customer
-      */
-
-      tl.to(rider, {
-        x: 255,
-        duration: 0.45,
-        ease: "power2.out",
-      });
-
-      /* bike stops */
-
-      tl.to(rider, {
-        y: -3,
-        duration: 0.12,
-        repeat: 1,
-        yoyo: true,
-      });
-
-      /* =====================================================
-         08 CUSTOMER
-      ===================================================== */
-
-      tl.call(() => {
-        status("HANDING PACKAGE TO CUSTOMER");
-        activeStep("08");
-      });
-
-      tl.to(
-        customer,
-        {
-          opacity: 1,
-          scale: 1,
-          duration: 0.45,
-          ease: "back.out(1.6)",
-        },
-        "-=0.3",
-      );
-
-      /*
-        Rider fades slightly
-        to show delivery finished.
-      */
-
-      tl.to(rider, {
-        opacity: 0.55,
-        duration: 0.3,
-      });
-
-      tl.call(() => {
-        routeTo(100);
-      });
-
-      tl.to(".ax-customer-check", {
-        scale: 1.3,
-        duration: 0.18,
-        repeat: 1,
-        yoyo: true,
-        boxShadow: "0 0 28px rgba(191,255,0,.9)",
-      });
-
-      tl.call(() => {
-        status("ORDER DELIVERED ✓");
-      });
-
-      /* =====================================================
-         LOWER PAGE REVEALS
-      ===================================================== */
-
-      gsap.utils.toArray(".ax-track-reveal").forEach((section) => {
-        gsap.from(section, {
-          opacity: 0,
-          y: 45,
-          duration: 0.8,
-
-          scrollTrigger: {
-            trigger: section,
-            start: "top 88%",
-            once: true,
+        );
+
+        gsap.from(
+          ".ax-track-heading h1",
+          {
+            opacity: 0,
+            y: 45,
+            duration: 0.8,
+            ease:
+              "power3.out",
           },
-        });
-      });
+        );
 
-      setTimeout(() => {
-        ScrollTrigger.refresh();
-      }, 250);
-    }, pageRef);
+        gsap.from(
+          ".ax-track-heading p",
+          {
+            opacity: 0,
+            y: 15,
+            duration: 0.5,
+            delay: 0.2,
+          },
+        );
+
+        /* =====================================================
+           NO REAL ORDER YET
+        ===================================================== */
+
+        if (
+          !trackingData
+        ) {
+          status(
+            "ENTER YOUR ORDER ID",
+          );
+
+          return;
+        }
+
+        const targetStep =
+          Math.min(
+            8,
+            Math.max(
+              1,
+              Number(
+                trackingStep ||
+                  1,
+              ),
+            ),
+          );
+
+        const tl =
+          gsap.timeline({
+            delay: 0.25,
+
+            defaults: {
+              ease:
+                "power2.inOut",
+            },
+          });
+
+        /* =====================================================
+           01 ORDER RECEIVED
+        ===================================================== */
+
+        tl.call(() => {
+          status(
+            targetStep === 1
+              ? getStepStatusText(
+                  1,
+                  currentStatus,
+                )
+              : "ORDER RECEIVED",
+          );
+
+          completeSteps(1);
+        });
+
+        tl.to(
+          seller,
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.35,
+          },
+        );
+
+        tl.call(() => {
+          routeTo(7);
+        });
+
+        if (
+          targetStep === 1
+        ) {
+          tl.call(() => {
+            status(
+              getStepStatusText(
+                1,
+                currentStatus,
+              ),
+            );
+
+            activeStep(
+              "01",
+            );
+          });
+
+          return;
+        }
+
+        /* =====================================================
+           02 PACKING
+        ===================================================== */
+
+        tl.call(() => {
+          status(
+            targetStep === 2
+              ? getStepStatusText(
+                  2,
+                  currentStatus,
+                )
+              : "PACKING YOUR ORDER",
+          );
+
+          completeSteps(2);
+        });
+
+        tl.to(
+          box,
+          {
+            opacity: 1,
+            scale: 1,
+            duration: 0.35,
+            ease:
+              "back.out(1.7)",
+          },
+        );
+
+        tl.call(() => {
+          routeTo(18);
+        });
+
+        if (
+          targetStep === 2
+        ) {
+          tl.call(() => {
+            status(
+              getStepStatusText(
+                2,
+                currentStatus,
+              ),
+            );
+
+            activeStep(
+              "02",
+            );
+          });
+
+          return;
+        }
+
+        /* =====================================================
+           03 PICKED UP
+        ===================================================== */
+
+        tl.call(() => {
+          status(
+            targetStep === 3
+              ? getStepStatusText(
+                  3,
+                  currentStatus,
+                )
+              : "COURIER PICKED UP PACKAGE",
+          );
+
+          completeSteps(3);
+        });
+
+        tl.to(
+          van,
+          {
+            opacity: 1,
+            x: 0,
+            duration: 0.45,
+            ease:
+              "power3.out",
+          },
+        );
+
+        tl.to(
+          box,
+          {
+            x: 120,
+            y: 8,
+            scale: 0.65,
+            duration: 0.35,
+          },
+          "-=0.2",
+        );
+
+        tl.to(
+          box,
+          {
+            opacity: 0,
+            duration: 0.1,
+          },
+        );
+
+        tl.call(() => {
+          routeTo(31);
+        });
+
+        if (
+          targetStep === 3
+        ) {
+          tl.call(() => {
+            status(
+              getStepStatusText(
+                3,
+                currentStatus,
+              ),
+            );
+
+            activeStep(
+              "03",
+            );
+          });
+
+          return;
+        }
+
+        /* =====================================================
+           04 IN TRANSIT
+        ===================================================== */
+
+        tl.call(() => {
+          status(
+            targetStep === 4
+              ? getStepStatusText(
+                  4,
+                  currentStatus,
+                )
+              : "PACKAGE IN TRANSIT",
+          );
+
+          completeSteps(4);
+        });
+
+        tl.to(
+          airportOne,
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.35,
+          },
+        );
+
+        tl.to(
+          van,
+          {
+            x: 100,
+            opacity: 0.35,
+            duration: 0.4,
+          },
+        );
+
+        tl.call(() => {
+          routeTo(44);
+        });
+
+        if (
+          targetStep === 4
+        ) {
+          tl.call(() => {
+            status(
+              getStepStatusText(
+                4,
+                currentStatus,
+              ),
+            );
+
+            activeStep(
+              "04",
+            );
+          });
+
+          return;
+        }
+
+        /* =====================================================
+           05 TRANSIT HUB / AIR
+        ===================================================== */
+
+        tl.call(() => {
+          status(
+            targetStep === 5
+              ? getStepStatusText(
+                  5,
+                  currentStatus,
+                )
+              : "PACKAGE MOVING TO DESTINATION",
+          );
+
+          completeSteps(5);
+        });
+
+        tl.to(
+          plane,
+          {
+            opacity: 1,
+            x: -50,
+            y: 10,
+            scale: 0.85,
+            duration: 0.35,
+          },
+        );
+
+        tl.to(
+          plane,
+          {
+            x: 150,
+            y: -72,
+            rotate: 0,
+            scale: 1,
+            duration: 0.6,
+          },
+        );
+
+        tl.call(() => {
+          routeTo(58);
+        });
+
+        if (
+          targetStep === 5
+        ) {
+          tl.call(() => {
+            status(
+              getStepStatusText(
+                5,
+                currentStatus,
+              ),
+            );
+
+            activeStep(
+              "05",
+            );
+          });
+
+          return;
+        }
+
+        /* =====================================================
+           06 DESTINATION HUB
+        ===================================================== */
+
+        tl.call(() => {
+          status(
+            targetStep === 6
+              ? getStepStatusText(
+                  6,
+                  currentStatus,
+                )
+              : "PACKAGE AT DESTINATION HUB",
+          );
+
+          completeSteps(6);
+        });
+
+        tl.to(
+          airportTwo,
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.35,
+          },
+        );
+
+        tl.to(
+          plane,
+          {
+            x: 305,
+            y: 15,
+            scale: 0.8,
+            duration: 0.5,
+          },
+        );
+
+        tl.call(() => {
+          routeTo(71);
+        });
+
+        tl.to(
+          plane,
+          {
+            opacity: 0,
+            duration: 0.15,
+          },
+        );
+
+        if (
+          targetStep === 6
+        ) {
+          tl.call(() => {
+            status(
+              getStepStatusText(
+                6,
+                currentStatus,
+              ),
+            );
+
+            activeStep(
+              "06",
+            );
+          });
+
+          return;
+        }
+
+        /* =====================================================
+           07 OUT FOR DELIVERY
+        ===================================================== */
+
+        tl.call(() => {
+          status(
+            targetStep === 7
+              ? getStepStatusText(
+                  7,
+                  currentStatus,
+                )
+              : "OUT FOR DELIVERY",
+          );
+
+          completeSteps(7);
+        });
+
+        tl.to(
+          rider,
+          {
+            opacity: 1,
+            x: 0,
+            duration: 0.45,
+            ease:
+              "power3.out",
+          },
+        );
+
+        tl.call(() => {
+          routeTo(84);
+        });
+
+        tl.to(
+          rider,
+          {
+            x: 205,
+            duration: 0.6,
+          },
+        );
+
+        tl.call(() => {
+          routeTo(94);
+        });
+
+        if (
+          targetStep === 7
+        ) {
+          tl.call(() => {
+            status(
+              getStepStatusText(
+                7,
+                currentStatus,
+              ),
+            );
+
+            activeStep(
+              "07",
+            );
+          });
+
+          return;
+        }
+
+        /* =====================================================
+           08 DELIVERED
+        ===================================================== */
+
+        tl.call(() => {
+          status(
+            "HANDING PACKAGE TO CUSTOMER",
+          );
+
+          completeSteps(8);
+        });
+
+        tl.to(
+          rider,
+          {
+            x: 255,
+            duration: 0.4,
+          },
+        );
+
+        tl.to(
+          customer,
+          {
+            opacity: 1,
+            scale: 1,
+            duration: 0.4,
+            ease:
+              "back.out(1.6)",
+          },
+          "-=0.2",
+        );
+
+        tl.to(
+          rider,
+          {
+            opacity: 0.55,
+            duration: 0.25,
+          },
+        );
+
+        tl.call(() => {
+          routeTo(100);
+        });
+
+        tl.to(
+          ".ax-customer-check",
+          {
+            scale: 1.3,
+            duration: 0.18,
+            repeat: 1,
+            yoyo: true,
+            boxShadow:
+              "0 0 28px rgba(191,255,0,.9)",
+          },
+        );
+
+        tl.call(() => {
+          status(
+            getStepStatusText(
+              8,
+              currentStatus,
+            ),
+          );
+
+          activeStep(
+            "08",
+          );
+        });
+
+        /* =====================================================
+           LOWER PAGE
+        ===================================================== */
+
+        gsap.utils
+          .toArray(
+            ".ax-track-reveal",
+          )
+          .forEach(
+            (section) => {
+              gsap.from(
+                section,
+                {
+                  opacity: 0,
+                  y: 45,
+                  duration: 0.8,
+
+                  scrollTrigger: {
+                    trigger:
+                      section,
+
+                    start:
+                      "top 88%",
+
+                    once:
+                      true,
+                  },
+                },
+              );
+            },
+          );
+
+        setTimeout(
+          () => {
+            ScrollTrigger
+              .refresh();
+          },
+          250,
+        );
+      }, pageRef);
 
     return () => {
       ctx.revert();
     };
-  }, []);
+  }, [
+    trackingStep,
+    trackingData,
+    currentStatus,
+  ]);
 
   /* =========================================================
      TRACK FORM
   ========================================================= */
 
-  const handleTrack = (event) => {
-    event.preventDefault();
+  const handleTrack =
+    async (event) => {
+      event.preventDefault();
 
-    const cleanOrder = orderId.trim();
+      const cleanOrder =
+        orderId
+          .trim()
+          .toUpperCase();
 
-    if (!cleanOrder) return;
+      if (!cleanOrder) {
+        setError(
+          "Please enter your order ID.",
+        );
 
-    setTrackedOrder(cleanOrder);
+        return;
+      }
 
-    setOrderId("");
-  };
+      setLoading(true);
+      setError("");
+
+      try {
+        const response =
+          await fetch(
+            apiUrl(
+              `/api/orders/track/${encodeURIComponent(
+                cleanOrder,
+              )}`,
+            ),
+          );
+
+        let data =
+          null;
+
+        try {
+          data =
+            await response.json();
+        } catch {
+          throw new Error(
+            "Invalid response from server.",
+          );
+        }
+
+        if (
+          !response.ok ||
+          !data?.success
+        ) {
+          throw new Error(
+            data?.message ||
+              "Order not found.",
+          );
+        }
+
+        setTrackedOrder(
+          data?.order
+            ?.orderNumber ||
+            cleanOrder,
+        );
+
+        setTrackingData(
+          data,
+        );
+
+        setTrackingStep(
+          Number(
+            data?.shipping
+              ?.trackingStep ||
+              1,
+          ),
+        );
+
+        setOrderId("");
+
+        setTimeout(
+          () => {
+            window.scrollTo({
+              top: 0,
+              behavior:
+                "smooth",
+            });
+          },
+          100,
+        );
+      } catch (err) {
+        console.error(
+          "Track order error:",
+          err,
+        );
+
+        setTrackingData(
+          null,
+        );
+
+        setTrackingStep(
+          1,
+        );
+
+        setTrackedOrder(
+          "ORDER NOT FOUND",
+        );
+
+        setError(
+          err.message ||
+            "Unable to track this order.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
 
   /* =========================================================
      COPY
   ========================================================= */
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(trackedOrder);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  const handleCopy =
+    async () => {
+      if (
+        !trackedOrder ||
+        trackedOrder ===
+          "ENTER ORDER ID" ||
+        trackedOrder ===
+          "ORDER NOT FOUND"
+      ) {
+        return;
+      }
+
+      try {
+        await navigator
+          .clipboard
+          .writeText(
+            trackedOrder,
+          );
+      } catch (error) {
+        console.error(
+          error,
+        );
+      }
+    };
+
+  /* =========================================================
+     UI
+  ========================================================= */
 
   return (
-    <main ref={pageRef} className="ax-track-page">
+    <main
+      ref={pageRef}
+      className="ax-track-page"
+    >
       {/* =====================================================
           FIRST SCREEN
       ===================================================== */}
 
       <section className="ax-track-first-screen">
+
         <div className="ax-track-grid"></div>
 
         <div className="ax-track-glow"></div>
@@ -1286,8 +1899,12 @@ function TrackOrder() {
         {/* TOP */}
 
         <div className="ax-track-top">
+
           <div className="ax-track-heading">
-            <span>AXIEE / ORDER SYSTEM</span>
+
+            <span>
+              AXIEE / ORDER SYSTEM
+            </span>
 
             <h1>
               TRACK
@@ -1302,24 +1919,45 @@ function TrackOrder() {
               <br />
               SELLER TO YOUR DOORSTEP.
             </p>
+
           </div>
 
           <div className="ax-track-status">
-            <article className="ax-status-card">
-              <span>ORDER ID</span>
 
-              <strong>{trackedOrder}</strong>
+            <article className="ax-status-card">
+
+              <span>
+                ORDER ID
+              </span>
+
+              <strong>
+                {trackedOrder}
+              </strong>
+
             </article>
 
             <article className="ax-status-card ax-live-card">
+
               <span>
                 <i></i>
                 LIVE TRACKING
               </span>
 
-              <strong ref={statusRef}>STARTING JOURNEY</strong>
+              <strong
+                ref={statusRef}
+              >
+                {trackingData
+                  ? getStepStatusText(
+                      trackingStep,
+                      currentStatus,
+                    )
+                  : "ENTER YOUR ORDER ID"}
+              </strong>
+
             </article>
+
           </div>
+
         </div>
 
         {/* =================================================
@@ -1327,6 +1965,7 @@ function TrackOrder() {
         ================================================= */}
 
         <div className="ax-journey">
+
           {/* MAP */}
 
           <div className="ax-world-map">
@@ -1360,81 +1999,137 @@ function TrackOrder() {
           {/* ROUTE */}
 
           <div className="ax-route">
-            <div ref={routeRef} className="ax-route-progress"></div>
 
-            <div ref={routeDotRef} className="ax-route-dot"></div>
+            <div
+              ref={routeRef}
+              className="ax-route-progress"
+            ></div>
+
+            <div
+              ref={routeDotRef}
+              className="ax-route-dot"
+            ></div>
+
           </div>
 
           {/* SELLER */}
 
-          <div ref={sellerRef} className="ax-object ax-seller">
+          <div
+            ref={sellerRef}
+            className="ax-object ax-seller"
+          >
             <SellerWarehouse />
           </div>
 
           {/* PACKAGE */}
 
-          <div ref={packageRef} className="ax-object ax-package">
+          <div
+            ref={packageRef}
+            className="ax-object ax-package"
+          >
             <div className="ax-package-box">
+
               <div className="ax-box-tape"></div>
 
-              <Package size={27} strokeWidth={1.1} />
+              <Package
+                size={27}
+                strokeWidth={1.1}
+              />
 
-              <strong>AXIEE</strong>
+              <strong>
+                AXIEE
+              </strong>
+
             </div>
           </div>
 
           {/* VAN */}
 
-          <div ref={vanRef} className="ax-object ax-van">
+          <div
+            ref={vanRef}
+            className="ax-object ax-van"
+          >
             <CargoVan />
           </div>
 
           {/* AIRPORT */}
 
-          <div ref={airportOneRef} className="ax-object ax-airport-one">
+          <div
+            ref={airportOneRef}
+            className="ax-object ax-airport-one"
+          >
             <Airport />
           </div>
 
           {/* PLANE */}
 
-          <div ref={planeRef} className="ax-object ax-plane">
+          <div
+            ref={planeRef}
+            className="ax-object ax-plane"
+          >
             <CargoPlane />
           </div>
 
-          {/* DESTINATION */}
+          {/* DESTINATION HUB */}
 
-          <div ref={airportTwoRef} className="ax-object ax-airport-two">
-            <Airport destination />
+          <div
+            ref={airportTwoRef}
+            className="ax-object ax-airport-two"
+          >
+            <Airport
+              destination
+            />
           </div>
 
           {/* RIDER */}
 
-          <div ref={riderRef} className="ax-object ax-rider">
+          <div
+            ref={riderRef}
+            className="ax-object ax-rider"
+          >
             <DeliveryRider />
           </div>
 
           {/* CUSTOMER */}
 
-          <div ref={customerRef} className="ax-object ax-customer-position">
+          <div
+            ref={customerRef}
+            className="ax-object ax-customer-position"
+          >
             <CustomerDoor />
           </div>
+
         </div>
 
         {/* STEPS */}
 
         <div className="ax-steps">
-          {steps.map((step) => (
-            <article
-              className="ax-step"
-              data-step={step.number}
-              key={step.number}
-            >
-              <div className="ax-step-number">{step.number}</div>
 
-              <h3>{step.title}</h3>
-            </article>
-          ))}
+          {steps.map(
+            (step) => (
+              <article
+                className="ax-step"
+                data-step={
+                  step.number
+                }
+                key={
+                  step.number
+                }
+              >
+                <div className="ax-step-number">
+                  {step.number}
+                </div>
+
+                <h3>
+                  {step.title}
+                </h3>
+
+              </article>
+            ),
+          )}
+
         </div>
+
       </section>
 
       {/* =====================================================
@@ -1442,8 +2137,12 @@ function TrackOrder() {
       ===================================================== */}
 
       <section className="ax-track-search ax-track-reveal">
+
         <div>
-          <span className="ax-small-green">ENTER YOUR ORDER ID</span>
+
+          <span className="ax-small-green">
+            ENTER YOUR ORDER ID
+          </span>
 
           <h2>
             WHERE IS
@@ -1451,34 +2150,95 @@ function TrackOrder() {
             YOUR ORDER?
           </h2>
 
-          <p>YOU ONLY NEED YOUR AXIEE ORDER ID.</p>
+          <p>
+            YOU ONLY NEED YOUR AXIEE ORDER ID.
+          </p>
+
         </div>
 
-        <form onSubmit={handleTrack}>
-          <label htmlFor="trackOrder">ORDER ID</label>
+        <form
+          onSubmit={
+            handleTrack
+          }
+        >
+
+          <label
+            htmlFor="trackOrder"
+          >
+            ORDER ID
+          </label>
 
           <div className="ax-form-row">
+
             <div className="ax-input">
-              <Package size={19} strokeWidth={1.2} />
+
+              <Package
+                size={19}
+                strokeWidth={1.2}
+              />
 
               <input
                 id="trackOrder"
                 value={orderId}
                 type="text"
-                placeholder="AXIEE-2026-00125"
+                placeholder="UB260929-528312227"
                 autoComplete="off"
-                onChange={(event) => setOrderId(event.target.value)}
+                disabled={
+                  loading
+                }
+                onChange={(
+                  event,
+                ) =>
+                  setOrderId(
+                    event.target
+                      .value,
+                  )
+                }
               />
+
             </div>
 
-            <button type="submit">
-              TRACK ORDER
-              <Search size={17} strokeWidth={1.4} />
+            <button
+              type="submit"
+              disabled={
+                loading
+              }
+            >
+              {loading
+                ? "TRACKING..."
+                : "TRACK ORDER"}
+
+              <Search
+                size={17}
+                strokeWidth={1.4}
+              />
             </button>
+
           </div>
 
-          <small>EXAMPLE / AXIEE-2026-00125</small>
+          <small>
+            EXAMPLE / UB260929-528312227
+          </small>
+
+          {error && (
+            <small
+              style={{
+                display:
+                  "block",
+
+                marginTop:
+                  "14px",
+
+                color:
+                  "#ff6b6b",
+              }}
+            >
+              {error}
+            </small>
+          )}
+
         </form>
+
       </section>
 
       {/* =====================================================
@@ -1486,51 +2246,116 @@ function TrackOrder() {
       ===================================================== */}
 
       <section className="ax-order-details ax-track-reveal">
-        <span className="ax-detail-title">ORDER DETAILS</span>
+
+        <span className="ax-detail-title">
+          ORDER DETAILS
+        </span>
 
         <div className="ax-detail-grid">
-          <article className="ax-detail-card">
-            <div>
-              <span>ORDER ID</span>
 
-              <strong>{trackedOrder}</strong>
+          {/* ORDER */}
+
+          <article className="ax-detail-card">
+
+            <div>
+
+              <span>
+                ORDER ID
+              </span>
+
+              <strong>
+                {trackedOrder}
+              </strong>
+
             </div>
 
-            <button type="button" onClick={handleCopy}>
-              <Copy size={18} />
+            <button
+              type="button"
+              onClick={
+                handleCopy
+              }
+            >
+              <Copy
+                size={18}
+              />
             </button>
+
           </article>
+
+          {/* ESTIMATED DELIVERY */}
 
           <article className="ax-detail-card">
-            <CalendarDays size={25} />
+
+            <CalendarDays
+              size={25}
+            />
 
             <div>
-              <span>ESTIMATED DELIVERY</span>
 
-              <strong>12 SEP 2026</strong>
+              <span>
+                ESTIMATED DELIVERY
+              </span>
+
+              <strong>
+                {estimatedDelivery}
+              </strong>
+
             </div>
+
           </article>
+
+          {/* COURIER */}
 
           <article className="ax-detail-card">
-            <Truck size={26} />
+
+            <Truck
+              size={26}
+            />
 
             <div>
-              <span>COURIER</span>
 
-              <strong>AXIEE EXPRESS</strong>
+              <span>
+                COURIER
+              </span>
+
+              <strong>
+                {courier}
+              </strong>
+
+              {awb && (
+                <small>
+                  AWB / {awb}
+                </small>
+              )}
+
             </div>
+
           </article>
+
+          {/* DESTINATION */}
 
           <article className="ax-detail-card">
-            <MapPin size={26} />
+
+            <MapPin
+              size={26}
+            />
 
             <div>
-              <span>DESTINATION</span>
 
-              <strong>MUMBAI, INDIA</strong>
+              <span>
+                DESTINATION
+              </span>
+
+              <strong>
+                {destination.toUpperCase()}
+              </strong>
+
             </div>
+
           </article>
+
         </div>
+
       </section>
 
       {/* =====================================================
@@ -1538,21 +2363,38 @@ function TrackOrder() {
       ===================================================== */}
 
       <section className="ax-support ax-track-reveal">
+
         <div>
-          <span className="ax-small-green">NEED HELP?</span>
 
-          <h2>ORDER SUPPORT</h2>
+          <span className="ax-small-green">
+            NEED HELP?
+          </span>
 
-          <p>Keep your order ID ready when contacting AXIEE support.</p>
+          <h2>
+            ORDER SUPPORT
+          </h2>
+
+          <p>
+            Keep your order ID ready when contacting AXIEE support.
+          </p>
+
         </div>
 
-        <button type="button">
+        <button
+          type="button"
+        >
           CONTACT SUPPORT
-          <span>→</span>
+          <span>
+            →
+          </span>
         </button>
+
       </section>
+
     </main>
   );
 }
+
+
 
 export default TrackOrder;
