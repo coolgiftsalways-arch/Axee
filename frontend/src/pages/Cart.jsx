@@ -1,13 +1,6 @@
-import React, {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { useEffect, useRef, useState } from "react";
 
-import {
-  Link,
-  useNavigate,
-} from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import {
   ArrowLeft,
@@ -29,8 +22,39 @@ import "../styles/cart.css";
    API
 ========================================================= */
 
-const API_URL =
-  import.meta.env.VITE_API_URL || "";
+const API_URL = (
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? `http://${window.location.hostname}:5000` : "")
+).replace(/\/+$/, "");
+
+/* =========================================================
+   SAFE API RESPONSE PARSER
+========================================================= */
+
+const parseApiResponse = async (response) => {
+  const text = await response.text();
+
+  let data = {};
+
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch (error) {
+      console.error("❌ API returned non-JSON:", {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url,
+        body: text.slice(0, 500),
+      });
+
+      throw new Error(
+        `Backend API returned invalid JSON (${response.status}).`,
+      );
+    }
+  }
+
+  return data;
+};
 
 /* =========================================================
    IMAGE HELPERS
@@ -43,33 +67,37 @@ const normalizeImageUrl = (value) => {
 
   /*
     Sometimes backend may send an image object.
+
+    IMPORTANT:
+    Prefer the real saved URL/path first.
+    _id can be a MongoDB subdocument id and is not always
+    the GridFS image id.
   */
 
-  if (
-    typeof value === "object"
-  ) {
-    const fileId =
-      value?.fileId ||
-      value?._id ||
-      value?.id;
+  if (typeof value === "object") {
+    const directUrl =
+      value?.url ||
+      value?.src ||
+      value?.path ||
+      value?.image ||
+      value?.imageUrl ||
+      value?.location ||
+      "";
 
-    if (fileId) {
-      return `${API_URL}/api/catalog/images/${String(
-        fileId,
-      )}`;
+    if (directUrl) {
+      return normalizeImageUrl(directUrl);
     }
 
-    if (value?.url) {
-      return normalizeImageUrl(
-        value.url,
-      );
+    const fileId = value?.fileId || value?.id || value?._id;
+
+    if (fileId) {
+      return `${API_URL}/api/catalog/images/${String(fileId)}`;
     }
 
     return "";
   }
 
-  const image =
-    String(value).trim();
+  const image = String(value).trim();
 
   if (!image) {
     return "";
@@ -85,18 +113,10 @@ const normalizeImageUrl = (value) => {
      http://localhost:5000/api/catalog/images/123
   ===================================================== */
 
-  if (
-    image.includes(
-      "/api/images/",
-    )
-  ) {
-    const parts =
-      image.split(
-        "/api/images/",
-      );
+  if (image.includes("/api/images/")) {
+    const parts = image.split("/api/images/");
 
-    const imageId =
-      parts[1];
+    const imageId = parts[1];
 
     if (imageId) {
       return `${API_URL}/api/catalog/images/${imageId}`;
@@ -107,18 +127,10 @@ const normalizeImageUrl = (value) => {
      CURRENT FULL GRIDFS URL
   ===================================================== */
 
-  if (
-    image.includes(
-      "/api/catalog/images/",
-    )
-  ) {
-    const parts =
-      image.split(
-        "/api/catalog/images/",
-      );
+  if (image.includes("/api/catalog/images/")) {
+    const parts = image.split("/api/catalog/images/");
 
-    const imageId =
-      parts[1];
+    const imageId = parts[1];
 
     if (imageId) {
       return `${API_URL}/api/catalog/images/${imageId}`;
@@ -142,16 +154,8 @@ const normalizeImageUrl = (value) => {
      OLD RELATIVE GRIDFS URL
   ===================================================== */
 
-  if (
-    image.startsWith(
-      "/api/images/",
-    )
-  ) {
-    const imageId =
-      image.replace(
-        "/api/images/",
-        "",
-      );
+  if (image.startsWith("/api/images/")) {
+    const imageId = image.replace("/api/images/", "");
 
     return `${API_URL}/api/catalog/images/${imageId}`;
   }
@@ -160,11 +164,7 @@ const normalizeImageUrl = (value) => {
      CURRENT RELATIVE GRIDFS URL
   ===================================================== */
 
-  if (
-    image.startsWith(
-      "/api/catalog/images/",
-    )
-  ) {
+  if (image.startsWith("/api/catalog/images/")) {
     return `${API_URL}${image}`;
   }
 
@@ -172,9 +172,7 @@ const normalizeImageUrl = (value) => {
      OTHER BACKEND API IMAGE
   ===================================================== */
 
-  if (
-    image.startsWith("/api/")
-  ) {
+  if (image.startsWith("/api/")) {
     return `${API_URL}${image}`;
   }
 
@@ -196,43 +194,55 @@ const normalizeImageUrl = (value) => {
 ========================================================= */
 
 const getCartItemImage = (item) => {
-  if (!item) return "";
+  if (!item) {
+    return "";
+  }
 
-  const product =
-    item?.product ||
-    item?.productId ||
-    item;
+  /*
+    IMPORTANT:
+    Cart item.image is the image saved by the backend when the
+    product is added to cart. Use that first.
+
+    Only inspect nested product data as a fallback.
+    productId is normally a STRING, so do not treat productId
+    itself as a product object.
+  */
+
+  const nestedProduct =
+    item?.product && typeof item.product === "object" ? item.product : null;
 
   const imageCandidates = [
-    ...(Array.isArray(product?.imageFiles)
-      ? [...product.imageFiles].sort(
-          (a, b) =>
-            Number(a?.order ?? 0) -
-            Number(b?.order ?? 0),
-        )
-      : []),
+    /* CURRENT CART IMAGE FIRST */
 
-    ...(Array.isArray(product?.images)
-      ? product.images
-      : []),
+    item?.image,
 
-    product?.mainImage,
-    product?.image,
+    item?.mainImage,
+
+    ...(Array.isArray(item?.images) ? item.images : []),
+
+    /* NESTED CURRENT PRODUCT IMAGES */
+
+    ...(Array.isArray(nestedProduct?.images) ? nestedProduct.images : []),
+
+    nestedProduct?.mainImage,
+
+    nestedProduct?.image,
+
+    /* LEGACY CART FALLBACK */
 
     ...(Array.isArray(item?.imageFiles)
       ? [...item.imageFiles].sort(
-          (a, b) =>
-            Number(a?.order ?? 0) -
-            Number(b?.order ?? 0),
+          (a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0),
         )
       : []),
 
-    ...(Array.isArray(item?.images)
-      ? item.images
-      : []),
+    /* LEGACY PRODUCT FALLBACK */
 
-    item?.mainImage,
-    item?.image,
+    ...(Array.isArray(nestedProduct?.imageFiles)
+      ? [...nestedProduct.imageFiles].sort(
+          (a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0),
+        )
+      : []),
   ];
 
   for (const candidate of imageCandidates) {
@@ -255,73 +265,77 @@ const getProductId = (item) => {
     return "";
   }
 
-  if (
-    typeof item.productId ===
-    "object"
-  ) {
-    return String(
-      item.productId?._id ||
-        item.productId?.id ||
-        "",
-    );
+  if (typeof item.productId === "object") {
+    return String(item.productId?._id || item.productId?.id || "");
   }
 
   return String(
-    item.productId ||
-      item.product?._id ||
-      item.product?.id ||
-      item._id ||
-      "",
+    item.productId || item.product?._id || item.product?.id || item._id || "",
   );
 };
+
+/* =========================================================
+   CART PRODUCT IMAGE
+
+   If an old/stale image still fails to load, show the existing
+   cart placeholder instead of leaving a blank white box.
+========================================================= */
+
+function CartProductImage({ src, alt }) {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  if (!src || failed) {
+    return <div className="cart-image-empty">UNBOUND</div>;
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      onError={() => {
+        console.error("❌ CART IMAGE FAILED:", {
+          alt,
+          src,
+        });
+
+        setFailed(true);
+      }}
+    />
+  );
+}
 
 /* =========================================================
    CART
 ========================================================= */
 
 function Cart() {
-  const navigate =
-    useNavigate();
+  const navigate = useNavigate();
 
-  const pageRef =
-    useRef(null);
+  const pageRef = useRef(null);
 
-  const [
-    cart,
-    setCart,
-  ] = useState(null);
+  const [cart, setCart] = useState(null);
 
-  const [
-    loading,
-    setLoading,
-  ] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [
-    error,
-    setError,
-  ] = useState("");
+  const [error, setError] = useState("");
 
-  const [
-    busyItemId,
-    setBusyItemId,
-  ] = useState("");
+  const [busyItemId, setBusyItemId] = useState("");
 
   /* =======================================================
      CART ID
   ======================================================= */
 
-  const getCartId = () =>
-    localStorage.getItem(
-      "axiee-cart-id",
-    );
+  const getCartId = () => localStorage.getItem("axiee-cart-id");
 
   /* =======================================================
      GET CART
   ======================================================= */
 
-  const fetchCart = async ({
-    silent = false,
-  } = {}) => {
+  const fetchCart = async ({ silent = false } = {}) => {
     try {
       if (!silent) {
         setLoading(true);
@@ -329,8 +343,7 @@ function Cart() {
 
       setError("");
 
-      const cartId =
-        getCartId();
+      const cartId = getCartId();
 
       if (!cartId) {
         setCart({
@@ -340,65 +353,44 @@ function Cart() {
         return;
       }
 
-      const response =
-        await fetch(
-          `${API_URL}/api/cart/${cartId}`,
-        );
+      const response = await fetch(`${API_URL}/api/cart/${cartId}`, {
+        method: "GET",
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+        },
+      });
 
-      const data =
-        await response.json();
+      const data = await parseApiResponse(response);
 
       if (!response.ok) {
-        throw new Error(
-          data.message ||
-            "Failed to get cart",
-        );
+        throw new Error(data.message || "Failed to get cart");
       }
 
-      console.log(
-        "✅ CART DATA:",
-        data.cart,
-      );
+      console.log("✅ CART DATA:", data.cart);
 
       console.log(
         "🖼 CART IMAGES:",
-        data.cart?.items?.map(
-          (item) => ({
-            name: item.name,
+        data.cart?.items?.map((item) => ({
+          name: item.name,
 
-            image:
-              item.image,
+          image: item.image,
 
-            mainImage:
-              item.mainImage,
+          mainImage: item.mainImage,
 
-            images:
-              item.images,
+          images: item.images,
 
-            imageFiles:
-              item.imageFiles,
+          imageFiles: item.imageFiles,
 
-            finalImage:
-              getCartItemImage(
-                item,
-              ),
-          }),
-        ),
+          finalImage: getCartItemImage(item),
+        })),
       );
 
-      setCart(
-        data.cart,
-      );
+      setCart(data.cart);
     } catch (err) {
-      console.error(
-        "❌ Cart fetch error:",
-        err,
-      );
+      console.error("❌ Cart fetch error:", err);
 
-      setError(
-        err.message ||
-          "Failed to get cart",
-      );
+      setError(err.message || "Failed to get cart");
     } finally {
       if (!silent) {
         setLoading(false);
@@ -413,15 +405,9 @@ function Cart() {
   useEffect(() => {
     fetchCart();
 
-    const syncCart = (
-      event,
-    ) => {
-      if (
-        event?.detail?.items
-      ) {
-        setCart(
-          event.detail,
-        );
+    const syncCart = (event) => {
+      if (event?.detail?.items) {
+        setCart(event.detail);
       } else {
         fetchCart({
           silent: true,
@@ -429,16 +415,10 @@ function Cart() {
       }
     };
 
-    window.addEventListener(
-      "axiee-cart-updated",
-      syncCart,
-    );
+    window.addEventListener("axiee-cart-updated", syncCart);
 
     return () => {
-      window.removeEventListener(
-        "axiee-cart-updated",
-        syncCart,
-      );
+      window.removeEventListener("axiee-cart-updated", syncCart);
     };
   }, []);
 
@@ -447,318 +427,230 @@ function Cart() {
   ======================================================= */
 
   useEffect(() => {
-    if (
-      loading ||
-      error ||
-      !pageRef.current
-    ) {
+    if (loading || error || !pageRef.current) {
       return;
     }
 
-    const ctx =
-      gsap.context(() => {
-        gsap.fromTo(
-          ".cart-hero-eyebrow, .cart-hero-title, .cart-hero-side",
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        ".cart-hero-eyebrow, .cart-hero-title, .cart-hero-side",
 
-          {
-            y: 40,
-            opacity: 0,
-          },
+        {
+          y: 40,
+          opacity: 0,
+        },
 
-          {
-            y: 0,
-            opacity: 1,
+        {
+          y: 0,
+          opacity: 1,
 
-            duration: 0.9,
+          duration: 0.9,
 
-            stagger: 0.09,
+          stagger: 0.09,
 
-            ease: "power4.out",
-          },
-        );
+          ease: "power4.out",
+        },
+      );
 
-        gsap.fromTo(
-          ".cart-stepbar",
+      gsap.fromTo(
+        ".cart-stepbar",
 
-          {
-            y: 24,
-            opacity: 0,
-          },
+        {
+          y: 24,
+          opacity: 0,
+        },
 
-          {
-            y: 0,
-            opacity: 1,
+        {
+          y: 0,
+          opacity: 1,
 
-            duration: 0.75,
+          duration: 0.75,
 
-            ease: "power3.out",
+          ease: "power3.out",
 
-            delay: 0.18,
-          },
-        );
+          delay: 0.18,
+        },
+      );
 
-        gsap.fromTo(
-          ".cart-item",
+      gsap.fromTo(
+        ".cart-item",
 
-          {
-            y: 34,
-            opacity: 0,
-          },
+        {
+          y: 34,
+          opacity: 0,
+        },
 
-          {
-            y: 0,
-            opacity: 1,
+        {
+          y: 0,
+          opacity: 1,
 
-            duration: 0.75,
+          duration: 0.75,
 
-            stagger: 0.08,
+          stagger: 0.08,
 
-            ease: "power3.out",
+          ease: "power3.out",
 
-            delay: 0.22,
-          },
-        );
+          delay: 0.22,
+        },
+      );
 
-        gsap.fromTo(
-          ".cart-summary",
+      gsap.fromTo(
+        ".cart-summary",
 
-          {
-            x: 40,
-            opacity: 0,
-          },
+        {
+          x: 40,
+          opacity: 0,
+        },
 
-          {
-            x: 0,
-            opacity: 1,
+        {
+          x: 0,
+          opacity: 1,
 
-            duration: 0.85,
+          duration: 0.85,
 
-            ease: "power4.out",
+          ease: "power4.out",
 
-            delay: 0.3,
-          },
-        );
-      }, pageRef);
+          delay: 0.3,
+        },
+      );
+    }, pageRef);
 
-    return () =>
-      ctx.revert();
+    return () => ctx.revert();
   }, [loading, error]);
 
   /* =======================================================
      UPDATE QUANTITY
   ======================================================= */
 
-  const updateQuantity =
-    async (
-      item,
-      amount,
-    ) => {
-      try {
-        const cartId =
-          getCartId();
+  const updateQuantity = async (item, amount) => {
+    try {
+      const cartId = getCartId();
 
-        if (
-          !cartId ||
-          !item?._id
-        ) {
-          return;
-        }
-
-        const newQuantity =
-          Math.min(
-            10,
-
-            Math.max(
-              1,
-
-              Number(
-                item.quantity ||
-                  1,
-              ) + amount,
-            ),
-          );
-
-        if (
-          newQuantity ===
-          Number(
-            item.quantity,
-          )
-        ) {
-          return;
-        }
-
-        setBusyItemId(
-          String(item._id),
-        );
-
-        const response =
-          await fetch(
-            `${API_URL}/api/cart/${cartId}/item/${item._id}`,
-            {
-              method:
-                "PATCH",
-
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-
-              body: JSON.stringify(
-                {
-                  quantity:
-                    newQuantity,
-                },
-              ),
-            },
-          );
-
-        const data =
-          await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data.message ||
-              "Failed to update quantity",
-          );
-        }
-
-        setCart(
-          data.cart,
-        );
-
-        window.dispatchEvent(
-          new CustomEvent(
-            "axiee-cart-updated",
-            {
-              detail:
-                data.cart,
-            },
-          ),
-        );
-      } catch (err) {
-        console.error(
-          "❌ Quantity update error:",
-          err,
-        );
-
-        setError(
-          err.message ||
-            "Failed to update quantity",
-        );
-      } finally {
-        setBusyItemId("");
+      if (!cartId || !item?._id) {
+        return;
       }
-    };
+
+      const newQuantity = Math.min(
+        10,
+
+        Math.max(
+          1,
+
+          Number(item.quantity || 1) + amount,
+        ),
+      );
+
+      if (newQuantity === Number(item.quantity)) {
+        return;
+      }
+
+      setBusyItemId(String(item._id));
+
+      const response = await fetch(
+        `${API_URL}/api/cart/${cartId}/item/${item._id}`,
+        {
+          method: "PATCH",
+
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+
+          body: JSON.stringify({
+            quantity: newQuantity,
+          }),
+        },
+      );
+
+      const data = await parseApiResponse(response);
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to update quantity");
+      }
+
+      setCart(data.cart);
+
+      window.dispatchEvent(
+        new CustomEvent("axiee-cart-updated", {
+          detail: data.cart,
+        }),
+      );
+    } catch (err) {
+      console.error("❌ Quantity update error:", err);
+
+      setError(err.message || "Failed to update quantity");
+    } finally {
+      setBusyItemId("");
+    }
+  };
 
   /* =======================================================
      REMOVE ITEM
   ======================================================= */
 
-  const removeItem =
-    async (itemId) => {
-      try {
-        const cartId =
-          getCartId();
+  const removeItem = async (itemId) => {
+    try {
+      const cartId = getCartId();
 
-        if (
-          !cartId ||
-          !itemId
-        ) {
-          return;
-        }
-
-        setBusyItemId(
-          String(itemId),
-        );
-
-        const response =
-          await fetch(
-            `${API_URL}/api/cart/${cartId}/item/${itemId}`,
-            {
-              method:
-                "DELETE",
-            },
-          );
-
-        const data =
-          await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data.message ||
-              "Failed to remove item",
-          );
-        }
-
-        setCart(
-          data.cart,
-        );
-
-        window.dispatchEvent(
-          new CustomEvent(
-            "axiee-cart-updated",
-            {
-              detail:
-                data.cart,
-            },
-          ),
-        );
-      } catch (err) {
-        console.error(
-          "❌ Remove item error:",
-          err,
-        );
-
-        setError(
-          err.message ||
-            "Failed to remove item",
-        );
-      } finally {
-        setBusyItemId("");
+      if (!cartId || !itemId) {
+        return;
       }
-    };
+
+      setBusyItemId(String(itemId));
+
+      const response = await fetch(
+        `${API_URL}/api/cart/${cartId}/item/${itemId}`,
+        {
+          method: "DELETE",
+
+          headers: {
+            Accept: "application/json",
+          },
+        },
+      );
+
+      const data = await parseApiResponse(response);
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to remove item");
+      }
+
+      setCart(data.cart);
+
+      window.dispatchEvent(
+        new CustomEvent("axiee-cart-updated", {
+          detail: data.cart,
+        }),
+      );
+    } catch (err) {
+      console.error("❌ Remove item error:", err);
+
+      setError(err.message || "Failed to remove item");
+    } finally {
+      setBusyItemId("");
+    }
+  };
 
   /* =======================================================
      VALUES
   ======================================================= */
 
-  const items =
-    cart?.items || [];
+  const items = cart?.items || [];
 
-  const totalItems =
-    items.reduce(
-      (total, item) =>
-        total +
-        Number(
-          item.quantity || 1,
-        ),
+  const totalItems = items.reduce(
+    (total, item) => total + Number(item.quantity || 1),
 
-      0,
-    );
+    0,
+  );
 
-  const subtotal =
-    items.reduce(
-      (total, item) =>
-        total +
-        Number(
-          item.price || 0,
-        ) *
-          Number(
-            item.quantity ||
-              1,
-          ),
+  const subtotal = items.reduce(
+    (total, item) =>
+      total + Number(item.price || 0) * Number(item.quantity || 1),
 
-      0,
-    );
+    0,
+  );
 
-  const formatPrice = (
-    value,
-  ) =>
-    Number(
-      value || 0,
-    ).toLocaleString(
-      "en-IN",
-    );
+  const formatPrice = (value) => Number(value || 0).toLocaleString("en-IN");
 
   /* =======================================================
      LOADING
@@ -768,25 +660,16 @@ function Cart() {
     return (
       <main className="cart-page cart-page-state">
         <div className="cart-status">
-          <span className="cart-status-eyebrow">
-            AXIEE / BAG
-            SYSTEM
-          </span>
+          <span className="cart-status-eyebrow">AXIEE / BAG SYSTEM</span>
 
           <div className="cart-loader-mark">
             <span />
             <span />
           </div>
 
-          <h2>
-            BUILDING YOUR
-            BAG
-          </h2>
+          <h2>BUILDING YOUR BAG</h2>
 
-          <p>
-            Syncing selected
-            pieces...
-          </p>
+          <p>Syncing selected pieces...</p>
         </div>
       </main>
     );
@@ -800,27 +683,15 @@ function Cart() {
     return (
       <main className="cart-page cart-page-state">
         <div className="cart-status">
-          <span className="cart-status-eyebrow">
-            AXIEE / SYSTEM
-          </span>
+          <span className="cart-status-eyebrow">AXIEE / SYSTEM</span>
 
-          <div className="cart-error-icon">
-            ×
-          </div>
+          <div className="cart-error-icon">×</div>
 
-          <h2>
-            Unable to load
-            cart
-          </h2>
+          <h2>Unable to load cart</h2>
 
           <p>{error}</p>
 
-          <button
-            type="button"
-            onClick={() =>
-              fetchCart()
-            }
-          >
+          <button type="button" onClick={() => fetchCart()}>
             TRY AGAIN
           </button>
         </div>
@@ -832,51 +703,32 @@ function Cart() {
      EMPTY
   ======================================================= */
 
-  if (
-    items.length === 0
-  ) {
+  if (items.length === 0) {
     return (
-      <main
-        ref={pageRef}
-        className="cart-page cart-page-empty"
-      >
+      <main ref={pageRef} className="cart-page cart-page-empty">
         <div className="cart-grid-overlay" />
 
-        <div className="cart-ghost-word">
-          EMPTY
-        </div>
+        <div className="cart-ghost-word">EMPTY</div>
 
         <section className="cart-empty">
-          <span className="cart-empty-index">
-            AX / BAG / 00
-          </span>
+          <span className="cart-empty-index">AX / BAG / 00</span>
 
-          <span className="cart-hero-eyebrow">
-            YOUR SELECTION
-          </span>
+          <span className="cart-hero-eyebrow">YOUR SELECTION</span>
 
           <h1 className="cart-hero-title">
             THE BAG
             <br />
-            <em>
-              IS QUIET.
-            </em>
+            <em>IS QUIET.</em>
           </h1>
 
           <p>
-            Your next AXIEE
-            uniform starts
-            here. Explore the
-            collection and build
-            the bag.
+            Your next AXIEE uniform starts here. Explore the collection and
+            build the bag.
           </p>
 
           <Link to="/shop">
             SHOP COLLECTION
-
-            <ArrowUpRight
-              size={17}
-            />
+            <ArrowUpRight size={17} />
           </Link>
         </section>
       </main>
@@ -888,19 +740,14 @@ function Cart() {
   ======================================================= */
 
   return (
-    <main
-      ref={pageRef}
-      className="cart-page"
-    >
+    <main ref={pageRef} className="cart-page">
       <div className="cart-grid-overlay" />
 
       <div className="cart-glow cart-glow-a" />
 
       <div className="cart-glow cart-glow-b" />
 
-      <div className="cart-ghost-word">
-        BAG
-      </div>
+      <div className="cart-ghost-word">BAG</div>
 
       {/* ===================================================
           HERO
@@ -908,49 +755,29 @@ function Cart() {
 
       <section className="cart-hero">
         <div className="cart-hero-left">
-          <span className="cart-hero-eyebrow">
-            AXIEE / CHECKOUT
-            SYSTEM
-          </span>
+          <span className="cart-hero-eyebrow">AXIEE / CHECKOUT SYSTEM</span>
 
           <div className="cart-hero-title-wrap">
             <h1 className="cart-hero-title">
               YOUR
               <br />
-
-              <em>
-                BAG
-              </em>
+              <em>BAG</em>
             </h1>
 
-            <span className="cart-hero-code">
-              COLLECTION / 26
-            </span>
+            <span className="cart-hero-code">COLLECTION / 26</span>
           </div>
         </div>
 
         <div className="cart-hero-side">
           <span className="cart-hero-side-no">
-            {String(
-              totalItems,
-            ).padStart(
-              2,
-              "0",
-            )}
+            {String(totalItems).padStart(2, "0")}
           </span>
 
           <span className="cart-hero-side-label">
-            {totalItems ===
-            1
-              ? "PIECE"
-              : "PIECES"}
+            {totalItems === 1 ? "PIECE" : "PIECES"}
           </span>
 
-          <p>
-            Curated pieces
-            ready for final
-            review.
-          </p>
+          <p>Curated pieces ready for final review.</p>
         </div>
       </section>
 
@@ -962,35 +789,25 @@ function Cart() {
         <div className="is-active">
           <span>01</span>
 
-          <strong>
-            BAG
-          </strong>
+          <strong>BAG</strong>
         </div>
 
         <div>
           <span>02</span>
 
-          <strong>
-            DETAILS
-          </strong>
+          <strong>DETAILS</strong>
         </div>
 
         <div>
           <span>03</span>
 
-          <strong>
-            PAYMENT
-          </strong>
+          <strong>PAYMENT</strong>
         </div>
 
         <div className="cart-stepbar-end">
-          <Sparkles
-            size={13}
-          />
+          <Sparkles size={13} />
 
-          <span>
-            AXIEE SECURE FLOW
-          </span>
+          <span>AXIEE SECURE FLOW</span>
         </div>
       </section>
 
@@ -1000,280 +817,124 @@ function Cart() {
 
       <section className="cart-layout">
         <div className="cart-items">
-          {items.map(
-            (
-              item,
-              index,
-            ) => {
-              const itemBusy =
-                busyItemId ===
-                String(
-                  item._id,
-                );
+          {items.map((item, index) => {
+            const itemBusy = busyItemId === String(item._id);
 
-              const imageUrl =
-                getCartItemImage(
-                  item,
-                );
+            const imageUrl = getCartItemImage(item);
 
-              const productId =
-                getProductId(
-                  item,
-                );
+            const productId = getProductId(item);
 
-              return (
-                <article
-                  className={`cart-item ${
-                    itemBusy
-                      ? "is-busy"
-                      : ""
-                  }`}
-                  key={
-                    item._id
-                  }
-                >
-                  <div className="cart-item-index">
-                    {String(
-                      index +
-                        1,
-                    ).padStart(
-                      2,
-                      "0",
-                    )}
-                  </div>
+            return (
+              <article
+                className={`cart-item ${itemBusy ? "is-busy" : ""}`}
+                key={item._id}
+              >
+                <div className="cart-item-index">
+                  {String(index + 1).padStart(2, "0")}
+                </div>
 
-                  <Link
-                    to={`/product/${productId}`}
-                    className="cart-item-image"
-                  >
-                    {imageUrl ? (
-                      <img
-                        src={
-                          imageUrl
-                        }
-                        alt={
-                          item.name
-                        }
-                        onError={(
-                          event,
-                        ) => {
-                          console.error(
-                            "❌ CART IMAGE FAILED:",
-                            {
-                              name:
-                                item.name,
+                <Link to={`/product/${productId}`} className="cart-item-image">
+                  <CartProductImage src={imageUrl} alt={item.name} />
 
-                              original:
-                                item.image,
+                  <span className="cart-image-tag">
+                    VIEW PIECE
+                    <ArrowUpRight size={12} />
+                  </span>
 
-                              final:
-                                imageUrl,
+                  <span className="cart-image-light" />
+                </Link>
 
-                              item,
-                            },
-                          );
+                <div className="cart-item-content">
+                  <div className="cart-item-head">
+                    <div>
+                      <span className="cart-item-category">
+                        {item.category || "AXIEE / COLLECTION"}
+                      </span>
 
-                          event.currentTarget.style.display =
-                            "none";
-                        }}
-                      />
-                    ) : (
-                      <div className="cart-image-empty">
-                        AXIEE
-                      </div>
-                    )}
-
-                    <span className="cart-image-tag">
-                      VIEW PIECE
-
-                      <ArrowUpRight
-                        size={
-                          12
-                        }
-                      />
-                    </span>
-
-                    <span className="cart-image-light" />
-                  </Link>
-
-                  <div className="cart-item-content">
-                    <div className="cart-item-head">
-                      <div>
-                        <span className="cart-item-category">
-                          {item.category ||
-                            "AXIEE / COLLECTION"}
-                        </span>
-
-                        <Link
-                          to={`/product/${productId}`}
-                          className="cart-product-link"
-                        >
-                          <h2>
-                            {
-                              item.name
-                            }
-                          </h2>
-                        </Link>
-                      </div>
-
-                      <button
-                        type="button"
-                        className="cart-remove"
-                        onClick={() =>
-                          removeItem(
-                            item._id,
-                          )
-                        }
-                        disabled={
-                          itemBusy
-                        }
+                      <Link
+                        to={`/product/${productId}`}
+                        className="cart-product-link"
                       >
-                        <Trash2
-                          size={
-                            14
-                          }
-                        />
-
-                        <span>
-                          {itemBusy
-                            ? "WORKING"
-                            : "REMOVE"}
-                        </span>
-                      </button>
+                        <h2>{item.name}</h2>
+                      </Link>
                     </div>
 
-                    <div className="cart-item-specs">
-                      <div>
-                        <span>
-                          SIZE
-                        </span>
+                    <button
+                      type="button"
+                      className="cart-remove"
+                      onClick={() => removeItem(item._id)}
+                      disabled={itemBusy}
+                    >
+                      <Trash2 size={14} />
 
-                        <strong>
-                          {item.size ||
-                            "—"}
-                        </strong>
-                      </div>
+                      <span>{itemBusy ? "WORKING" : "REMOVE"}</span>
+                    </button>
+                  </div>
 
-                      <div>
-                        <span>
-                          PRICE
-                        </span>
+                  <div className="cart-item-specs">
+                    <div>
+                      <span>SIZE</span>
 
-                        <strong>
-                          ₹
-                          {formatPrice(
-                            item.price,
-                          )}
-                        </strong>
-                      </div>
-
-                      <div>
-                        <span>
-                          STATUS
-                        </span>
-
-                        <strong className="is-live">
-                          IN BAG
-                        </strong>
-                      </div>
+                      <strong>{item.size || "—"}</strong>
                     </div>
 
-                    <div className="cart-item-bottom">
-                      <div className="cart-quantity-block">
-                        <span className="cart-small-label">
-                          QUANTITY
-                        </span>
+                    <div>
+                      <span>PRICE</span>
 
-                        <div className="cart-quantity">
-                          <button
-                            type="button"
-                            disabled={
-                              itemBusy ||
-                              Number(
-                                item.quantity,
-                              ) <=
-                                1
-                            }
-                            onClick={() =>
-                              updateQuantity(
-                                item,
-                                -1,
-                              )
-                            }
-                          >
-                            <Minus
-                              size={
-                                14
-                              }
-                            />
-                          </button>
+                      <strong>₹{formatPrice(item.price)}</strong>
+                    </div>
 
-                          <span>
-                            {
-                              item.quantity
-                            }
-                          </span>
+                    <div>
+                      <span>STATUS</span>
 
-                          <button
-                            type="button"
-                            disabled={
-                              itemBusy ||
-                              Number(
-                                item.quantity,
-                              ) >=
-                                10
-                            }
-                            onClick={() =>
-                              updateQuantity(
-                                item,
-                                1,
-                              )
-                            }
-                          >
-                            <Plus
-                              size={
-                                14
-                              }
-                            />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="cart-line-total">
-                        <span>
-                          LINE TOTAL
-                        </span>
-
-                        <strong>
-                          ₹
-                          {formatPrice(
-                            Number(
-                              item.price ||
-                                0,
-                            ) *
-                              Number(
-                                item.quantity ||
-                                  1,
-                              ),
-                          )}
-                        </strong>
-                      </div>
+                      <strong className="is-live">IN BAG</strong>
                     </div>
                   </div>
 
-                  <div className="cart-item-watermark">
-                    {String(
-                      index +
-                        1,
-                    ).padStart(
-                      2,
-                      "0",
-                    )}
+                  <div className="cart-item-bottom">
+                    <div className="cart-quantity-block">
+                      <span className="cart-small-label">QUANTITY</span>
+
+                      <div className="cart-quantity">
+                        <button
+                          type="button"
+                          disabled={itemBusy || Number(item.quantity) <= 1}
+                          onClick={() => updateQuantity(item, -1)}
+                        >
+                          <Minus size={14} />
+                        </button>
+
+                        <span>{item.quantity}</span>
+
+                        <button
+                          type="button"
+                          disabled={itemBusy || Number(item.quantity) >= 10}
+                          onClick={() => updateQuantity(item, 1)}
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="cart-line-total">
+                      <span>LINE TOTAL</span>
+
+                      <strong>
+                        ₹
+                        {formatPrice(
+                          Number(item.price || 0) * Number(item.quantity || 1),
+                        )}
+                      </strong>
+                    </div>
                   </div>
-                </article>
-              );
-            },
-          )}
+                </div>
+
+                <div className="cart-item-watermark">
+                  {String(index + 1).padStart(2, "0")}
+                </div>
+              </article>
+            );
+          })}
         </div>
 
         {/* =================================================
@@ -1285,157 +946,89 @@ function Cart() {
 
           <div className="cart-summary-head">
             <div>
-              <span>
-                ORDER SUMMARY
-              </span>
+              <span>ORDER SUMMARY</span>
 
-              <h3>
-                FINAL REVIEW
-              </h3>
+              <h3>FINAL REVIEW</h3>
             </div>
 
             <span className="cart-summary-id">
-              BAG /{" "}
-              {String(
-                items.length,
-              ).padStart(
-                2,
-                "0",
-              )}
+              BAG / {String(items.length).padStart(2, "0")}
             </span>
           </div>
 
           <p className="cart-summary-copy">
-            Review the bag
-            before continuing
-            to secure checkout.
+            Review the bag before continuing to secure checkout.
           </p>
 
           <div className="cart-summary-divider" />
 
           <div className="cart-summary-row">
-            <span>
-              PIECES
-            </span>
+            <span>PIECES</span>
 
-            <strong>
-              {totalItems}
-            </strong>
+            <strong>{totalItems}</strong>
           </div>
 
           <div className="cart-summary-row">
-            <span>
-              SUBTOTAL
-            </span>
+            <span>SUBTOTAL</span>
 
-            <strong>
-              ₹
-              {formatPrice(
-                subtotal,
-              )}
-            </strong>
+            <strong>₹{formatPrice(subtotal)}</strong>
           </div>
 
           <div className="cart-summary-row">
-            <span>
-              SHIPPING
-            </span>
+            <span>SHIPPING</span>
 
-            <strong className="cart-free">
-              COMPLIMENTARY
-            </strong>
+            <strong className="cart-free">COMPLIMENTARY</strong>
           </div>
 
           <div className="cart-summary-total">
             <div>
-              <span>
-                TOTAL
-              </span>
+              <span>TOTAL</span>
 
-              <small>
-                Taxes calculated
-                at checkout
-              </small>
+              <small>Taxes calculated at checkout</small>
             </div>
 
-            <strong>
-              ₹
-              {formatPrice(
-                subtotal,
-              )}
-            </strong>
+            <strong>₹{formatPrice(subtotal)}</strong>
           </div>
 
           <button
             type="button"
             className="cart-checkout"
-            onClick={() =>
-              navigate(
-                "/checkout",
-              )
-            }
+            onClick={() => navigate("/checkout")}
           >
-            <span>
-              CONTINUE TO
-              CHECKOUT
-            </span>
+            <span>CONTINUE TO CHECKOUT</span>
 
-            <ArrowUpRight
-              size={17}
-            />
+            <ArrowUpRight size={17} />
           </button>
 
           <div className="cart-trust-row">
             <div>
-              <LockKeyhole
-                size={15}
-              />
+              <LockKeyhole size={15} />
 
-              <span>
-                SECURE
-              </span>
+              <span>SECURE</span>
             </div>
 
             <div>
-              <ShieldCheck
-                size={15}
-              />
+              <ShieldCheck size={15} />
 
-              <span>
-                PROTECTED
-              </span>
+              <span>PROTECTED</span>
             </div>
 
             <div>
-              <PackageCheck
-                size={15}
-              />
+              <PackageCheck size={15} />
 
-              <span>
-                TRACKED
-              </span>
+              <span>TRACKED</span>
             </div>
           </div>
 
-          <Link
-            to="/shop"
-            className="cart-continue"
-          >
-            <ArrowLeft
-              size={14}
-            />
-
+          <Link to="/shop" className="cart-continue">
+            <ArrowLeft size={14} />
             CONTINUE SHOPPING
           </Link>
 
           <div className="cart-summary-bottom">
-            <span>
-              AXIEE / BAG SYSTEM
-            </span>
+            <span>AXIEE / BAG SYSTEM</span>
 
-            <span>
-              2026
-            </span>
+            <span>2026</span>
           </div>
         </aside>
       </section>

@@ -154,7 +154,43 @@ function Navbar() {
      API
   ========================================================= */
 
-  const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+  const API_BASE = (
+    import.meta.env.VITE_API_URL ||
+    (import.meta.env.DEV ? `http://${window.location.hostname}:5000` : "")
+  ).replace(/\/+$/, "");
+
+  console.log("🌐 Navbar API:", API_BASE || "same-origin");
+
+  const readApiResponse = async (response, label = "API") => {
+    const text = await response.text();
+
+    let data = {};
+
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.error(`❌ ${label} returned invalid JSON:`, {
+          status: response.status,
+          statusText: response.statusText,
+          body: text,
+        });
+
+        throw new Error(
+          `${label} returned an invalid response (${response.status})`,
+        );
+      }
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        data?.message ||
+          `${label} failed (${response.status} ${response.statusText})`,
+      );
+    }
+
+    return data;
+  };
 
   /* =========================================================
      CART ID WATCHER
@@ -207,17 +243,7 @@ function Navbar() {
         },
       });
 
-      const contentType = response.headers.get("content-type") || "";
-
-      if (!contentType.includes("application/json")) {
-        throw new Error("Cart API did not return JSON");
-      }
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.message || "Failed to get cart");
-      }
+      const data = await readApiResponse(response, "Navbar cart");
 
       const updatedCart = data?.cart ||
         data || {

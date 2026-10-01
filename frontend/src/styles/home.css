@@ -1136,10 +1136,10 @@ body {
      width: 100%;
      height: 100%;
 
-     object-fit: cover;
+     object-fit: contain;
 
      object-position:
-          center;
+          center top;
 
      transition:
           opacity 0.55s ease,
@@ -1160,7 +1160,7 @@ body {
      opacity: 0;
 
      transform:
-          scale(1.04);
+          scale(1);
 }
 
 .ax-product-no-image {
@@ -1839,7 +1839,7 @@ body {
           opacity: 0;
 
           transform:
-               scale(1.04);
+               scale(1);
      }
 
      .ax-product-card:hover .ax-home-hover-image {
@@ -2676,5 +2676,76 @@ body {
 
           transition-duration:
                0.001ms !important;
+     }
+}
+
+
+/* =========================================================
+   FINAL HOME PRODUCT IMAGE FIX
+   FULL PRODUCT / FULL MODEL VISIBLE ON ALL SCREENS
+   Desktop + Laptop + Tablet + Mobile
+========================================================= */
+
+.ax-home .ax-product-image-wrap {
+     aspect-ratio: 4 / 5;
+     overflow: hidden;
+}
+
+.ax-home .ax-product-image {
+     width: 100%;
+     height: 100%;
+
+     object-fit: contain !important;
+     object-position: center top !important;
+
+     transform: scale(1) !important;
+     transform-origin: center top;
+
+     background: transparent;
+}
+
+/* Never zoom/crop either image during hover */
+@media (hover: hover) {
+
+     .ax-home .ax-product-card:hover .ax-home-main-image,
+     .ax-home .ax-product-card:hover .ax-home-hover-image {
+          transform: scale(1) !important;
+     }
+}
+
+/* Tablet */
+@media (max-width: 1100px) {
+     .ax-home .ax-product-image-wrap {
+          aspect-ratio: 4 / 5;
+     }
+
+     .ax-home .ax-product-image {
+          object-fit: contain !important;
+          object-position: center top !important;
+     }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+     .ax-home .ax-product-image-wrap {
+          aspect-ratio: 4 / 5;
+     }
+
+     .ax-home .ax-product-image {
+          object-fit: contain !important;
+          object-position: center top !important;
+          transform: none !important;
+     }
+}
+
+/* Very small mobile */
+@media (max-width: 390px) {
+     .ax-home .ax-product-image-wrap {
+          aspect-ratio: 4 / 5;
+     }
+
+     .ax-home .ax-product-image {
+          object-fit: contain !important;
+          object-position: center top !important;
      }
 }

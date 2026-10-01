@@ -102,6 +102,8 @@ const normalizeSizes = (value) => {
             size: cleanText(item),
 
             stock: 0,
+
+            isOutOfStock: false,
           };
         }
 
@@ -112,6 +114,8 @@ const normalizeSizes = (value) => {
             0,
             safeNumber(item?.stock ?? item?.quantity ?? item?.qty),
           ),
+
+          isOutOfStock: toBoolean(item?.isOutOfStock, false),
         };
       })
       .filter((item) => item.size);
@@ -462,6 +466,11 @@ const normalizeProductBody = (body = {}) => {
 
     isActive:
       body.isActive === undefined ? true : toBoolean(body.isActive, true),
+
+    isOutOfStock:
+      body.isOutOfStock === undefined
+        ? false
+        : toBoolean(body.isOutOfStock, false),
 
     source: cleanText(body.source) || "admin",
   };

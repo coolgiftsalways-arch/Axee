@@ -2897,3 +2897,767 @@
           font-size: 19px;
      }
 }
+
+
+/* =========================================================
+   PRODUCT DETAILS - ALL SIZES VISIBLE
+========================================================= */
+
+.pd-sizes button.out-of-stock,
+.pd-sizes button.out-of-stock:disabled {
+     opacity: 0.48;
+}
+
+.pd-size-button-copy {
+     position: relative;
+     z-index: 2;
+
+     display: inline-flex;
+     align-items: center;
+     justify-content: center;
+
+     width: 100%;
+     height: 100%;
+}
+
+.pd-size-strike {
+     position: absolute;
+
+     z-index: 1;
+
+     top: 50%;
+     left: 50%;
+
+     width: 135%;
+     height: 1px;
+
+     background:
+          rgba(255, 255, 255, 0.42);
+
+     transform:
+          translate(-50%, -50%) rotate(-24deg);
+
+     pointer-events: none;
+}
+
+.pd-size-out-label {
+     position: absolute;
+
+     z-index: 3;
+
+     right: 4px;
+     bottom: 3px;
+
+     color:
+          rgba(255, 255, 255, 0.34);
+
+     font-size: 4px;
+
+     line-height: 1;
+
+     letter-spacing: 0.1em;
+}
+
+.pd-size-status-in {
+     color: #c7ff13 !important;
+}
+
+.pd-size-status-out {
+     color:
+          rgba(255, 255, 255, 0.24) !important;
+}
+
+@media (max-width: 600px) {
+     .pd-sizes {
+          grid-template-columns:
+               repeat(4, minmax(0, 1fr));
+     }
+
+     .pd-sizes button {
+          min-width: 0;
+     }
+}
+
+@media (max-width: 390px) {
+     .pd-sizes {
+          grid-template-columns:
+               repeat(3, minmax(0, 1fr));
+     }
+}
+
+
+/* =========================================================
+   FINAL CATEGORY SIZE GUIDE
+   Measurement chart only — NO stock/status column
+========================================================= */
+
+.pd-size-chart-panel.open {
+     max-height: 980px;
+}
+
+.pd-size-chart-note {
+     align-items: flex-end;
+}
+
+.pd-size-chart-note span {
+     color: rgba(255, 255, 255, 0.82);
+
+     font-size: 6px;
+     font-weight: 600;
+
+     letter-spacing: 0.16em;
+}
+
+.pd-size-chart-note small {
+     max-width: 230px;
+
+     color: rgba(199, 255, 19, 0.58);
+
+     text-align: right;
+
+     line-height: 1.5;
+}
+
+/* CATEGORY DESCRIPTION */
+
+.pd-size-chart-category {
+     display: flex;
+     align-items: flex-start;
+     justify-content: space-between;
+
+     gap: 20px;
+
+     margin-bottom: 12px;
+
+     padding: 11px 12px;
+
+     border: 1px solid rgba(255, 255, 255, 0.07);
+
+     background: rgba(255, 255, 255, 0.018);
+}
+
+.pd-size-chart-category span {
+     flex: 0 0 auto;
+
+     color: #c7ff13;
+
+     font-size: 5px;
+     font-weight: 700;
+
+     letter-spacing: 0.18em;
+}
+
+.pd-size-chart-category p {
+     max-width: 310px;
+
+     margin: 0;
+
+     color: rgba(255, 255, 255, 0.35);
+
+     font-size: 6px;
+
+     line-height: 1.65;
+
+     text-align: right;
+
+     letter-spacing: 0.035em;
+}
+
+/* REAL MEASUREMENT TABLE */
+
+.pd-size-chart-table {
+     min-width: 560px;
+
+     table-layout: auto;
+}
+
+.pd-size-chart-table th,
+.pd-size-chart-table td {
+     min-width: 92px;
+
+     padding: 10px 9px;
+}
+
+.pd-size-chart-table th:first-child,
+.pd-size-chart-table td:first-child {
+     min-width: 74px;
+}
+
+.pd-size-chart-table th {
+     color: rgba(255, 255, 255, 0.42);
+
+     font-size: 5px;
+     font-weight: 600;
+}
+
+.pd-size-chart-table td {
+     color: rgba(255, 255, 255, 0.75);
+
+     font-size: 7px;
+}
+
+/* No inventory/status styling is used inside size chart anymore. */
+
+.pd-size-chart-table tbody tr.active td {
+     background: rgba(199, 255, 19, 0.075);
+
+     color: #c7ff13;
+}
+
+.pd-size-chart-table tbody tr.active td:first-child {
+     background: #c7ff13;
+
+     color: #050505;
+}
+
+/* MOBILE */
+
+@media (max-width: 768px) {
+     .pd-size-chart-note {
+          align-items: flex-start;
+          flex-direction: column;
+
+          gap: 6px;
+     }
+
+     .pd-size-chart-note small {
+          max-width: 100%;
+
+          text-align: left;
+     }
+
+     .pd-size-chart-category {
+          flex-direction: column;
+
+          gap: 7px;
+     }
+
+     .pd-size-chart-category p {
+          max-width: 100%;
+
+          text-align: left;
+     }
+
+     .pd-size-chart-table {
+          min-width: 540px;
+     }
+
+     .pd-size-chart-table th,
+     .pd-size-chart-table td {
+          min-width: 88px;
+     }
+}
+
+@media (max-width: 430px) {
+     .pd-size-chart-inner {
+          padding-left: 9px;
+          padding-right: 9px;
+     }
+
+     .pd-size-chart-table {
+          min-width: 520px;
+     }
+
+     .pd-size-chart-table th,
+     .pd-size-chart-table td {
+          min-width: 84px;
+     }
+}
+
+
+/* =========================================================
+   SAMPLE REVIEW CAROUSEL
+========================================================= */
+
+.pd-reviews {
+     padding:
+          76px 4vw 86px;
+
+     border-bottom:
+          1px solid rgba(255,
+               255,
+               255,
+               0.07);
+
+     background:
+          linear-gradient(180deg,
+               rgba(199,
+                    255,
+                    19,
+                    0.012),
+               transparent 45%);
+}
+
+.pd-reviews-heading {
+     display: flex;
+     align-items: flex-end;
+     justify-content: space-between;
+
+     gap: 20px;
+
+     margin-bottom: 18px;
+}
+
+.pd-reviews-heading>div>span {
+     display: block;
+
+     margin-bottom: 13px;
+
+     color: #c7ff13;
+
+     font-size: 6px;
+
+     letter-spacing: 0.27em;
+}
+
+.pd-reviews-heading h2 {
+     margin: 0;
+
+     color: #f5f5f0;
+
+     font-size:
+          clamp(35px,
+               4.6vw,
+               72px);
+
+     font-weight: 400;
+
+     line-height: 0.95;
+
+     letter-spacing: -0.045em;
+}
+
+.pd-reviews-heading h2 small {
+     color:
+          rgba(255,
+               255,
+               255,
+               0.3);
+
+     font-size: 0.4em;
+
+     font-weight: 400;
+
+     letter-spacing: 0;
+}
+
+.pd-reviews-heading button {
+     min-height: 38px;
+
+     padding:
+          0 15px;
+
+     border:
+          1px solid rgba(255,
+               255,
+               255,
+               0.13);
+
+     background:
+          transparent;
+
+     color:
+          rgba(255,
+               255,
+               255,
+               0.62);
+
+     font-family: inherit;
+
+     font-size: 6px;
+
+     letter-spacing: 0.18em;
+
+     cursor: pointer;
+
+     transition:
+          border-color 0.25s ease,
+          color 0.25s ease,
+          background 0.25s ease;
+}
+
+.pd-reviews-heading button:hover,
+.pd-reviews-heading button.is-paused {
+     border-color: #c7ff13;
+
+     background:
+          rgba(199,
+               255,
+               19,
+               0.06);
+
+     color: #c7ff13;
+}
+
+.pd-reviews-note {
+     margin-bottom: 20px;
+
+     color:
+          rgba(255,
+               255,
+               255,
+               0.2);
+
+     font-size: 5px;
+
+     letter-spacing: 0.16em;
+}
+
+/* =========================================================
+   REVIEW TRACK
+========================================================= */
+
+.pd-review-track {
+     width: 100%;
+
+     display: flex;
+
+     gap: 14px;
+
+     overflow-x: auto;
+     overflow-y: hidden;
+
+     padding:
+          0 0 14px;
+
+     scroll-snap-type: x mandatory;
+     scroll-behavior: smooth;
+
+     scrollbar-width: thin;
+
+     scrollbar-color:
+          #c7ff13 rgba(255,
+               255,
+               255,
+               0.06);
+
+     cursor: grab;
+}
+
+.pd-review-track:active {
+     cursor: grabbing;
+}
+
+.pd-review-track::-webkit-scrollbar {
+     height: 4px;
+}
+
+.pd-review-track::-webkit-scrollbar-track {
+     background:
+          rgba(255,
+               255,
+               255,
+               0.05);
+}
+
+.pd-review-track::-webkit-scrollbar-thumb {
+     background: #c7ff13;
+}
+
+/* =========================================================
+   REVIEW CARD
+========================================================= */
+
+.pd-review-card {
+     flex:
+          0 0 clamp(310px,
+               31vw,
+               455px);
+
+     min-height: 280px;
+
+     scroll-snap-align: start;
+
+     display: flex;
+     flex-direction: column;
+
+     padding:
+          24px;
+
+     border:
+          1px solid rgba(255,
+               255,
+               255,
+               0.12);
+
+     background:
+          linear-gradient(145deg,
+               #0d0f0a,
+               #050505 72%);
+
+     border-radius: 18px;
+
+     box-shadow:
+          inset 0 1px 0 rgba(255,
+               255,
+               255,
+               0.02);
+
+     user-select: none;
+}
+
+.pd-review-card-top {
+     display: flex;
+     align-items: center;
+
+     gap: 9px;
+
+     flex-wrap: wrap;
+}
+
+.pd-review-stars {
+     min-height: 37px;
+
+     display: inline-flex;
+     align-items: center;
+
+     gap: 5px;
+
+     padding:
+          0 12px;
+
+     border-radius: 999px;
+
+     background: #1f7a52;
+
+     color: #ffffff;
+}
+
+.pd-review-stars strong {
+     font-size: 15px;
+     font-weight: 600;
+}
+
+.pd-review-stars span {
+     font-size: 15px;
+     line-height: 1;
+}
+
+.pd-review-sample-badge {
+     min-height: 30px;
+
+     display: inline-flex;
+     align-items: center;
+
+     padding:
+          0 10px;
+
+     border:
+          1px solid rgba(199,
+               255,
+               19,
+               0.32);
+
+     border-radius: 999px;
+
+     color: #c7ff13;
+
+     font-size: 5px;
+
+     letter-spacing: 0.15em;
+}
+
+.pd-review-size {
+     margin-left: auto;
+
+     min-height: 34px;
+
+     display: inline-flex;
+     align-items: center;
+
+     padding:
+          0 11px;
+
+     border-radius: 999px;
+
+     background:
+          rgba(255,
+               255,
+               255,
+               0.055);
+
+     color:
+          rgba(255,
+               255,
+               255,
+               0.72);
+
+     font-size: 6px;
+
+     letter-spacing: 0.09em;
+}
+
+.pd-review-card>p {
+     flex: 1;
+
+     margin:
+          28px 0 32px;
+
+     color:
+          rgba(255,
+               255,
+               255,
+               0.83);
+
+     font-size:
+          clamp(14px,
+               1.2vw,
+               18px);
+
+     line-height: 1.65;
+}
+
+.pd-review-card-footer {
+     display: flex;
+     align-items: center;
+
+     gap: 10px;
+
+     padding-top: 17px;
+
+     border-top:
+          1px solid rgba(255,
+               255,
+               255,
+               0.08);
+}
+
+.pd-review-check {
+     width: 26px;
+     height: 26px;
+
+     flex: 0 0 26px;
+
+     display: grid;
+     place-items: center;
+
+     border:
+          1px solid #2fae78;
+
+     border-radius: 50%;
+
+     color: #2fae78;
+}
+
+.pd-review-card-footer>div {
+     min-width: 0;
+
+     display: flex;
+     flex-direction: column;
+
+     gap: 4px;
+}
+
+.pd-review-card-footer strong {
+     color: #ffffff;
+
+     font-size: 10px;
+
+     font-weight: 500;
+}
+
+.pd-review-card-footer small {
+     color:
+          rgba(255,
+               255,
+               255,
+               0.25);
+
+     font-size: 5px;
+
+     letter-spacing: 0.12em;
+}
+
+.pd-review-scroll-hint {
+     display: flex;
+     align-items: center;
+     justify-content: space-between;
+
+     gap: 15px;
+
+     margin-top: 10px;
+
+     color:
+          rgba(255,
+               255,
+               255,
+               0.2);
+
+     font-size: 5px;
+
+     letter-spacing: 0.15em;
+}
+
+/* =========================================================
+   REVIEW RESPONSIVE
+========================================================= */
+
+@media (max-width: 900px) {
+     .pd-reviews {
+          padding:
+               58px 20px 66px;
+     }
+
+     .pd-review-card {
+          flex-basis:
+               min(78vw,
+                    390px);
+     }
+}
+
+@media (max-width: 600px) {
+     .pd-reviews {
+          padding:
+               50px 14px 58px;
+     }
+
+     .pd-reviews-heading {
+          align-items: flex-start;
+     }
+
+     .pd-reviews-heading h2 {
+          font-size:
+               clamp(31px,
+                    11vw,
+                    48px);
+     }
+
+     .pd-reviews-heading button {
+          min-height: 34px;
+
+          padding:
+               0 11px;
+     }
+
+     .pd-review-track {
+          gap: 10px;
+
+          margin-right: -14px;
+
+          padding-right: 14px;
+     }
+
+     .pd-review-card {
+          flex-basis:
+               min(86vw,
+                    355px);
+
+          min-height: 250px;
+
+          padding:
+               20px;
+
+          border-radius: 15px;
+     }
+
+     .pd-review-card>p {
+          margin:
+               23px 0 27px;
+
+          font-size: 14px;
+     }
+
+     .pd-review-size {
+          margin-left: 0;
+     }
+}

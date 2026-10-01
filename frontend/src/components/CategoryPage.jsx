@@ -15,6 +15,52 @@ import { products } from "../data/products";
 import "../styles/shop.css";
 
 /* =========================================================
+   SAFE CART ID
+
+   crypto.randomUUID() can be unavailable when the website is
+   opened on a phone through a local HTTP address such as:
+
+   http://192.168.x.x:5178
+
+   This helper:
+   1. Uses randomUUID() when available.
+   2. Falls back to crypto.getRandomValues().
+   3. Uses a final timestamp/random fallback if needed.
+========================================================= */
+
+const createSafeUUID = () => {
+  const webCrypto =
+    typeof globalThis !== "undefined" ? globalThis.crypto : undefined;
+
+  if (webCrypto && typeof webCrypto.randomUUID === "function") {
+    return webCrypto.randomUUID();
+  }
+
+  if (webCrypto && typeof webCrypto.getRandomValues === "function") {
+    const bytes = new Uint8Array(16);
+
+    webCrypto.getRandomValues(bytes);
+
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+    const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0"));
+
+    return [
+      hex.slice(0, 4).join(""),
+      hex.slice(4, 6).join(""),
+      hex.slice(6, 8).join(""),
+      hex.slice(8, 10).join(""),
+      hex.slice(10, 16).join(""),
+    ].join("-");
+  }
+
+  return `cart-${Date.now()}-${Math.random()
+    .toString(16)
+    .slice(2)}-${Math.random().toString(16).slice(2)}`;
+};
+
+/* =========================================================
    CATEGORY VISUAL
 ========================================================= */
 
@@ -1781,8 +1827,43 @@ function CategoryVisual({ type }) {
    Image 2 = mouse hover
 ========================================================= */
 
-const API_BASE =
-  import.meta.env.VITE_API_URL || "";
+const API_BASE = (
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? `http://${window.location.hostname}:5000` : "")
+).replace(/\/+$/, "");
+
+const readApiResponse = async (response, label = "API") => {
+  const text = await response.text();
+
+  let data = {};
+
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      console.error(`❌ ${label} returned invalid JSON:`, {
+        status: response.status,
+        statusText: response.statusText,
+        body: text,
+      });
+
+      throw new Error(
+        `${label} returned an invalid response (${response.status})`,
+      );
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      data?.message ||
+        `${label} failed (${response.status} ${response.statusText})`,
+    );
+  }
+
+  return data;
+};
+
+console.log("🌐 CategoryPage API:", API_BASE || "same-origin");
 
 const resolveProductImageUrl = (value) => {
   if (!value) return "";
@@ -1814,7 +1895,7 @@ function ProductHoverImage({ product }) {
   const sweepRef = useRef(null);
   const labelRef = useRef(null);
 
-    const productImages = useMemo(() => {
+  const productImages = useMemo(() => {
     const list = [];
 
     const addImage = (value) => {
@@ -1844,16 +1925,9 @@ function ProductHoverImage({ product }) {
        3. OLD GRIDFS ONLY AS LAST FALLBACK
     ========================================================= */
 
-    if (
-      list.length === 0 &&
-      Array.isArray(product?.imageFiles)
-    ) {
+    if (list.length === 0 && Array.isArray(product?.imageFiles)) {
       [...product.imageFiles]
-        .sort(
-          (a, b) =>
-            Number(a?.order ?? 0) -
-            Number(b?.order ?? 0)
-        )
+        .sort((a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0))
         .forEach((item) => {
           /*
             Prefer saved URL first.
@@ -1868,17 +1942,10 @@ function ProductHoverImage({ product }) {
             Old MongoDB GridFS file ID fallback.
           */
 
-          const fileId =
-            item?.fileId ||
-            item?._id ||
-            item?.id;
+          const fileId = item?.fileId || item?._id || item?.id;
 
           if (fileId) {
-            addImage(
-              `${API_BASE}/api/catalog/images/${String(
-                fileId,
-              )}`,
-            );
+            addImage(`${API_BASE}/api/catalog/images/${String(fileId)}`);
           }
         });
     }
@@ -1907,7 +1974,7 @@ function ProductHoverImage({ product }) {
 
     gsap.set(secondImageRef.current, {
       opacity: 0,
-      scale: 1.035,
+      scale: 1,
       xPercent: 3,
       filter: "brightness(0.9) contrast(1.05) saturate(0.95)",
     });
@@ -1929,7 +1996,7 @@ function ProductHoverImage({ product }) {
       firstImageRef.current,
       {
         opacity: 0,
-        scale: 1.025,
+        scale: 1,
         xPercent: -1.5,
         duration: 0.16,
         ease: "power2.out",
@@ -1989,7 +2056,7 @@ function ProductHoverImage({ product }) {
     tl.to(
       stageRef.current,
       {
-        scale: 1.006,
+        scale: 1,
         duration: 0.22,
         ease: "power2.out",
       },
@@ -2017,7 +2084,7 @@ function ProductHoverImage({ product }) {
     if (hasSecondImage) {
       gsap.to(secondImageRef.current, {
         xPercent: x * 0.8,
-        yPercent: y * 0.65,
+        yPercent: 0,
         duration: 0.22,
         ease: "power2.out",
         overwrite: "auto",
@@ -2056,7 +2123,7 @@ function ProductHoverImage({ product }) {
       secondImageRef.current,
       {
         opacity: 0,
-        scale: 1.02,
+        scale: 1,
         xPercent: 1.5,
         yPercent: 0,
         duration: 0.16,
@@ -2139,7 +2206,6 @@ function ProductHoverImage({ product }) {
           inset: 0,
           width: "100%",
           height: "100%",
-          objectFit: "cover",
           opacity: 1,
           zIndex: 1,
           willChange: "transform, opacity, filter",
@@ -2158,7 +2224,6 @@ function ProductHoverImage({ product }) {
             inset: 0,
             width: "100%",
             height: "100%",
-            objectFit: "cover",
             opacity: 0,
             zIndex: 2,
             willChange: "transform, opacity, filter",
@@ -2743,11 +2808,7 @@ function CategoryPage({
       cache: "no-store",
     });
 
-    const getData = await getResponse.json();
-
-    if (!getResponse.ok) {
-      throw new Error(getData?.message || "Could not load cart.");
-    }
+    const getData = await readApiResponse(getResponse, "Load cart");
 
     const currentCart = getData?.cart || getData || { items: [] };
 
@@ -2778,16 +2839,10 @@ function CategoryPage({
             }),
           });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        data?.message ||
-          (nextQuantity <= 0
-            ? "Could not remove item from cart."
-            : "Could not update cart quantity."),
-      );
-    }
+    const data = await readApiResponse(
+      response,
+      nextQuantity <= 0 ? "Remove cart item" : "Update cart quantity",
+    );
 
     const updatedCart = data?.cart || data || { items: [] };
 
@@ -2869,167 +2924,138 @@ function CategoryPage({
    Hostinger images first, old GridFS only as fallback
 ========================================================= */
 
-const getCartProductImage = (product = {}) => {
-  /* 1. NEW HOSTINGER IMAGES */
-  if (Array.isArray(product?.images) && product.images.length > 0) {
-    const firstImage = product.images.find(Boolean);
+  const getCartProductImage = (product = {}) => {
+    /* 1. NEW HOSTINGER IMAGES */
+    if (Array.isArray(product?.images) && product.images.length > 0) {
+      const firstImage = product.images.find(Boolean);
 
-    if (typeof firstImage === "string") {
-      return resolveProductImageUrl(firstImage);
+      if (typeof firstImage === "string") {
+        return resolveProductImageUrl(firstImage);
+      }
+
+      if (firstImage?.url) {
+        return resolveProductImageUrl(firstImage.url);
+      }
+
+      if (firstImage?.src) {
+        return resolveProductImageUrl(firstImage.src);
+      }
     }
 
-    if (firstImage?.url) {
-      return resolveProductImageUrl(firstImage.url);
+    /* 2. MAIN IMAGE */
+    if (product?.mainImage) {
+      return resolveProductImageUrl(product.mainImage);
     }
 
-    if (firstImage?.src) {
-      return resolveProductImageUrl(firstImage.src);
-    }
-  }
-
-  /* 2. MAIN IMAGE */
-  if (product?.mainImage) {
-    return resolveProductImageUrl(product.mainImage);
-  }
-
-  /* 3. SINGLE IMAGE */
-  if (product?.image) {
-    return resolveProductImageUrl(product.image);
-  }
-
-  /* 4. OLD GRIDFS / LEGACY FALLBACK */
-  if (Array.isArray(product?.imageFiles) && product.imageFiles.length > 0) {
-    const sortedFiles = [...product.imageFiles].sort(
-      (a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0),
-    );
-
-    const firstFile = sortedFiles[0];
-
-    if (typeof firstFile === "string") {
-      return resolveProductImageUrl(firstFile);
+    /* 3. SINGLE IMAGE */
+    if (product?.image) {
+      return resolveProductImageUrl(product.image);
     }
 
-    if (firstFile?.url) {
-      return resolveProductImageUrl(firstFile.url);
+    /* 4. OLD GRIDFS / LEGACY FALLBACK */
+    if (Array.isArray(product?.imageFiles) && product.imageFiles.length > 0) {
+      const sortedFiles = [...product.imageFiles].sort(
+        (a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0),
+      );
+
+      const firstFile = sortedFiles[0];
+
+      if (typeof firstFile === "string") {
+        return resolveProductImageUrl(firstFile);
+      }
+
+      if (firstFile?.url) {
+        return resolveProductImageUrl(firstFile.url);
+      }
+
+      const fileId = firstFile?.fileId || firstFile?._id || firstFile?.id;
+
+      if (fileId) {
+        return `${API_BASE}/api/catalog/images/${String(fileId)}`;
+      }
     }
 
-    const fileId =
-      firstFile?.fileId ||
-      firstFile?._id ||
-      firstFile?.id;
-
-    if (fileId) {
-      return `${API_BASE}/api/catalog/images/${String(fileId)}`;
-    }
-  }
-
-  return "";
-};
-/* =======================================================
+    return "";
+  };
+  /* =======================================================
    ADD TO CART
 ======================================================= */
 
-const addToCart = async (product) => {
-  try {
-    /* ================================================
+  const addToCart = async (product) => {
+    try {
+      /* ================================================
        PRODUCT DETAILS
     ================================================ */
 
-    const productId =
-      getProductId(product);
+      const productId = getProductId(product);
 
-    const sizes =
-      getProductSizes(product);
+      const sizes = getProductSizes(product);
 
-    const size =
-      selectedSizes[productId];
+      const size = selectedSizes[productId];
 
-    const quantity =
-      getQuantity(productId);
+      const quantity = getQuantity(productId);
 
-    /* ================================================
+      /* ================================================
        VALIDATION
     ================================================ */
 
-    if (sizes.length === 0) {
-      alert(
-        "Sizes are not configured for this product yet.",
-      );
+      if (sizes.length === 0) {
+        alert("Sizes are not configured for this product yet.");
 
-      return;
-    }
+        return;
+      }
 
-    if (!size) {
-      alert(
-        "Please select a size first.",
-      );
+      if (!size) {
+        alert("Please select a size first.");
 
-      return;
-    }
+        return;
+      }
 
-    if (quantity <= 0) {
-      alert(
-        "Please select quantity first.",
-      );
+      if (quantity <= 0) {
+        alert("Please select quantity first.");
 
-      return;
-    }
+        return;
+      }
 
-    /* ================================================
+      /* ================================================
        CART ID
     ================================================ */
 
-    let cartId =
-      localStorage.getItem(
-        "axiee-cart-id",
-      );
+      let cartId = localStorage.getItem("axiee-cart-id");
 
-    if (!cartId) {
-      cartId =
-        crypto.randomUUID();
+      if (!cartId) {
+        cartId = createSafeUUID();
 
-      localStorage.setItem(
-        "axiee-cart-id",
-        cartId,
-      );
-    }
+        localStorage.setItem("axiee-cart-id", cartId);
+      }
 
-    /* ================================================
+      /* ================================================
        PRODUCT IMAGE
     ================================================ */
 
-    const productImage =
-      getCartProductImage(product);
+      const productImage = getCartProductImage(product);
 
-    console.log(
-      "🛒 ADDING TO CART:",
-      {
+      console.log("🛒 ADDING TO CART:", {
         productId,
         name: product?.name,
         image: productImage,
-        imageFiles:
-          product?.imageFiles,
-        images:
-          product?.images,
-        mainImage:
-          product?.mainImage,
-        originalImage:
-          product?.image,
-      },
-    );
+        imageFiles: product?.imageFiles,
+        images: product?.images,
+        mainImage: product?.mainImage,
+        originalImage: product?.image,
+      });
 
-    /* ================================================
+      /* ================================================
        SEND TO BACKEND
     ================================================ */
 
-    const response = await fetch(
-      `${API_BASE}/api/cart/add`,
-      {
+      const response = await fetch(`${API_BASE}/api/cart/add`, {
         method: "POST",
 
         headers: {
-          "Content-Type":
-            "application/json",
+          "Content-Type": "application/json",
+
+          Accept: "application/json",
         },
 
         body: JSON.stringify({
@@ -3041,35 +3067,21 @@ const addToCart = async (product) => {
 
           quantity,
 
-          name:
-            product?.name ||
-            "AXIEE Product",
+          name: product?.name || "AXIEE Product",
 
-          price: Number(
-            product?.price || 0,
-          ),
+          price: Number(product?.price || 0),
 
-          image:
-            productImage,
+          image: productImage,
 
-          category:
-            product?.category ||
-            category ||
-            "",
+          category: product?.category || category || "",
         }),
-      },
-    );
+      });
 
-    /* ================================================
+      /* ================================================
        RESPONSE
     ================================================ */
 
-    const data =
-      await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Unable to add to cart");
-      }
+      const data = await readApiResponse(response, "Add to cart");
 
       console.log("✅ CART SAVED:", data.cart);
 
@@ -3105,44 +3117,29 @@ const addToCart = async (product) => {
         }),
       );
 
-    /* ================================================
+      /* ================================================
        SUCCESS TOAST
     ================================================ */
 
-    setCartToast({
-      name:
-        product?.name ||
-        "AXIEE Product",
+      setCartToast({
+        name: product?.name || "AXIEE Product",
 
-      size,
+        size,
 
-      quantity,
-    });
+        quantity,
+      });
 
-    setAddedProductId(
-      productId,
-    );
+      setAddedProductId(productId);
 
-    window.setTimeout(() => {
-      setAddedProductId(
-        (current) =>
-          current === productId
-            ? ""
-            : current,
-      );
-    }, 1400);
-  } catch (error) {
-    console.error(
-      "❌ Add to cart error:",
-      error,
-    );
+      window.setTimeout(() => {
+        setAddedProductId((current) => (current === productId ? "" : current));
+      }, 1400);
+    } catch (error) {
+      console.error("❌ Add to cart error:", error);
 
-    alert(
-      error?.message ||
-        "Unable to add to cart",
-    );
-  }
-};
+      alert(error?.message || "Unable to add to cart");
+    }
+  };
 
   /* =======================================================
      BUY NOW

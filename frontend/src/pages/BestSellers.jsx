@@ -1018,7 +1018,7 @@ const peopleReelStyles = `
   inset: 0;
   z-index: 1;
   opacity: 0;
-  transform: scale(1.045);
+  transform: scale(1);
   pointer-events: none;
 }
 
@@ -1027,7 +1027,7 @@ const peopleReelStyles = `
 .best-product-card:hover
 .best-image-main {
   opacity: 0;
-  transform: scale(1.035);
+  transform: scale(1);
 }
 
 /* Second image appears */
@@ -1147,6 +1147,63 @@ const peopleReelStyles = `
       1fr;
   }
 }
+
+/* =========================================================
+   FINAL BEST SELLER PRODUCT IMAGE FIX
+   Full model/product visible on every screen size
+========================================================= */
+
+.best-product-image {
+  overflow: hidden;
+  background: #f0f1f2;
+}
+
+.best-product-image img,
+.best-product-image .best-image-main,
+.best-product-image .best-image-hover {
+  width: 100% !important;
+  height: 100% !important;
+
+  object-fit: contain !important;
+  object-position: center top !important;
+
+  transform: scale(1) !important;
+  transform-origin: center top !important;
+}
+
+.best-product-card:hover .best-image-main,
+.best-product-card:hover .best-image-hover {
+  transform: scale(1) !important;
+}
+
+@media (max-width: 1250px) {
+  .best-product-image img,
+  .best-product-image .best-image-main,
+  .best-product-image .best-image-hover {
+    object-fit: contain !important;
+    object-position: center top !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .best-product-image img,
+  .best-product-image .best-image-main,
+  .best-product-image .best-image-hover {
+    object-fit: contain !important;
+    object-position: center top !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .best-product-image img,
+  .best-product-image .best-image-main,
+  .best-product-image .best-image-hover {
+    object-fit: contain !important;
+    object-position: center top !important;
+    transform: none !important;
+  }
+}
+
 `;
 
 /* =========================================================

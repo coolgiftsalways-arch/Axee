@@ -17,6 +17,21 @@ const sizeSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+
+    /*
+      Manual selling switch for this exact size.
+
+      Example:
+      size: "M"
+      stock: 6
+      isOutOfStock: true
+
+      The physical stock stays 6, but the website can disable M.
+    */
+    isOutOfStock: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     _id: false,
@@ -59,8 +74,6 @@ const productSchema = new mongoose.Schema(
   {
     /* =====================================================
        SKU
-
-       Used for bulk imports and duplicate detection.
     ===================================================== */
 
     sku: {
@@ -118,8 +131,7 @@ const productSchema = new mongoose.Schema(
     },
 
     /* =====================================================
-       NEW STANDARD IMAGE ARRAY
-
+       STANDARD IMAGE ARRAY
        First image = website main image.
     ===================================================== */
 
@@ -187,6 +199,12 @@ const productSchema = new mongoose.Schema(
       default: "UNISEX",
     },
 
+    /*
+      Physical stock total.
+
+      This still counts stock numbers even when a size is manually
+      marked Out of Stock, so you do not lose your inventory count.
+    */
     totalStock: {
       type: Number,
       default: 0,
@@ -199,6 +217,31 @@ const productSchema = new mongoose.Schema(
     },
 
     bestSeller: {
+      type: Boolean,
+      default: false,
+    },
+
+    /*
+      Product visibility:
+      false = hidden/inactive
+    */
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+
+    /*
+      Product-level manual selling switch.
+
+      This is separate from isActive.
+
+      So a product can be:
+      Active = true
+      Out of Stock = true
+
+      That means it remains visible but cannot be purchased.
+    */
+    isOutOfStock: {
       type: Boolean,
       default: false,
     },
@@ -230,11 +273,6 @@ const productSchema = new mongoose.Schema(
     source: {
       type: String,
       default: "admin",
-    },
-
-    isActive: {
-      type: Boolean,
-      default: true,
     },
   },
   {
@@ -282,7 +320,7 @@ productSchema.pre("save", function (next) {
     this.slug = `${namePart}-${uniquePart}`;
   }
 
-  /* TOTAL STOCK */
+  /* TOTAL PHYSICAL STOCK */
 
   if (Array.isArray(this.sizes) && this.sizes.length > 0) {
     this.totalStock = this.sizes.reduce(
@@ -304,8 +342,11 @@ productSchema.pre("save", function (next) {
   next();
 });
 
-/* ========================================================= */
+/* =========================================================
+   MODEL
+========================================================= */
 
-const Product = mongoose.model("Product", productSchema);
+const Product =
+  mongoose.models.Product || mongoose.model("Product", productSchema);
 
 export default Product;

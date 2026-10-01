@@ -4,7 +4,51 @@ import { Edit3, Plus, Trash2, X } from "lucide-react";
 
 import "../AdminCss/admin-pages.css";
 
-const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+const API_URL = (
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? `http://${window.location.hostname}:5000` : "")
+).replace(/\/+$/, "");
+
+/* =========================================================
+   SAFE API RESPONSE PARSER
+
+   Prevents:
+   - Unexpected end of JSON input
+   - Unexpected token '<'
+   - Empty response bodies
+   - HTML being parsed as JSON
+========================================================= */
+
+const parseApiResponse = async (response, label = "Coupon API") => {
+  const text = await response.text();
+
+  if (!text) {
+    if (!response.ok) {
+      throw new Error(
+        `${label} failed (${response.status} ${response.statusText || ""})`.trim(),
+      );
+    }
+
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    console.error(`❌ ${label} returned non-JSON:`, {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url,
+      body: text.slice(0, 500),
+    });
+
+    throw new Error(
+      `${label} returned an invalid response (${response.status}).`,
+    );
+  }
+};
+
+console.log("🌐 COUPON API:", API_URL || "same-domain");
 
 const EMPTY_FORM = {
   code: "",
@@ -119,7 +163,7 @@ function Coupons() {
         },
       );
 
-      const data = await response.json();
+      const data = await parseApiResponse(response, "Coupon API");
 
       if (!response.ok) {
         throw new Error(data?.message || "Failed to load coupons.");
@@ -286,7 +330,7 @@ function Coupons() {
         },
       );
 
-      const data = await response.json();
+      const data = await parseApiResponse(response, "Coupon API");
 
       if (!response.ok) {
         throw new Error(data?.message || "Failed to save coupon.");
@@ -342,7 +386,7 @@ function Coupons() {
         },
       );
 
-      const data = await response.json();
+      const data = await parseApiResponse(response, "Coupon API");
 
       if (!response.ok) {
         throw new Error(data?.message || "Failed to update coupon status.");
@@ -384,7 +428,7 @@ function Coupons() {
         },
       );
 
-      const data = await response.json();
+      const data = await parseApiResponse(response, "Coupon API");
 
       if (!response.ok) {
         throw new Error(data?.message || "Failed to delete coupon.");

@@ -22,7 +22,50 @@ import "../styles/checkout.css";
    API
 ========================================================= */
 
-const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+const API_URL = (
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? `http://${window.location.hostname}:5000` : "")
+).replace(/\/+$/, "");
+
+/* =========================================================
+   SAFE API RESPONSE PARSER
+
+   Prevents:
+   - Unexpected end of JSON input
+   - Unexpected token '<'
+   - HTML being parsed as JSON
+========================================================= */
+
+const parseApiResponse = async (response, label = "API") => {
+  const text = await response.text();
+
+  if (!text) {
+    if (!response.ok) {
+      throw new Error(
+        `${label} failed (${response.status} ${response.statusText || ""})`.trim(),
+      );
+    }
+
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    console.error(`❌ ${label} returned non-JSON:`, {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url,
+      body: text.slice(0, 500),
+    });
+
+    throw new Error(
+      `${label} returned an invalid response (${response.status}).`,
+    );
+  }
+};
+
+console.log("🌐 CHECKOUT API:", API_URL || "same-domain");
 
 /* =========================================================
    FORM
@@ -332,7 +375,7 @@ function Checkout() {
           },
         });
 
-        const data = await response.json();
+        const data = await parseApiResponse(response, "Checkout API");
 
         if (!response.ok) {
           throw new Error(data?.message || "Could not load your bag.");
@@ -434,7 +477,7 @@ function Checkout() {
           },
         );
 
-        const data = await response.json();
+        const data = await parseApiResponse(response, "Checkout API");
 
         if (!response.ok) {
           throw new Error(data?.message || "Could not load coupons.");
@@ -541,7 +584,7 @@ function Checkout() {
         }),
       });
 
-      const data = await response.json();
+      const data = await parseApiResponse(response, "Checkout API");
 
       if (!response.ok || !data?.success) {
         throw new Error(data?.message || "Coupon could not be applied.");
@@ -623,7 +666,9 @@ function Checkout() {
         });
 
         if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
+          const data = await parseApiResponse(response, "Cart clear API").catch(
+            () => ({}),
+          );
 
           console.warn(
             "Backend cart clear failed:",
@@ -732,9 +777,14 @@ function Checkout() {
 
       /* KEY */
 
-      const keyResponse = await fetch(`${API_URL}/api/payments/key`);
+      const keyResponse = await fetch(`${API_URL}/api/payments/key`, {
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+        },
+      });
 
-      const keyData = await keyResponse.json();
+      const keyData = await parseApiResponse(keyResponse, "Razorpay key API");
 
       if (!keyResponse.ok || !keyData?.key) {
         throw new Error(keyData?.message || "Razorpay Key ID is missing.");
@@ -749,6 +799,7 @@ function Checkout() {
 
           headers: {
             "Content-Type": "application/json",
+            Accept: "application/json",
           },
 
           body: JSON.stringify({
@@ -767,7 +818,10 @@ function Checkout() {
         },
       );
 
-      const razorpayOrderData = await orderResponse.json();
+      const razorpayOrderData = await parseApiResponse(
+        orderResponse,
+        "Razorpay order API",
+      );
 
       if (!orderResponse.ok || !razorpayOrderData?.order?.id) {
         throw new Error(
@@ -819,6 +873,7 @@ function Checkout() {
 
                 headers: {
                   "Content-Type": "application/json",
+                  Accept: "application/json",
                 },
 
                 body: JSON.stringify({
@@ -835,7 +890,10 @@ function Checkout() {
               },
             );
 
-            const verifyData = await verifyResponse.json();
+            const verifyData = await parseApiResponse(
+              verifyResponse,
+              "Payment verify API",
+            );
 
             if (!verifyResponse.ok || !verifyData?.success) {
               throw new Error(
@@ -987,7 +1045,7 @@ function Checkout() {
         body: JSON.stringify(checkoutPayload),
       });
 
-      const data = await response.json();
+      const data = await parseApiResponse(response, "Checkout API");
 
       if (!response.ok) {
         throw new Error(data?.message || "Could not create your order.");

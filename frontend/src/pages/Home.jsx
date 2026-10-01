@@ -119,18 +119,25 @@ const API_BASE = getApiBase();
 ========================================================= */
 
 const getCatalogEndpoints = () => {
-  const endpoints = [];
+  /*
+    IMPORTANT:
+    /api/products is now the PRIMARY source because it returns the same
+    current MongoDB product data used by the category pages.
 
-  const mainEndpoint = `${API_BASE}/api/catalog/products`;
+    /api/catalog/products stays only as a legacy fallback.
+  */
 
-  endpoints.push(mainEndpoint);
+  const endpoints = [
+    `${API_BASE}/api/products`,
+    `${API_BASE}/api/catalog/products`,
+  ];
 
   /*
-      Fallback to same-origin
-      if configured API fails.
-    */
+    If an absolute/configured backend fails, also try same-origin.
+  */
 
-  if (API_BASE && mainEndpoint !== "/api/catalog/products") {
+  if (API_BASE) {
+    endpoints.push("/api/products");
     endpoints.push("/api/catalog/products");
   }
 
@@ -433,25 +440,21 @@ const getProductSizes = (product) => {
   }
 
   return product.sizes
-    .filter((item) => {
-      if (typeof item === "string") {
-        return true;
-      }
-
-      if (item?.stock !== undefined && item?.stock !== null) {
-        return Number(item.stock) > 0;
-      }
-
-      return true;
-    })
     .map((item) => {
       if (typeof item === "string") {
-        return item;
+        return item.trim();
       }
 
-      return item?.size;
+      if (item && typeof item === "object") {
+        return String(
+          item?.size || item?.label || item?.name || item?.value || "",
+        ).trim();
+      }
+
+      return "";
     })
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((size, index, array) => array.indexOf(size) === index);
 };
 
 /* =========================================================
@@ -465,23 +468,37 @@ const resolveImageValue = (imageValue) => {
 
   let value = imageValue;
 
-  /*
-    OBJECT IMAGE
+  /* =======================================================
+     IMAGE OBJECT
 
-    Example:
-    {
-      fileId: "..."
-    }
-  */
+     IMPORTANT:
+     Prefer the saved URL/src/path first.
+
+     Some old objects also contain an _id that is the object/document id,
+     not necessarily the real GridFS file id. Using _id first can create
+     a broken image URL.
+  ======================================================= */
 
   if (typeof value === "object") {
-    const fileId = value?.fileId || value?._id || value?.id;
+    const savedUrl =
+      value?.url ||
+      value?.src ||
+      value?.path ||
+      value?.image ||
+      value?.imageUrl ||
+      "";
+
+    if (savedUrl) {
+      return resolveImageValue(savedUrl);
+    }
+
+    const fileId = value?.fileId || value?.id || value?._id;
 
     if (fileId) {
       return `${API_BASE}/api/catalog/images/${String(fileId)}`;
     }
 
-    value = value?.url || value?.src || value?.path || "";
+    return "";
   }
 
   value = String(value).trim().replace(/\\/g, "/");
@@ -490,42 +507,70 @@ const resolveImageValue = (imageValue) => {
     return "";
   }
 
-  /*
-    OLD IMAGE ROUTE
-  */
+  /* =======================================================
+     RAW GRIDFS OBJECT ID
+  ======================================================= */
 
-  if (value.startsWith("/api/images/")) {
-    value = value.replace("/api/images/", "/api/catalog/images/");
+  if (/^[a-f\d]{24}$/i.test(value)) {
+    return `${API_BASE}/api/catalog/images/${value}`;
   }
 
-  if (value.startsWith("api/images/")) {
-    value = `/${value.replace("api/images/", "api/catalog/images/")}`;
+  /* =======================================================
+     OLD IMAGE ROUTE
+  ======================================================= */
+
+  if (value.includes("/api/images/")) {
+    const imageId = value.split("/api/images/")[1];
+
+    if (imageId) {
+      return `${API_BASE}/api/catalog/images/${imageId}`;
+    }
   }
 
-  /*
-    FULL HTTP URL
-  */
+  /* =======================================================
+     CURRENT GRIDFS ROUTE
+
+     Rebuild it with the current API_BASE even if MongoDB contains:
+     http://localhost:5000/api/catalog/images/...
+  ======================================================= */
+
+  if (value.includes("/api/catalog/images/")) {
+    const imageId = value.split("/api/catalog/images/")[1];
+
+    if (imageId) {
+      return `${API_BASE}/api/catalog/images/${imageId}`;
+    }
+  }
+
+  /* =======================================================
+     FULL HTTP / HTTPS URL
+  ======================================================= */
 
   if (value.startsWith("http://") || value.startsWith("https://")) {
     try {
       const parsed = new URL(value);
 
-      const imageIsLocal =
+      const imageIsLoopback =
         parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
 
-      const browserIsLocal = isLocalHostName(window.location.hostname);
-
       /*
-        Fix old MongoDB records
-        containing localhost image URL
-        when customer is on production.
+        CRITICAL MOBILE FIX:
+
+        When the website is opened from a phone using:
+        http://192.168.x.x:5178
+
+        an image saved as:
+        http://localhost:5000/...
+
+        must NOT stay localhost, because localhost on the phone means
+        the phone itself. Rebuild it using API_BASE.
       */
 
-      if (imageIsLocal && !browserIsLocal) {
+      if (imageIsLoopback) {
         return `${API_BASE}${parsed.pathname}${parsed.search}`;
       }
     } catch {
-      // Keep original image.
+      // Keep the original external URL if parsing fails.
     }
 
     return value;
@@ -535,9 +580,9 @@ const resolveImageValue = (imageValue) => {
     return value;
   }
 
-  /*
-    BACKEND PATH
-  */
+  /* =======================================================
+     BACKEND PATH
+  ======================================================= */
 
   if (value.startsWith("/api/") || value.startsWith("/uploads/")) {
     return `${API_BASE}${value}`;
@@ -547,9 +592,9 @@ const resolveImageValue = (imageValue) => {
     return `${API_BASE}/${value}`;
   }
 
-  /*
-    FRONTEND PUBLIC IMAGE
-  */
+  /* =======================================================
+     FRONTEND PUBLIC IMAGE
+  ======================================================= */
 
   return value.startsWith("/") ? value : `/${value}`;
 };
@@ -559,22 +604,68 @@ const resolveImageValue = (imageValue) => {
 ========================================================= */
 
 const getAllProductImages = (product) => {
-  const values = [
-    ...(Array.isArray(product?.imageFiles) ? product.imageFiles : []),
+  const resolvedImages = [];
 
-    ...(Array.isArray(product?.images) ? product.images : []),
+  const addImage = (value) => {
+    const resolved = resolveImageValue(value);
 
-    ...(Array.isArray(product?.imageIds) ? product.imageIds : []),
+    if (resolved && !resolvedImages.includes(resolved)) {
+      resolvedImages.push(resolved);
+    }
+  };
 
-    product?.mainImage,
-    product?.image,
-    product?.imageId,
-  ];
+  /* =======================================================
+     1. CURRENT ADMIN / MONGODB IMAGES ARE THE SOURCE OF TRUTH
 
-  return values
-    .map((image) => resolveImageValue(image))
-    .filter(Boolean)
-    .filter((image, index, array) => array.indexOf(image) === index);
+     The order saved in product.images is the order selected in Admin.
+     images[0] = MAIN
+     images[1] = hover / second image
+  ======================================================= */
+
+  if (Array.isArray(product?.images) && product.images.length > 0) {
+    product.images.forEach(addImage);
+
+    return resolvedImages;
+  }
+
+  /* =======================================================
+     2. SINGLE CURRENT IMAGE FIELDS
+     Only use when product.images is empty.
+  ======================================================= */
+
+  addImage(product?.mainImage);
+  addImage(product?.image);
+
+  if (resolvedImages.length > 0) {
+    return resolvedImages;
+  }
+
+  /* =======================================================
+     3. LEGACY imageFiles
+     Fallback only. Do NOT mix these before current images.
+  ======================================================= */
+
+  if (Array.isArray(product?.imageFiles)) {
+    [...product.imageFiles]
+      .sort((a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0))
+      .forEach(addImage);
+  }
+
+  if (resolvedImages.length > 0) {
+    return resolvedImages;
+  }
+
+  /* =======================================================
+     4. VERY OLD imageIds / imageId
+  ======================================================= */
+
+  if (Array.isArray(product?.imageIds)) {
+    product.imageIds.forEach(addImage);
+  }
+
+  addImage(product?.imageId);
+
+  return resolvedImages;
 };
 
 const getProductImage = (product) => {

@@ -1,130 +1,18 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Heart, ArrowRight, SlidersHorizontal, Search, X } from "lucide-react";
+import {
+  Heart,
+  ArrowRight,
+  SlidersHorizontal,
+  Search,
+  X,
+  Check,
+  ShoppingBag,
+} from "lucide-react";
 import gsap from "gsap";
 
 import { products } from "../data/products";
 import "../styles/shop.css";
-
-/* =========================================================
-   PRODUCT HOVER IMAGE
-   IMAGE 1 = DEFAULT
-   IMAGE 2 = HOVER
-========================================================= */
-
-function ProductHoverImage({ product }) {
-  const wrapRef = useRef(null);
-  const firstImageRef = useRef(null);
-  const secondImageRef = useRef(null);
-
-  const productImages = useMemo(() => {
-    const list = [];
-
-    if (Array.isArray(product?.images)) {
-      product.images.forEach((image) => {
-        if (image && !list.includes(image)) {
-          list.push(image);
-        }
-      });
-    }
-
-    if (product?.image && !list.includes(product.image)) {
-      list.unshift(product.image);
-    }
-
-    return list.filter(Boolean);
-  }, [product]);
-
-  const firstImage = productImages[0] || "";
-  const secondImage = productImages[1] || firstImage;
-  const hasSecondImage = Boolean(productImages[1]);
-
-  const handleMouseEnter = () => {
-    if (!hasSecondImage) return;
-
-    gsap.killTweensOf([firstImageRef.current, secondImageRef.current]);
-
-    gsap.to(firstImageRef.current, {
-      opacity: 0,
-      scale: 1.07,
-      duration: 0.38,
-      ease: "power2.out",
-    });
-
-    gsap.fromTo(
-      secondImageRef.current,
-      {
-        opacity: 0,
-        scale: 1.05,
-      },
-      {
-        opacity: 1,
-        scale: 1,
-        duration: 0.5,
-        ease: "power3.out",
-      },
-    );
-  };
-
-  const handleMouseLeave = () => {
-    if (!hasSecondImage) return;
-
-    gsap.killTweensOf([firstImageRef.current, secondImageRef.current]);
-
-    gsap.to(secondImageRef.current, {
-      opacity: 0,
-      scale: 1.05,
-      duration: 0.32,
-      ease: "power2.out",
-    });
-
-    gsap.to(firstImageRef.current, {
-      opacity: 1,
-      scale: 1,
-      duration: 0.48,
-      ease: "power3.out",
-    });
-  };
-
-  if (!firstImage) {
-    return (
-      <div className="shop-product-image-placeholder">
-        <span>AXIEE</span>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      ref={wrapRef}
-      className="shop-product-image-stage"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      <img
-        ref={firstImageRef}
-        src={firstImage}
-        alt={product?.name || "AXIEE product"}
-        className="shop-product-image shop-product-image-first"
-        draggable="false"
-      />
-
-      {hasSecondImage && (
-        <img
-          ref={secondImageRef}
-          src={secondImage}
-          alt={`${product?.name || "AXIEE product"} alternate`}
-          className="shop-product-image shop-product-image-second"
-          draggable="false"
-        />
-      )}
-
-      {hasSecondImage && (
-        <span className="shop-hover-image-label">02 / HOVER</span>
-      )}
-    </div>
-  );
-}
 
 /* =========================================================
    CATEGORY VISUAL
@@ -1888,6 +1776,759 @@ function CategoryVisual({ type }) {
 }
 
 /* =========================================================
+   PRODUCT CARD HOVER IMAGE
+   Image 1 = normal
+   Image 2 = mouse hover
+========================================================= */
+
+const API_BASE = (
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? `http://${window.location.hostname}:5000` : "")
+).replace(/\/+$/, "");
+
+const readApiResponse = async (response, label = "API") => {
+  const text = await response.text();
+
+  let data = {};
+
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      console.error(`❌ ${label} returned invalid JSON:`, {
+        status: response.status,
+        statusText: response.statusText,
+        body: text,
+      });
+
+      throw new Error(
+        `${label} returned an invalid response (${response.status})`,
+      );
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      data?.message ||
+        `${label} failed (${response.status} ${response.statusText})`,
+    );
+  }
+
+  return data;
+};
+
+console.log("🌐 CategoryPage API:", API_BASE || "same-origin");
+
+const resolveProductImageUrl = (value) => {
+  if (!value) {
+    return "";
+  }
+
+  let rawValue = value;
+
+  /* =======================================================
+     SUPPORT IMAGE OBJECTS
+
+     Examples:
+     { url: "/api/catalog/images/..." }
+     { src: "/products/jeans.jpg" }
+     { path: "/product-images/jeans.jpg" }
+     { fileId: "MongoObjectId" }
+  ======================================================= */
+
+  if (typeof value === "object") {
+    rawValue =
+      value?.url ||
+      value?.src ||
+      value?.path ||
+      value?.image ||
+      value?.imageUrl ||
+      value?.location ||
+      "";
+
+    if (!rawValue) {
+      const fileId = value?.fileId || value?._id || value?.id;
+
+      if (fileId) {
+        return `${API_BASE}/api/catalog/images/${String(fileId)}`;
+      }
+    }
+  }
+
+  if (!rawValue) {
+    return "";
+  }
+
+  const url = String(rawValue).trim();
+
+  if (!url) {
+    return "";
+  }
+
+  /* =======================================================
+     FIX OLD ABSOLUTE GRIDFS URLS
+
+     Important:
+     MongoDB may contain an old value like:
+
+     http://localhost:5000/api/catalog/images/OBJECT_ID
+
+     On the live website localhost points to the visitor's
+     own computer, so rebuild it with the current API_BASE.
+  ======================================================= */
+
+  const currentGridFsMatch = url.match(
+    /\/api\/catalog\/images\/([a-f\d]{24})/i,
+  );
+
+  if (currentGridFsMatch?.[1]) {
+    return `${API_BASE}/api/catalog/images/${currentGridFsMatch[1]}`;
+  }
+
+  /* =======================================================
+     FIX OLD GRIDFS ROUTE
+
+     /api/images/OBJECT_ID
+     http://localhost:5000/api/images/OBJECT_ID
+  ======================================================= */
+
+  const oldGridFsMatch = url.match(/\/api\/images\/([a-f\d]{24})/i);
+
+  if (oldGridFsMatch?.[1]) {
+    return `${API_BASE}/api/catalog/images/${oldGridFsMatch[1]}`;
+  }
+
+  /* =======================================================
+     CURRENT BACKEND API URL
+  ======================================================= */
+
+  if (url.startsWith("/api/")) {
+    return `${API_BASE}${url}`;
+  }
+
+  if (url.startsWith("api/")) {
+    return `${API_BASE}/${url}`;
+  }
+
+  /* =======================================================
+     STATIC HOSTINGER IMAGE
+  ======================================================= */
+
+  if (url.startsWith("product-images/")) {
+    return `/${url}`;
+  }
+
+  /* =======================================================
+     EXTERNAL IMAGE URL
+  ======================================================= */
+
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+
+  /* =======================================================
+     VITE /PUBLIC IMAGE
+     Example: /products/track-1.jpg
+  ======================================================= */
+
+  return url;
+};
+
+function ProductHoverImage({ product }) {
+  const stageRef = useRef(null);
+  const firstImageRef = useRef(null);
+  const secondImageRef = useRef(null);
+  const sweepRef = useRef(null);
+  const labelRef = useRef(null);
+
+  const productImages = useMemo(() => {
+    const list = [];
+
+    const addImage = (value) => {
+      const resolved = resolveProductImageUrl(value);
+
+      if (resolved && !list.includes(resolved)) {
+        list.push(resolved);
+      }
+    };
+
+    /* =========================================================
+       1. NEW HOSTINGER / BACKEND IMAGES FIRST
+    ========================================================= */
+
+    if (Array.isArray(product?.images)) {
+      product.images.forEach(addImage);
+    }
+
+    /* =========================================================
+       2. SINGLE IMAGE FALLBACKS
+    ========================================================= */
+
+    addImage(product?.mainImage);
+    addImage(product?.image);
+
+    /* =========================================================
+       3. OLD GRIDFS ONLY AS LAST FALLBACK
+    ========================================================= */
+
+    if (list.length === 0 && Array.isArray(product?.imageFiles)) {
+      [...product.imageFiles]
+        .sort((a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0))
+        .forEach((item) => {
+          /*
+            Prefer saved URL first.
+          */
+
+          if (item?.url) {
+            addImage(item.url);
+            return;
+          }
+
+          /*
+            Old MongoDB GridFS file ID fallback.
+          */
+
+          const fileId = item?.fileId || item?._id || item?.id;
+
+          if (fileId) {
+            addImage(`${API_BASE}/api/catalog/images/${String(fileId)}`);
+          }
+        });
+    }
+
+    return list;
+  }, [product]);
+
+  const firstImage = productImages[0] || "";
+  const secondImage = productImages[1] || "";
+  const hasSecondImage = Boolean(secondImage);
+
+  const stopAnimations = () => {
+    gsap.killTweensOf([
+      stageRef.current,
+      firstImageRef.current,
+      secondImageRef.current,
+      sweepRef.current,
+      labelRef.current,
+    ]);
+  };
+
+  const handleMouseEnter = () => {
+    if (!hasSecondImage) return;
+
+    stopAnimations();
+
+    gsap.set(secondImageRef.current, {
+      opacity: 0,
+      scale: 1.035,
+      xPercent: 3,
+      filter: "brightness(0.9) contrast(1.05) saturate(0.95)",
+    });
+
+    gsap.set(sweepRef.current, {
+      xPercent: -140,
+      opacity: 0,
+    });
+
+    gsap.set(labelRef.current, {
+      opacity: 0,
+      y: 7,
+    });
+
+    const tl = gsap.timeline({ defaults: { overwrite: "auto" } });
+
+    // Fast, obvious image change.
+    tl.to(
+      firstImageRef.current,
+      {
+        opacity: 0,
+        scale: 1.025,
+        xPercent: -1.5,
+        duration: 0.16,
+        ease: "power2.out",
+      },
+      0,
+    );
+
+    tl.to(
+      secondImageRef.current,
+      {
+        opacity: 1,
+        scale: 1,
+        xPercent: 0,
+        filter: "brightness(1) contrast(1.03) saturate(1)",
+        duration: 0.28,
+        ease: "power3.out",
+      },
+      0.03,
+    );
+
+    // Quick Awwwards-style light sweep.
+    tl.fromTo(
+      sweepRef.current,
+      {
+        xPercent: -140,
+        opacity: 0,
+      },
+      {
+        xPercent: 140,
+        opacity: 0.8,
+        duration: 0.3,
+        ease: "power2.inOut",
+      },
+      0.02,
+    );
+
+    tl.to(
+      sweepRef.current,
+      {
+        opacity: 0,
+        duration: 0.08,
+      },
+      0.24,
+    );
+
+    tl.to(
+      labelRef.current,
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.18,
+        ease: "power2.out",
+      },
+      0.1,
+    );
+
+    tl.to(
+      stageRef.current,
+      {
+        scale: 1.006,
+        duration: 0.22,
+        ease: "power2.out",
+      },
+      0,
+    );
+  };
+
+  const handleMouseMove = (event) => {
+    if (!stageRef.current) return;
+
+    const rect = stageRef.current.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width - 0.5;
+    const y = (event.clientY - rect.top) / rect.height - 0.5;
+
+    // Very small parallax: premium but not confusing.
+    gsap.to(stageRef.current, {
+      rotateY: x * 1.4,
+      rotateX: y * -1.1,
+      transformPerspective: 1000,
+      duration: 0.22,
+      ease: "power2.out",
+      overwrite: "auto",
+    });
+
+    if (hasSecondImage) {
+      gsap.to(secondImageRef.current, {
+        xPercent: x * 0.8,
+        yPercent: y * 0.65,
+        duration: 0.22,
+        ease: "power2.out",
+        overwrite: "auto",
+      });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    stopAnimations();
+
+    if (!hasSecondImage) {
+      gsap.to(stageRef.current, {
+        rotateX: 0,
+        rotateY: 0,
+        scale: 1,
+        duration: 0.22,
+        ease: "power2.out",
+      });
+      return;
+    }
+
+    const tl = gsap.timeline({ defaults: { overwrite: "auto" } });
+
+    tl.to(
+      labelRef.current,
+      {
+        opacity: 0,
+        y: 5,
+        duration: 0.1,
+        ease: "power1.in",
+      },
+      0,
+    );
+
+    tl.to(
+      secondImageRef.current,
+      {
+        opacity: 0,
+        scale: 1.02,
+        xPercent: 1.5,
+        yPercent: 0,
+        duration: 0.16,
+        ease: "power2.in",
+      },
+      0,
+    );
+
+    tl.to(
+      firstImageRef.current,
+      {
+        opacity: 1,
+        scale: 1,
+        xPercent: 0,
+        yPercent: 0,
+        filter: "brightness(0.88) contrast(1.07) saturate(0.88)",
+        duration: 0.24,
+        ease: "power3.out",
+      },
+      0.03,
+    );
+
+    tl.to(
+      stageRef.current,
+      {
+        rotateX: 0,
+        rotateY: 0,
+        scale: 1,
+        duration: 0.2,
+        ease: "power2.out",
+      },
+      0,
+    );
+  };
+
+  if (!firstImage) {
+    return (
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          display: "grid",
+          placeItems: "center",
+          color: "rgba(255,255,255,0.18)",
+          fontSize: "10px",
+          letterSpacing: "0.25em",
+        }}
+      >
+        AXIEE
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={stageRef}
+      className="shop-product-hover-stage"
+      onMouseEnter={handleMouseEnter}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        overflow: "hidden",
+        transformOrigin: "50% 50%",
+        transformStyle: "preserve-3d",
+        willChange: "transform",
+      }}
+    >
+      <img
+        ref={firstImageRef}
+        src={firstImage}
+        alt={product?.name || "AXIEE product"}
+        className="shop-product-image shop-product-image-first"
+        draggable="false"
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          opacity: 1,
+          zIndex: 1,
+          willChange: "transform, opacity, filter",
+        }}
+      />
+
+      {hasSecondImage && (
+        <img
+          ref={secondImageRef}
+          src={secondImage}
+          alt={`${product?.name || "AXIEE product"} alternate`}
+          className="shop-product-image shop-product-image-second"
+          draggable="false"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            opacity: 0,
+            zIndex: 2,
+            willChange: "transform, opacity, filter",
+          }}
+          onError={(event) => {
+            console.error("Second hover image failed:", secondImage);
+            event.currentTarget.style.display = "none";
+          }}
+        />
+      )}
+
+      {hasSecondImage && (
+        <span
+          ref={sweepRef}
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            zIndex: 3,
+            top: "-12%",
+            bottom: "-12%",
+            left: "42%",
+            width: "18%",
+            opacity: 0,
+            pointerEvents: "none",
+            transform: "skewX(-14deg)",
+            background:
+              "linear-gradient(90deg, transparent, rgba(255,255,255,0.20), rgba(199,255,19,0.20), transparent)",
+            filter: "blur(4px)",
+            mixBlendMode: "screen",
+          }}
+        />
+      )}
+
+      {hasSecondImage && (
+        <span
+          ref={labelRef}
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            zIndex: 4,
+            left: "12px",
+            bottom: "12px",
+            padding: "6px 8px",
+            border: "1px solid rgba(199,255,19,0.45)",
+            background: "rgba(0,0,0,0.46)",
+            color: "#c7ff13",
+            fontSize: "6px",
+            letterSpacing: "0.16em",
+            opacity: 0,
+            pointerEvents: "none",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          02 / {String(productImages.length).padStart(2, "0")}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/* =========================================================
+   PREMIUM CART TOAST
+========================================================= */
+
+function CartAddedToast({ toast, setToast }) {
+  const toastRef = useRef(null);
+  const progressRef = useRef(null);
+
+  useEffect(() => {
+    if (!toast || !toastRef.current) return undefined;
+
+    const toastEl = toastRef.current;
+    const progressEl = progressRef.current;
+
+    gsap.killTweensOf([toastEl, progressEl]);
+
+    const tl = gsap.timeline();
+
+    tl.fromTo(
+      toastEl,
+      {
+        autoAlpha: 0,
+        y: 28,
+        scale: 0.96,
+        filter: "blur(8px)",
+      },
+      {
+        autoAlpha: 1,
+        y: 0,
+        scale: 1,
+        filter: "blur(0px)",
+        duration: 0.38,
+        ease: "power3.out",
+      },
+    );
+
+    if (progressEl) {
+      gsap.fromTo(
+        progressEl,
+        { scaleX: 1, transformOrigin: "left center" },
+        {
+          scaleX: 0,
+          duration: 2.6,
+          ease: "none",
+        },
+      );
+    }
+
+    const timer = window.setTimeout(() => {
+      gsap.to(toastEl, {
+        autoAlpha: 0,
+        y: 18,
+        scale: 0.98,
+        filter: "blur(6px)",
+        duration: 0.24,
+        ease: "power2.in",
+        onComplete: () => setToast(null),
+      });
+    }, 2600);
+
+    return () => {
+      window.clearTimeout(timer);
+      gsap.killTweensOf([toastEl, progressEl]);
+    };
+  }, [toast, setToast]);
+
+  if (!toast) return null;
+
+  return (
+    <div
+      ref={toastRef}
+      role="status"
+      aria-live="polite"
+      style={{
+        position: "fixed",
+        zIndex: 99999,
+        right: "clamp(14px, 2.2vw, 30px)",
+        bottom: "clamp(14px, 2.2vw, 30px)",
+        width: "min(390px, calc(100vw - 28px))",
+        overflow: "hidden",
+        border: "1px solid rgba(199,255,19,0.62)",
+        background: "rgba(5,5,5,0.94)",
+        boxShadow:
+          "0 18px 60px rgba(0,0,0,0.48), 0 0 32px rgba(199,255,19,0.08)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+        color: "#fff",
+        pointerEvents: "auto",
+      }}
+    >
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "46px minmax(0,1fr) auto",
+          alignItems: "center",
+          gap: "12px",
+          padding: "14px 14px 13px",
+        }}
+      >
+        <div
+          style={{
+            width: "46px",
+            height: "46px",
+            display: "grid",
+            placeItems: "center",
+            border: "1px solid rgba(199,255,19,0.24)",
+            background: "rgba(199,255,19,0.065)",
+            color: "#c7ff13",
+          }}
+        >
+          <ShoppingBag size={18} strokeWidth={1.6} />
+        </div>
+
+        <div style={{ minWidth: 0 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "7px",
+              marginBottom: "5px",
+              color: "#c7ff13",
+              fontSize: "7px",
+              fontWeight: 700,
+              letterSpacing: "0.2em",
+            }}
+          >
+            <Check size={12} strokeWidth={2.2} />
+            ADDED TO CART
+          </div>
+
+          <strong
+            style={{
+              display: "block",
+              overflow: "hidden",
+              color: "#fff",
+              fontSize: "12px",
+              fontWeight: 500,
+              lineHeight: 1.25,
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {toast.name}
+          </strong>
+
+          <span
+            style={{
+              display: "block",
+              marginTop: "5px",
+              color: "rgba(255,255,255,0.45)",
+              fontSize: "7px",
+              letterSpacing: "0.12em",
+            }}
+          >
+            SIZE {toast.size} · QTY {toast.quantity}
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setToast(null)}
+          aria-label="Close cart message"
+          style={{
+            width: "31px",
+            height: "31px",
+            display: "grid",
+            placeItems: "center",
+            border: "1px solid rgba(255,255,255,0.1)",
+            background: "transparent",
+            color: "rgba(255,255,255,0.55)",
+            cursor: "pointer",
+          }}
+        >
+          <X size={13} strokeWidth={1.5} />
+        </button>
+      </div>
+
+      <div
+        style={{
+          height: "2px",
+          background: "rgba(255,255,255,0.06)",
+        }}
+      >
+        <div
+          ref={progressRef}
+          style={{
+            width: "100%",
+            height: "100%",
+            background: "#c7ff13",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
    CATEGORY PAGE
 ========================================================= */
 
@@ -1911,6 +2552,17 @@ function CategoryPage({
 
   const [quantities, setQuantities] = useState({});
 
+  const [cartToast, setCartToast] = useState(null);
+
+  const [addedProductId, setAddedProductId] = useState("");
+
+  /*
+    Tracks product + size combinations that were successfully saved
+    to the backend cart from this page. After an item has been added,
+    the + / - controls will keep that backend cart item in sync.
+  */
+  const cartSyncedItemsRef = useRef(new Set());
+
   // If a category page passes products from MongoDB, use those.
   // Otherwise keep using the existing local products data for other categories.
   const usingExternalProducts = Array.isArray(externalProducts);
@@ -1932,7 +2584,14 @@ function CategoryPage({
   ======================================================= */
 
   const quickSearchOptions = {
-    "T-SHIRTS": ["WHITE", "BLACK", "RED", "OVERSIZED", "GRAPHIC"],
+    "T-SHIRTS": [
+      "ALL",
+      "HALF SLEEVE",
+      "FULL SLEEVE",
+      "OVERSIZED",
+      "GRAPHIC",
+      "SWEATSHIRT",
+    ],
 
     SHIRTS: ["WHITE", "BLACK", "BLUE", "OVERSIZED", "FORMAL"],
 
@@ -1953,7 +2612,7 @@ function CategoryPage({
 
   const getSearchPlaceholder = () => {
     if (category === "T-SHIRTS") {
-      return "SEARCH WHITE T-SHIRT, BLACK T-SHIRT, OVERSIZED...";
+      return "SEARCH HALF SLEEVE, FULL SLEEVE, OVERSIZED, GRAPHIC...";
     }
 
     if (category === "SHIRTS") {
@@ -1984,8 +2643,9 @@ function CategoryPage({
   ======================================================= */
 
   const categoryProducts = useMemo(() => {
-    // MongoDB products passed by TrackPants are already fetched for that category.
-    // Local/static products still use the old category filter.
+    // MongoDB category pages (like Track Pants) already pass only the
+    // products that belong on this page. Local category pages still
+    // use the original category filter from ../data/products.
     let result = usingExternalProducts
       ? [...sourceProducts]
       : sourceProducts.filter((product) => product.category === category);
@@ -1997,22 +2657,112 @@ function CategoryPage({
     if (searchValue) {
       const searchWords = searchValue.split(/\s+/);
 
+      const tshirtSearchAliases =
+        category === "T-SHIRTS"
+          ? {
+              "half sleeve": [
+                "half sleeve",
+                "half-sleeve",
+                "short sleeve",
+                "short-sleeve",
+              ],
+              "full sleeve": [
+                "full sleeve",
+                "full-sleeve",
+                "long sleeve",
+                "long-sleeve",
+              ],
+              oversized: ["oversized", "oversize"],
+              graphic: ["graphic", "printed", "print"],
+              sweatshirt: ["sweatshirt", "sweat shirt"],
+            }
+          : {};
+
+      const activeAliases = tshirtSearchAliases[searchValue];
+
       result = result.filter((product) => {
         const searchableText = [
           product.name,
           product.category,
+          product.subcategory,
+          product.subCategory,
+          product.productType,
+          product.type,
+          product.sleeve,
+          product.sleeveType,
           product.color,
           product.fit,
           product.style,
           product.tag,
           product.description,
 
-          ...(product.colors || []),
-          ...(product.keywords || []),
+          ...(Array.isArray(product.colors) ? product.colors : []),
+          ...(Array.isArray(product.keywords) ? product.keywords : []),
         ]
           .filter(Boolean)
           .join(" ")
           .toLowerCase();
+
+        /*
+         * T-SHIRT QUICK FILTERS
+         *
+         * Imported MongoDB products may not have a `sleeve` field yet.
+         * Since this page already receives only T-shirts, treat a regular
+         * T-shirt as HALF SLEEVE by default unless the product explicitly
+         * says it is full/long sleeve or a sweatshirt.
+         */
+        if (category === "T-SHIRTS") {
+          const hasAny = (values) =>
+            values.some((value) => searchableText.includes(value));
+
+          const isFullSleeve = hasAny([
+            "full sleeve",
+            "full-sleeve",
+            "long sleeve",
+            "long-sleeve",
+            "fullsleeve",
+            "longsleeve",
+          ]);
+
+          const isSweatshirt = hasAny([
+            "sweatshirt",
+            "sweat shirt",
+            "sweat-shirt",
+          ]);
+
+          if (searchValue === "half sleeve") {
+            // Most imported tee records don't have sleeve metadata.
+            // If it is a T-shirt and isn't explicitly full sleeve/sweatshirt,
+            // show it under HALF SLEEVE.
+            return !isFullSleeve && !isSweatshirt;
+          }
+
+          if (searchValue === "full sleeve") {
+            return isFullSleeve;
+          }
+
+          if (searchValue === "sweatshirt") {
+            return isSweatshirt;
+          }
+
+          if (searchValue === "oversized") {
+            return hasAny(["oversized", "oversize"]);
+          }
+
+          if (searchValue === "graphic") {
+            return hasAny([
+              "graphic",
+              "printed",
+              "print",
+              "printed tee",
+              "graphic tee",
+            ]);
+          }
+        }
+
+        if (activeAliases) {
+          return activeAliases.some((alias) => searchableText.includes(alias));
+        }
 
         return searchWords.every((word) => searchableText.includes(word));
       });
@@ -2068,60 +2818,375 @@ function CategoryPage({
      QUANTITY
   ======================================================= */
 
-  const getQuantity = (productId) => quantities[productId] || 1;
+  // Every card starts at quantity 0.
+  const getQuantity = (productId) => quantities[productId] ?? 0;
 
-  const changeQuantity = (productId, amount) => {
-    setQuantities((previous) => {
-      const currentQuantity = previous[productId] || 1;
-      const nextQuantity = Math.min(10, Math.max(1, currentQuantity + amount));
+  const normalizeCartSize = (value = "") => String(value).trim().toLowerCase();
 
-      return {
-        ...previous,
-        [productId]: nextQuantity,
-      };
-    });
+  const makeCartSyncKey = (productId, size) =>
+    `${String(productId)}::${normalizeCartSize(size)}`;
+
+  const findMatchingCartItem = (cart, productId, size) => {
+    const items = Array.isArray(cart?.items) ? cart.items : [];
+
+    return items.find(
+      (item) =>
+        String(
+          item?.productId || item?.product?._id || item?.product?.id || "",
+        ) === String(productId) &&
+        normalizeCartSize(item?.size) === normalizeCartSize(size),
+    );
   };
 
-  /* =======================================================
-     ADD TO CART
-  ======================================================= */
+  /*
+    If this product/size has already been added from this page,
+    keep the real MongoDB cart quantity in sync with the card controls.
 
-  const addToCart = (product) => {
-    const productId = getProductId(product);
-    const sizes = getProductSizes(product);
-    const size = selectedSizes[productId];
-    const quantity = getQuantity(productId);
+    2 -> 1 = PATCH cart item
+    1 -> 0 = DELETE cart item completely
+  */
+  const syncBackendCartQuantity = async (productId, size, nextQuantity) => {
+    const cartId = localStorage.getItem("axiee-cart-id");
 
-    if (sizes.length === 0) {
-      alert("Sizes are not configured for this product yet.");
-      return;
+    if (!cartId || !size) {
+      return null;
     }
 
-    if (!size) {
-      alert("Please select a size first.");
-      return;
+    const getResponse = await fetch(`${API_BASE}/api/cart/${cartId}`, {
+      cache: "no-store",
+    });
+
+    const getData = await readApiResponse(getResponse, "Load cart");
+
+    const currentCart = getData?.cart || getData || { items: [] };
+
+    const cartItem = findMatchingCartItem(currentCart, productId, size);
+
+    if (!cartItem?._id) {
+      return null;
     }
 
-    const cart = JSON.parse(localStorage.getItem("axiee-cart")) || [];
+    const itemId = String(cartItem._id);
 
-    const existingIndex = cart.findIndex(
-      (item) => String(item.id) === productId && item.size === size,
+    const response =
+      nextQuantity <= 0
+        ? await fetch(`${API_BASE}/api/cart/${cartId}/item/${itemId}`, {
+            method: "DELETE",
+            headers: {
+              Accept: "application/json",
+            },
+          })
+        : await fetch(`${API_BASE}/api/cart/${cartId}/item/${itemId}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({
+              quantity: nextQuantity,
+            }),
+          });
+
+    const data = await readApiResponse(
+      response,
+      nextQuantity <= 0 ? "Remove cart item" : "Update cart quantity",
     );
 
-    if (existingIndex !== -1) {
-      cart[existingIndex].quantity =
-        Number(cart[existingIndex].quantity || 1) + quantity;
-    } else {
-      cart.push({
-        ...product,
-        id: productId,
-        size,
-        quantity,
-      });
+    const updatedCart = data?.cart || data || { items: [] };
+
+    window.dispatchEvent(
+      new CustomEvent("axiee-cart-updated", {
+        detail: updatedCart,
+      }),
+    );
+
+    return updatedCart;
+  };
+
+  const changeQuantity = async (productId, amount) => {
+    const currentQuantity = getQuantity(productId);
+
+    const nextQuantity = Math.min(10, Math.max(0, currentQuantity + amount));
+
+    if (nextQuantity === currentQuantity) {
+      return;
     }
 
-    localStorage.setItem("axiee-cart", JSON.stringify(cart));
-    window.dispatchEvent(new Event("axiee-cart-updated"));
+    setQuantities((previous) => ({
+      ...previous,
+      [productId]: nextQuantity,
+    }));
+
+    const size = selectedSizes[productId];
+
+    if (!size) {
+      return;
+    }
+
+    const syncKey = makeCartSyncKey(productId, size);
+
+    /*
+      Before ADD TO CART has been pressed, + / - are only a selector.
+      After ADD TO CART succeeds, + / - update the real cart.
+    */
+    if (!cartSyncedItemsRef.current.has(syncKey)) {
+      return;
+    }
+
+    try {
+      const updatedCart = await syncBackendCartQuantity(
+        productId,
+        size,
+        nextQuantity,
+      );
+
+      if (nextQuantity <= 0) {
+        cartSyncedItemsRef.current.delete(syncKey);
+
+        setAddedProductId((current) => (current === productId ? "" : current));
+      } else if (!updatedCart) {
+        /*
+          The item disappeared from the backend cart somehow.
+          Stop treating this selector as cart-synced.
+        */
+        cartSyncedItemsRef.current.delete(syncKey);
+      }
+    } catch (error) {
+      console.error("❌ Cart quantity sync error:", error);
+
+      /*
+        Roll the visible selector back if the backend update failed,
+        so UI and cart do not show different quantities.
+      */
+      setQuantities((previous) => ({
+        ...previous,
+        [productId]: currentQuantity,
+      }));
+
+      alert(error.message || "Unable to update cart quantity.");
+    }
+  };
+
+  /* =========================================================
+   CART PRODUCT IMAGE
+   Hostinger images first, old GridFS only as fallback
+========================================================= */
+
+  const getCartProductImage = (product = {}) => {
+    /* 1. NEW HOSTINGER IMAGES */
+    if (Array.isArray(product?.images) && product.images.length > 0) {
+      const firstImage = product.images.find(Boolean);
+
+      if (typeof firstImage === "string") {
+        return resolveProductImageUrl(firstImage);
+      }
+
+      if (firstImage?.url) {
+        return resolveProductImageUrl(firstImage.url);
+      }
+
+      if (firstImage?.src) {
+        return resolveProductImageUrl(firstImage.src);
+      }
+    }
+
+    /* 2. MAIN IMAGE */
+    if (product?.mainImage) {
+      return resolveProductImageUrl(product.mainImage);
+    }
+
+    /* 3. SINGLE IMAGE */
+    if (product?.image) {
+      return resolveProductImageUrl(product.image);
+    }
+
+    /* 4. OLD GRIDFS / LEGACY FALLBACK */
+    if (Array.isArray(product?.imageFiles) && product.imageFiles.length > 0) {
+      const sortedFiles = [...product.imageFiles].sort(
+        (a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0),
+      );
+
+      const firstFile = sortedFiles[0];
+
+      if (typeof firstFile === "string") {
+        return resolveProductImageUrl(firstFile);
+      }
+
+      if (firstFile?.url) {
+        return resolveProductImageUrl(firstFile.url);
+      }
+
+      const fileId = firstFile?.fileId || firstFile?._id || firstFile?.id;
+
+      if (fileId) {
+        return `${API_BASE}/api/catalog/images/${String(fileId)}`;
+      }
+    }
+
+    return "";
+  };
+  /* =======================================================
+   ADD TO CART
+======================================================= */
+
+  const addToCart = async (product) => {
+    try {
+      /* ================================================
+       PRODUCT DETAILS
+    ================================================ */
+
+      const productId = getProductId(product);
+
+      const sizes = getProductSizes(product);
+
+      const size = selectedSizes[productId];
+
+      const quantity = getQuantity(productId);
+
+      /* ================================================
+       VALIDATION
+    ================================================ */
+
+      if (sizes.length === 0) {
+        alert("Sizes are not configured for this product yet.");
+
+        return;
+      }
+
+      if (!size) {
+        alert("Please select a size first.");
+
+        return;
+      }
+
+      if (quantity <= 0) {
+        alert("Please select quantity first.");
+
+        return;
+      }
+
+      /* ================================================
+       CART ID
+    ================================================ */
+
+      let cartId = localStorage.getItem("axiee-cart-id");
+
+      if (!cartId) {
+        cartId = crypto.randomUUID();
+
+        localStorage.setItem("axiee-cart-id", cartId);
+      }
+
+      /* ================================================
+       PRODUCT IMAGE
+    ================================================ */
+
+      const productImage = getCartProductImage(product);
+
+      console.log("🛒 ADDING TO CART:", {
+        productId,
+        name: product?.name,
+        image: productImage,
+        imageFiles: product?.imageFiles,
+        images: product?.images,
+        mainImage: product?.mainImage,
+        originalImage: product?.image,
+      });
+
+      /* ================================================
+       SEND TO BACKEND
+    ================================================ */
+
+      const response = await fetch(`${API_BASE}/api/cart/add`, {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+
+          Accept: "application/json",
+        },
+
+        body: JSON.stringify({
+          cartId,
+
+          productId,
+
+          size,
+
+          quantity,
+
+          name: product?.name || "AXIEE Product",
+
+          price: Number(product?.price || 0),
+
+          image: productImage,
+
+          category: product?.category || category || "",
+        }),
+      });
+
+      /* ================================================
+       RESPONSE
+    ================================================ */
+
+      const data = await readApiResponse(response, "Add to cart");
+
+      console.log("✅ CART SAVED:", data.cart);
+
+      const savedCart = data?.cart || {
+        items: [],
+      };
+
+      const savedItem = findMatchingCartItem(savedCart, productId, size);
+
+      /*
+        This product + size is now a real backend cart item.
+        From this point the + / - controls will PATCH / DELETE it.
+      */
+      if (savedItem?._id) {
+        const syncKey = makeCartSyncKey(productId, size);
+
+        cartSyncedItemsRef.current.add(syncKey);
+
+        const savedQuantity = Number(savedItem.quantity || quantity);
+
+        setQuantities((previous) => ({
+          ...previous,
+          [productId]: savedQuantity,
+        }));
+      }
+
+      /*
+        Tell Navbar / Cart that the backend cart changed.
+      */
+      window.dispatchEvent(
+        new CustomEvent("axiee-cart-updated", {
+          detail: savedCart,
+        }),
+      );
+
+      /* ================================================
+       SUCCESS TOAST
+    ================================================ */
+
+      setCartToast({
+        name: product?.name || "AXIEE Product",
+
+        size,
+
+        quantity,
+      });
+
+      setAddedProductId(productId);
+
+      window.setTimeout(() => {
+        setAddedProductId((current) => (current === productId ? "" : current));
+      }, 1400);
+    } catch (error) {
+      console.error("❌ Add to cart error:", error);
+
+      alert(error?.message || "Unable to add to cart");
+    }
   };
 
   /* =======================================================
@@ -2130,29 +3195,19 @@ function CategoryPage({
 
   const buyNow = (product) => {
     const productId = getProductId(product);
-    const sizes = getProductSizes(product);
-    const size = selectedSizes[productId];
-    const quantity = getQuantity(productId);
 
-    if (sizes.length === 0) {
-      alert("Sizes are not configured for this product yet.");
+    if (!productId) {
+      alert("Product ID is missing.");
       return;
     }
 
-    if (!size) {
-      alert("Please select a size first.");
-      return;
-    }
+    /*
+      Category/listing BUY NOW must first open Product Details.
+      The final BUY NOW from ProductDetails handles checkout.
+    */
+    localStorage.removeItem("axiee-buy-now");
 
-    const checkoutProduct = {
-      ...product,
-      id: productId,
-      size,
-      quantity,
-    };
-
-    localStorage.setItem("axiee-buy-now", JSON.stringify(checkoutProduct));
-    navigate("/checkout");
+    navigate(`/product/${productId}`);
   };
 
   /* =======================================================
@@ -2161,6 +3216,7 @@ function CategoryPage({
 
   return (
     <main className="shop-page">
+      <CartAddedToast toast={cartToast} setToast={setCartToast} />
       {/* ===================================================
           CATEGORY HERO
       =================================================== */}
@@ -2277,18 +3333,23 @@ function CategoryPage({
           <div className="category-quick-search">
             <span className="category-quick-title">QUICK SEARCH</span>
 
-            {quickSearch.map((option) => (
-              <button
-                type="button"
-                key={option}
-                className={
-                  search.toLowerCase() === option.toLowerCase() ? "active" : ""
-                }
-                onClick={() => setSearch(option.toLowerCase())}
-              >
-                {option}
-              </button>
-            ))}
+            {quickSearch.map((option) => {
+              const isAll = option === "ALL";
+              const isActive = isAll
+                ? search.trim() === ""
+                : search.trim().toLowerCase() === option.toLowerCase();
+
+              return (
+                <button
+                  type="button"
+                  key={option}
+                  className={isActive ? "active" : ""}
+                  onClick={() => setSearch(isAll ? "" : option.toLowerCase())}
+                >
+                  {option}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -2305,7 +3366,7 @@ function CategoryPage({
             <div className="category-no-results">
               <span>LOADING</span>
               <h3>LOADING PRODUCTS...</h3>
-              <p>FETCHING THE LATEST AXIEE PRODUCTS</p>
+              <p>CONNECTING TO AXIEE CATALOG</p>
             </div>
           )}
 
@@ -2327,7 +3388,7 @@ function CategoryPage({
                 FOR "{search}"
               </h3>
 
-              <p>TRY ANOTHER COLOUR, STYLE OR PRODUCT NAME</p>
+              <p>TRY ANOTHER STYLE OR PRODUCT NAME</p>
 
               <button type="button" onClick={() => setSearch("")}>
                 CLEAR SEARCH
@@ -2434,7 +3495,7 @@ function CategoryPage({
                           type="button"
                           className="shop-quantity-btn"
                           onClick={() => changeQuantity(productId, -1)}
-                          disabled={getQuantity(productId) <= 1}
+                          disabled={getQuantity(productId) <= 0}
                           aria-label={`Decrease ${product.name} quantity`}
                         >
                           −
@@ -2463,8 +3524,20 @@ function CategoryPage({
                         type="button"
                         className="shop-add-cart"
                         onClick={() => addToCart(product)}
+                        disabled={getQuantity(productId) <= 0}
+                        style={
+                          addedProductId === productId
+                            ? {
+                                background: "#c7ff13",
+                                borderColor: "#c7ff13",
+                                color: "#050505",
+                              }
+                            : undefined
+                        }
                       >
-                        ADD TO CART
+                        {addedProductId === productId
+                          ? "ADDED ✓"
+                          : "ADD TO CART"}
                       </button>
 
                       <button

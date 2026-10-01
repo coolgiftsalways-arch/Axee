@@ -1,6 +1,5 @@
 import dns from "node:dns";
 import path from "node:path";
-
 import { fileURLToPath } from "node:url";
 
 import express from "express";
@@ -15,19 +14,12 @@ import connectDB from "./db.js";
 ========================================================= */
 
 import productRoutes from "./routes/productRoutes.js";
-
 import cartRoutes from "./routes/cartRoutes.js";
-
 import catalogRoutes from "./routes/catalogRoutes.js";
-
 import categoryRoutes from "./routes/categoryRoutes.js";
-
 import orderRoutes from "./routes/orderRoutes.js";
-
 import adminAuthRoutes from "./routes/adminAuthRoutes.js";
-
 import paymentRoutes from "./routes/paymentRoutes.js";
-
 import couponRoutes from "./routes/couponRoutes.js";
 
 /* =========================================================
@@ -77,8 +69,7 @@ const app = express();
 ========================================================= */
 
 const productImagesPath =
-  process.env.PRODUCT_IMAGES_PATH ||
-  path.join(__dirname, "product-images");
+  process.env.PRODUCT_IMAGES_PATH || path.join(__dirname, "product-images");
 
 console.log("📸 Product images path:", productImagesPath);
 
@@ -86,8 +77,9 @@ app.use(
   "/product-images",
   express.static(productImagesPath, {
     maxAge: "7d",
+
     immutable: false,
-  })
+  }),
 );
 
 /* =========================================================
@@ -139,13 +131,30 @@ function isPrivateLocalOrigin(origin) {
 app.use(
   cors({
     origin(origin, callback) {
+      /*
+        Postman, curl,
+        backend-to-backend etc.
+      */
+
       if (!origin) {
         return callback(null, true);
       }
 
+      /*
+        Production domains
+      */
+
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
+
+      /*
+        Development:
+        localhost,
+        192.168.x.x,
+        10.x.x.x,
+        172.16-31.x.x
+      */
 
       if (
         process.env.NODE_ENV !== "production" &&
@@ -193,7 +202,7 @@ app.get(
   "/api/health",
 
   (_req, res) => {
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
 
       message: "UNBOUND API is running",
@@ -203,6 +212,30 @@ app.get(
       database:
         mongoose.connection.readyState === 1 ? "connected" : "not connected",
     });
+  },
+);
+
+/* =========================================================
+   CART DEBUG LOGGER
+========================================================= */
+
+/*
+  When Add to Cart
+  reaches backend you
+  should see:
+
+  🛒 CART API -> POST /api/cart/add
+
+  inside backend terminal.
+*/
+
+app.use(
+  "/api/cart",
+
+  (req, _res, next) => {
+    console.log(`🛒 CART API -> ${req.method} ${req.originalUrl}`);
+
+    next();
   },
 );
 
@@ -219,8 +252,6 @@ app.use("/api/catalog", catalogRoutes);
 app.use("/api/categories", categoryRoutes);
 
 app.use("/api/orders", orderRoutes);
-
-/* NEW */
 
 app.use("/api/coupons", couponRoutes);
 
@@ -240,14 +271,28 @@ app.use("/api/payments", paymentRoutes);
    API 404
 ========================================================= */
 
+/*
+  IMPORTANT:
+
+  API 404 must come
+  BEFORE React fallback.
+
+  This makes frontend receive
+  JSON instead of empty response.
+*/
+
 app.use(
   "/api",
 
-  (_req, res) => {
+  (req, res) => {
     return res.status(404).json({
       success: false,
 
-      message: "API route not found",
+      message: `API route not found: ${req.method} ${req.originalUrl}`,
+
+      method: req.method,
+
+      path: req.originalUrl,
     });
   },
 );
@@ -261,6 +306,16 @@ app.use(express.static(frontendDistPath));
 /* =========================================================
    REACT SPA
 ========================================================= */
+
+/*
+  Only GET requests
+  should be sent to
+  index.html.
+
+  POST / PATCH / DELETE
+  should never fall back
+  to React.
+*/
 
 app.use((req, res, next) => {
   if (req.method !== "GET") {
@@ -279,7 +334,7 @@ app.use((req, res, next) => {
 });
 
 /* =========================================================
-   ERROR
+   ERROR HANDLER
 ========================================================= */
 
 app.use((error, _req, res, next) => {
@@ -332,6 +387,11 @@ async function fixCartIndexes() {
       console.log("✅ Old userId_1 index removed");
     }
 
+    /*
+      Synchronize indexes
+      with Cart model.
+    */
+
     await Cart.syncIndexes();
 
     const updatedIndexes = await collection.indexes();
@@ -355,77 +415,108 @@ async function fixCartIndexes() {
 const PORT = process.env.PORT || 5000;
 
 /* =========================================================
-   START
+   START SERVER
 ========================================================= */
 
-const server = app.listen(
-  PORT,
+let server = null;
 
-  "0.0.0.0",
-
-  () => {
-    console.log("");
-
-    console.log("==============================================");
-
-    console.log(`✅ UNBOUND Server running on port ${PORT}`);
-
-    console.log(`✅ Environment: ${process.env.NODE_ENV || "development"}`);
-
-    console.log("");
-
-    console.log(`🌐 Frontend: http://localhost:${PORT}`);
-
-    console.log(`❤️ API Health: http://localhost:${PORT}/api/health`);
-
-    console.log("");
-
-    console.log("✅ Products: /api/products");
-
-    console.log("✅ Cart: /api/cart");
-
-    console.log("✅ Catalog: /api/catalog");
-
-    console.log("✅ Categories: /api/categories");
-
-    console.log("✅ Orders: /api/orders");
-
-    console.log("✅ Coupons: /api/coupons");
-
-    console.log("✅ Payments: /api/payments");
-
-    console.log("");
-
-    console.log(`📁 React build: ${frontendDistPath}`);
-
-    console.log("==============================================");
-  },
-);
-
-/* =========================================================
-   DATABASE
-========================================================= */
-
-async function initializeDatabase() {
+async function startServer() {
   try {
     console.log("🔌 Connecting to MongoDB...");
+
+    /*
+      IMPORTANT:
+
+      MongoDB connects
+      BEFORE Express starts
+      accepting requests.
+
+      This prevents cart /
+      checkout requests from
+      running while DB is
+      disconnected.
+    */
 
     await connectDB();
 
     console.log("✅ MongoDB connected");
 
+    /*
+      Fix old cart indexes
+      after connection.
+    */
+
     await fixCartIndexes();
+
+    /*
+      Start Express
+      only after DB is ready.
+    */
+
+    server = app.listen(
+      PORT,
+
+      "0.0.0.0",
+
+      () => {
+        console.log("");
+
+        console.log("==============================================");
+
+        console.log(`✅ UNBOUND Server running on port ${PORT}`);
+
+        console.log(`✅ Environment: ${process.env.NODE_ENV || "development"}`);
+
+        console.log("");
+
+        console.log(`🌐 Backend: http://localhost:${PORT}`);
+
+        console.log(`❤️ API Health: http://localhost:${PORT}/api/health`);
+
+        console.log("");
+
+        console.log("✅ Products: /api/products");
+
+        console.log("✅ Cart GET: GET /api/cart/:cartId");
+
+        console.log("✅ Cart ADD: POST /api/cart/add");
+
+        console.log("✅ Cart UPDATE: PATCH /api/cart/:cartId/item/:itemId");
+
+        console.log("✅ Cart REMOVE: DELETE /api/cart/:cartId/item/:itemId");
+
+        console.log("✅ Cart CLEAR: DELETE /api/cart/:cartId/clear");
+
+        console.log("✅ Catalog: /api/catalog");
+
+        console.log("✅ Categories: /api/categories");
+
+        console.log("✅ Orders: /api/orders");
+
+        console.log("✅ Coupons: /api/coupons");
+
+        console.log("✅ Payments: /api/payments");
+
+        console.log("");
+
+        console.log(`📁 React build: ${frontendDistPath}`);
+
+        console.log("==============================================");
+      },
+    );
   } catch (error) {
-    console.error("❌ MongoDB startup error:");
+    console.error("❌ Server startup failed:");
 
     console.error(error);
+
+    process.exit(1);
   }
 }
 
-initializeDatabase();
+startServer();
 
 /* =========================================================
-   MONGOOSE
+   MONGOOSE EVENTS
 ========================================================= */
 
 mongoose.connection.on(
@@ -459,7 +550,7 @@ mongoose.connection.on(
 async function shutdown(signal) {
   console.log(`⚠️ ${signal} received. Shutting down...`);
 
-  server.close(async () => {
+  const closeMongoAndExit = async () => {
     try {
       if (mongoose.connection.readyState !== 0) {
         await mongoose.connection.close();
@@ -469,8 +560,25 @@ async function shutdown(signal) {
     }
 
     process.exit(0);
-  });
+  };
+
+  /*
+    If Express server has
+    not started yet.
+  */
+
+  if (!server) {
+    await closeMongoAndExit();
+
+    return;
+  }
+
+  server.close(closeMongoAndExit);
 }
+
+/* =========================================================
+   PROCESS EVENTS
+========================================================= */
 
 process.on(
   "SIGTERM",

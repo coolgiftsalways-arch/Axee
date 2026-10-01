@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import "../AdminCss/admin-pages.css";
+import "../AdminCss/admin-product-stock.css";
 
 /* =========================================================
    API
@@ -46,6 +47,7 @@ const EMPTY_PRODUCT = {
   featured: false,
   bestSeller: false,
   isActive: true,
+  isOutOfStock: false,
 
   rating: "4.5",
   reviewCount: "0",
@@ -57,18 +59,22 @@ const EMPTY_PRODUCT = {
     {
       size: "S",
       stock: 0,
+      isOutOfStock: false,
     },
     {
       size: "M",
       stock: 0,
+      isOutOfStock: false,
     },
     {
       size: "L",
       stock: 0,
+      isOutOfStock: false,
     },
     {
       size: "XL",
       stock: 0,
+      isOutOfStock: false,
     },
   ],
 };
@@ -225,24 +231,48 @@ const getStock = (product) => {
 
 /* =========================================================
    STATUS
+
+   Product visibility and stock availability are separate.
+
+   Examples:
+   - Active + In Stock
+   - Active + Out of Stock
+   - Inactive + Out of Stock
 ========================================================= */
 
-const getStatus = (product) => {
-  if (product?.isActive === false) {
-    return "Inactive";
+const isSizeOutOfStock = (item) => {
+  return Boolean(item?.isOutOfStock) || safeNumber(item?.stock) <= 0;
+};
+
+const isProductOutOfStock = (product) => {
+  if (product?.isOutOfStock === true) {
+    return true;
   }
+
+  if (Array.isArray(product?.sizes) && product.sizes.length > 0) {
+    return product.sizes.every((item) => isSizeOutOfStock(item));
+  }
+
+  return getStock(product) <= 0;
+};
+
+const getProductStatuses = (product) => {
+  const visibility = product?.isActive === false ? "Inactive" : "Active";
 
   const stock = getStock(product);
 
-  if (stock <= 0) {
-    return "Out of Stock";
+  let inventory = "In Stock";
+
+  if (isProductOutOfStock(product)) {
+    inventory = "Out of Stock";
+  } else if (stock <= 15) {
+    inventory = "Low Stock";
   }
 
-  if (stock <= 15) {
-    return "Low Stock";
-  }
-
-  return "Active";
+  return {
+    visibility,
+    inventory,
+  };
 };
 
 /* =========================================================
@@ -283,6 +313,8 @@ const Products = () => {
   const [imageItems, setImageItems] = useState([]);
 
   const [saving, setSaving] = useState(false);
+
+  const [bulkUpdatingStock, setBulkUpdatingStock] = useState(false);
 
   /* =======================================================
      LOAD PRODUCTS
@@ -425,6 +457,8 @@ const Products = () => {
 
       isActive: product?.isActive !== false,
 
+      isOutOfStock: Boolean(product?.isOutOfStock),
+
       rating: product?.rating ?? 0,
 
       reviewCount: product?.reviewCount ?? 0,
@@ -440,6 +474,8 @@ const Products = () => {
             size: item?.size || "",
 
             stock: safeNumber(item?.stock),
+
+            isOutOfStock: Boolean(item?.isOutOfStock),
           }))
         : [],
     });
@@ -490,6 +526,340 @@ const Products = () => {
   };
 
   /* =======================================================
+     ACTIVE
+
+     When Active is switched ON:
+     - every existing size becomes stock 50
+     - every size becomes IN STOCK
+     - product-level Out of Stock becomes false
+
+     When Active is switched OFF:
+     - only visibility changes
+     - stock values are kept as they are
+  ======================================================= */
+
+  const handleActiveChange = (checked) => {
+    setForm((current) => {
+      if (!checked) {
+        return {
+          ...current,
+          isActive: false,
+        };
+      }
+
+      return {
+        ...current,
+        isActive: true,
+        isOutOfStock: false,
+
+        sizes: Array.isArray(current.sizes)
+          ? current.sizes.map((item) => ({
+              ...item,
+              stock: 50,
+              isOutOfStock: false,
+            }))
+          : [],
+      };
+    });
+  };
+
+  /* =======================================================
+     BULK DEFAULT SIZES
+
+     If an older/imported product has no saved sizes,
+     create sensible defaults so bulk stock still works.
+  ======================================================= */
+
+  const getBulkDefaultSizes = (product) => {
+    const categoryText = String(product?.category || "")
+      .trim()
+      .toLowerCase();
+
+    const nameText = String(product?.name || "")
+      .trim()
+      .toLowerCase();
+
+    const text = `${categoryText} ${nameText}`;
+
+    if (text.includes("jean") || text.includes("denim")) {
+      return ["28", "30", "32", "34", "36"];
+    }
+
+    return ["S", "M", "L", "XL"];
+  };
+
+  /* =======================================================
+     PRODUCT STOCK TOGGLE IN EDIT MODAL
+
+     OUT OF STOCK -> click:
+     - becomes IN STOCK
+     - every size becomes stock 50
+     - every size isOutOfStock = false
+
+     IN STOCK -> click:
+     - product becomes OUT OF STOCK
+     - every size is marked isOutOfStock = true
+     - physical stock number is kept
+  ======================================================= */
+
+  const handleProductStockToggle = () => {
+    setForm((current) => {
+      const currentSizes = Array.isArray(current?.sizes) ? current.sizes : [];
+
+      const currentlyOutOfStock =
+        Boolean(current?.isOutOfStock) ||
+        (currentSizes.length > 0 &&
+          currentSizes.every(
+            (item) =>
+              Boolean(item?.isOutOfStock) || safeNumber(item?.stock) <= 0,
+          ));
+
+      /* OUT -> IN */
+      if (currentlyOutOfStock) {
+        const sizeNames =
+          currentSizes.length > 0
+            ? currentSizes
+                .map((item) => String(item?.size || "").trim())
+                .filter(Boolean)
+            : getBulkDefaultSizes(current);
+
+        return {
+          ...current,
+
+          isOutOfStock: false,
+
+          sizes: [...new Set(sizeNames)].map((sizeName) => ({
+            size: sizeName,
+            stock: 50,
+            isOutOfStock: false,
+          })),
+        };
+      }
+
+      /* IN -> OUT */
+      return {
+        ...current,
+
+        isOutOfStock: true,
+
+        sizes: currentSizes.map((item) => ({
+          ...item,
+          isOutOfStock: true,
+        })),
+      };
+    });
+  };
+
+  /* =======================================================
+     BULK: SET CURRENTLY VISIBLE PRODUCTS IN STOCK
+
+     If category/search filters are active:
+     only those visible products are updated.
+
+     If ALL is selected with no search:
+     all products are updated.
+
+     Existing size names are preserved.
+     Every size gets:
+     - stock: 50
+     - isOutOfStock: false
+
+     If a product has no saved sizes:
+     - JEANS / DENIM => 28, 30, 32, 34, 36
+     - everything else => S, M, L, XL
+
+     Product becomes Active and product-level
+     Out of Stock is cleared.
+  ======================================================= */
+
+  const setVisibleProductsInStock = async () => {
+    if (!Array.isArray(visibleProducts) || visibleProducts.length === 0) {
+      alert("No products found to update.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Set ${visibleProducts.length} product(s) IN STOCK?\n\nEvery size will become stock 50.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setBulkUpdatingStock(true);
+
+      let successCount = 0;
+      let failedCount = 0;
+
+      for (const product of visibleProducts) {
+        const productId = product?._id || product?.id;
+
+        if (!productId) {
+          failedCount += 1;
+          continue;
+        }
+
+        const savedSizes = Array.isArray(product?.sizes)
+          ? product.sizes
+              .map((item) => String(item?.size || "").trim())
+              .filter(Boolean)
+          : [];
+
+        const sizeNames =
+          savedSizes.length > 0
+            ? [...new Set(savedSizes)]
+            : getBulkDefaultSizes(product);
+
+        const currentSizes = sizeNames.map((sizeName) => ({
+          size: sizeName,
+          stock: 50,
+          isOutOfStock: false,
+        }));
+
+        const data = new FormData();
+
+        data.append("isActive", "true");
+        data.append("isOutOfStock", "false");
+        data.append("sizes", JSON.stringify(currentSizes));
+
+        try {
+          const response = await fetch(
+            `${API_BASE}/api/products/${productId}`,
+            {
+              method: "PUT",
+              body: data,
+            },
+          );
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              result?.message ||
+                result?.error ||
+                `Could not update ${product?.name || "product"}.`,
+            );
+          }
+
+          successCount += 1;
+        } catch (productError) {
+          console.error(
+            "BULK STOCK UPDATE ERROR:",
+            product?.name,
+            productError,
+          );
+
+          failedCount += 1;
+        }
+      }
+
+      await loadProducts();
+
+      if (failedCount > 0) {
+        alert(
+          `${successCount} product(s) updated.\n${failedCount} product(s) failed.`,
+        );
+      } else {
+        alert(`${successCount} product(s) are now IN STOCK.`);
+      }
+    } catch (bulkError) {
+      console.error("BULK STOCK ERROR:", bulkError);
+
+      alert(bulkError?.message || "Bulk stock update failed.");
+    } finally {
+      setBulkUpdatingStock(false);
+    }
+  };
+
+  /* =======================================================
+     TABLE STATUS CLICK
+
+     Click OUT OF STOCK:
+     -> IN STOCK
+     -> all sizes stock 50
+
+     Click IN STOCK:
+     -> OUT OF STOCK
+     -> keeps physical quantities
+  ======================================================= */
+
+  const toggleProductInventoryStatus = async (product) => {
+    const productId = product?._id || product?.id;
+
+    if (!productId) {
+      return;
+    }
+
+    const currentlyOutOfStock = isProductOutOfStock(product);
+
+    const savedSizes = Array.isArray(product?.sizes)
+      ? product.sizes
+          .map((item) => ({
+            size: String(item?.size || "").trim(),
+            stock: Math.max(0, safeNumber(item?.stock)),
+            isOutOfStock: Boolean(item?.isOutOfStock),
+          }))
+          .filter((item) => item.size)
+      : [];
+
+    let nextSizes = [];
+
+    let nextOutOfStock = false;
+
+    if (currentlyOutOfStock) {
+      const sizeNames =
+        savedSizes.length > 0
+          ? savedSizes.map((item) => item.size)
+          : getBulkDefaultSizes(product);
+
+      nextSizes = [...new Set(sizeNames)].map((sizeName) => ({
+        size: sizeName,
+        stock: 50,
+        isOutOfStock: false,
+      }));
+
+      nextOutOfStock = false;
+    } else {
+      nextSizes = savedSizes.map((item) => ({
+        ...item,
+        isOutOfStock: true,
+      }));
+
+      nextOutOfStock = true;
+    }
+
+    try {
+      const data = new FormData();
+
+      data.append("isOutOfStock", String(nextOutOfStock));
+
+      data.append("sizes", JSON.stringify(nextSizes));
+
+      const response = await fetch(`${API_BASE}/api/products/${productId}`, {
+        method: "PUT",
+        body: data,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result?.message ||
+            result?.error ||
+            "Unable to update product stock status.",
+        );
+      }
+
+      await loadProducts();
+    } catch (statusError) {
+      console.error("PRODUCT STOCK STATUS ERROR:", statusError);
+
+      alert(statusError?.message || "Unable to update product stock status.");
+    }
+  };
+
+  /* =======================================================
      SIZES
   ======================================================= */
 
@@ -503,6 +873,7 @@ const Products = () => {
         {
           size: "",
           stock: 0,
+          isOutOfStock: false,
         },
       ],
     }));
@@ -518,7 +889,11 @@ const Products = () => {
               ...item,
 
               [field]:
-                field === "stock" ? Math.max(0, safeNumber(value)) : value,
+                field === "stock"
+                  ? Math.max(0, safeNumber(value))
+                  : field === "isOutOfStock"
+                    ? Boolean(value)
+                    : value,
             }
           : item,
       ),
@@ -666,6 +1041,8 @@ const Products = () => {
 
         isActive: String(form.isActive),
 
+        isOutOfStock: String(form.isOutOfStock),
+
         rating: form.rating,
 
         reviewCount: form.reviewCount,
@@ -810,6 +1187,24 @@ const Products = () => {
 
           <button
             type="button"
+            className="admin-bulk-stock-button"
+            disabled={bulkUpdatingStock || visibleProducts.length === 0}
+            onClick={setVisibleProductsInStock}
+            title={
+              category === "ALL" && !search.trim()
+                ? "Set all products to In Stock"
+                : "Set currently filtered products to In Stock"
+            }
+          >
+            <span className="admin-bulk-stock-dot" />
+
+            {bulkUpdatingStock
+              ? "UPDATING..."
+              : `SET ${visibleProducts.length} IN STOCK`}
+          </button>
+
+          <button
+            type="button"
             className="admin-primary-button"
             onClick={openCreate}
           >
@@ -902,7 +1297,7 @@ const Products = () => {
                 {visibleProducts.map((product, index) => {
                   const images = getProductImages(product);
 
-                  const status = getStatus(product);
+                  const statuses = getProductStatuses(product);
 
                   return (
                     <tr key={product?._id || product?.id}>
@@ -955,15 +1350,43 @@ const Products = () => {
                       {/* STATUS */}
 
                       <td>
-                        <span
-                          className={`admin-status ${
-                            status === "Active"
-                              ? "admin-status-active"
-                              : "admin-status-pending"
-                          }`}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            gap: "6px",
+                          }}
                         >
-                          {status}
-                        </span>
+                          <span
+                            className={`admin-status ${
+                              statuses.visibility === "Active"
+                                ? "admin-status-active"
+                                : "admin-status-pending"
+                            }`}
+                          >
+                            {statuses.visibility}
+                          </span>
+
+                          <button
+                            type="button"
+                            className={`admin-status admin-inventory-status-button ${
+                              statuses.inventory === "In Stock"
+                                ? "admin-status-active"
+                                : "admin-status-pending"
+                            }`}
+                            onClick={() =>
+                              toggleProductInventoryStatus(product)
+                            }
+                            title={
+                              statuses.inventory === "Out of Stock"
+                                ? "Click to make IN STOCK and set every size to 50"
+                                : "Click to mark product OUT OF STOCK"
+                            }
+                          >
+                            {statuses.inventory}
+                          </button>
+                        </div>
                       </td>
 
                       {/* ACTIONS */}
@@ -1334,7 +1757,8 @@ const Products = () => {
                     <h3>Sizes & Stock</h3>
 
                     <p>
-                      Total website stock is calculated from the size stock.
+                      Stock quantity and selling status can be controlled
+                      separately for every size.
                     </p>
                   </div>
 
@@ -1349,31 +1773,79 @@ const Products = () => {
                 </div>
 
                 <div className="admin-product-sizes">
-                  {form.sizes.map((size, index) => (
-                    <div key={index}>
-                      <input
-                        value={size.size}
-                        placeholder="Size"
-                        onChange={(event) =>
-                          updateSize(index, "size", event.target.value)
-                        }
-                      />
+                  {form.sizes.map((size, index) => {
+                    const manuallyOut = Boolean(size?.isOutOfStock);
+                    const noStock = safeNumber(size?.stock) <= 0;
+                    const shownOut = manuallyOut || noStock;
 
-                      <input
-                        type="number"
-                        min="0"
-                        value={size.stock}
-                        placeholder="Stock"
-                        onChange={(event) =>
-                          updateSize(index, "stock", event.target.value)
-                        }
-                      />
+                    return (
+                      <div className="admin-size-stock-row" key={index}>
+                        <div className="admin-size-stock-field">
+                          <span className="admin-size-stock-label">SIZE</span>
 
-                      <button type="button" onClick={() => removeSize(index)}>
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  ))}
+                          <input
+                            value={size.size}
+                            placeholder="Size"
+                            onChange={(event) =>
+                              updateSize(index, "size", event.target.value)
+                            }
+                          />
+                        </div>
+
+                        <div className="admin-size-stock-field">
+                          <span className="admin-size-stock-label">STOCK</span>
+
+                          <input
+                            type="number"
+                            min="0"
+                            value={size.stock}
+                            placeholder="Stock"
+                            onChange={(event) =>
+                              updateSize(index, "stock", event.target.value)
+                            }
+                          />
+                        </div>
+
+                        <div className="admin-size-stock-status-wrap">
+                          <span className="admin-size-stock-label">STATUS</span>
+
+                          <button
+                            type="button"
+                            className={`admin-size-stock-status ${
+                              shownOut
+                                ? "admin-size-stock-status-out"
+                                : "admin-size-stock-status-in"
+                            }`}
+                            onClick={() =>
+                              updateSize(
+                                index,
+                                "isOutOfStock",
+                                !Boolean(size?.isOutOfStock),
+                              )
+                            }
+                            title={
+                              manuallyOut
+                                ? "Click to make this size available"
+                                : "Click to mark this size Out of Stock"
+                            }
+                          >
+                            <span className="admin-size-stock-status-dot" />
+
+                            {shownOut ? "OUT OF STOCK" : "IN STOCK"}
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="admin-size-stock-delete"
+                          onClick={() => removeSize(index)}
+                          title="Remove size"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </section>
 
@@ -1388,11 +1860,46 @@ const Products = () => {
                       type="checkbox"
                       checked={form.isActive}
                       onChange={(event) =>
-                        setField("isActive", event.target.checked)
+                        handleActiveChange(event.target.checked)
                       }
                     />
                     Active
                   </label>
+
+                  <button
+                    type="button"
+                    className={`admin-product-stock-toggle ${
+                      form.isOutOfStock ||
+                      (Array.isArray(form.sizes) &&
+                        form.sizes.length > 0 &&
+                        form.sizes.every(
+                          (item) =>
+                            Boolean(item?.isOutOfStock) ||
+                            safeNumber(item?.stock) <= 0,
+                        ))
+                        ? "is-out"
+                        : "is-in"
+                    }`}
+                    onClick={handleProductStockToggle}
+                    title={
+                      form.isOutOfStock
+                        ? "Click to make product IN STOCK and set every size to 50"
+                        : "Click to mark product OUT OF STOCK"
+                    }
+                  >
+                    <span />
+
+                    {form.isOutOfStock ||
+                    (Array.isArray(form.sizes) &&
+                      form.sizes.length > 0 &&
+                      form.sizes.every(
+                        (item) =>
+                          Boolean(item?.isOutOfStock) ||
+                          safeNumber(item?.stock) <= 0,
+                      ))
+                      ? "OUT OF STOCK"
+                      : "IN STOCK"}
+                  </button>
 
                   <label>
                     <input

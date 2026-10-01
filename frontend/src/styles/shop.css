@@ -555,7 +555,7 @@
 
   width: 100%;
 
-  aspect-ratio: 0.88;
+  aspect-ratio: 4 / 5;
 
   overflow: hidden;
 
@@ -573,9 +573,11 @@
   width: 100%;
   height: 100%;
 
-  object-fit: cover;
+  object-fit: contain !important;
 
-  object-position: center;
+  object-position: center top !important;
+
+  transform-origin: center top;
 
   filter:
     brightness(0.88) contrast(1.07) saturate(0.88);
@@ -1667,10 +1669,10 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center;
+  object-fit: contain !important;
+  object-position: center top !important;
   will-change: transform, opacity;
-  transform-origin: center center;
+  transform-origin: center top;
 }
 
 .shop-product-image-first {
@@ -2070,4 +2072,173 @@
   .shop-size-chart-note {
     padding: 12px 16px 18px;
   }
+}
+
+/* =========================================================
+   MOBILE PRODUCT CARD FIX
+   1. Keep the full model/product visible.
+   2. Keep quantity - 0 + completely inside two-column cards.
+   3. Do not change desktop card sizing.
+========================================================= */
+
+@media (max-width: 600px) {
+  /* -------------------------------------------------------
+     IMAGE
+     The JSX no longer forces object-fit: cover inline.
+     On mobile we show the complete garment/model.
+  ------------------------------------------------------- */
+
+  .shop-product-image-box {
+    aspect-ratio: 0.78;
+    background: #d9d9d5;
+  }
+
+  .shop-product-hover-stage,
+  .shop-product-image-stage {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .shop-product-image,
+  .shop-product-hover-stage .shop-product-image,
+  .shop-product-image-stage .shop-product-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain !important;
+    object-position: center top !important;
+    transform-origin: center top;
+  }
+
+  /* Touch devices do not need desktop hover zoom/parallax. */
+  .shop-product-card:hover .shop-product-image {
+    transform: none;
+  }
+
+  /* -------------------------------------------------------
+     QUANTITY
+     A half-width mobile card is narrow. The previous
+     label + 98px counter + 12px gap could overflow.
+  ------------------------------------------------------- */
+
+  .shop-quantity-area {
+    width: 100%;
+    min-width: 0;
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 86px;
+    align-items: center;
+    gap: 5px;
+    overflow: hidden;
+  }
+
+  .shop-quantity-label {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    font-size: 6px;
+    letter-spacing: 0.11em;
+  }
+
+  .shop-quantity-counter {
+    width: 86px;
+    min-width: 86px;
+    max-width: 86px;
+    height: 34px;
+    display: grid;
+    grid-template-columns: 27px 32px 27px;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  .shop-quantity-btn {
+    width: 27px;
+    min-width: 0;
+    height: 32px;
+    padding: 0;
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .shop-quantity-number {
+    width: 32px;
+    min-width: 0;
+    height: 32px;
+    padding: 0;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 390px) {
+  .shop-products-section {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+
+  .shop-product-grid {
+    gap: 5px;
+  }
+
+  .shop-product-content {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+
+  .shop-quantity-area {
+    grid-template-columns: minmax(0, 1fr) 78px;
+    gap: 3px;
+  }
+
+  .shop-quantity-label {
+    font-size: 5.4px;
+    letter-spacing: 0.08em;
+  }
+
+  .shop-quantity-counter {
+    width: 78px;
+    min-width: 78px;
+    max-width: 78px;
+    grid-template-columns: 24px 30px 24px;
+  }
+
+  .shop-quantity-btn {
+    width: 24px;
+    font-size: 15px;
+  }
+
+  .shop-quantity-number {
+    width: 30px;
+  }
+}
+
+/* =========================================================
+   ALL SCREEN PRODUCT IMAGE SAFETY FIX
+   DESKTOP + TABLET + MOBILE
+
+   Never crop the model's head or the garment.
+========================================================= */
+
+.shop-product-image-box {
+  aspect-ratio: 4 / 5;
+  background: #d9d9d5;
+}
+
+.shop-product-hover-stage,
+.shop-product-image-stage {
+  overflow: hidden;
+}
+
+.shop-product-image,
+.shop-product-hover-stage .shop-product-image,
+.shop-product-image-stage .shop-product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain !important;
+  object-position: center top !important;
+  transform-origin: center top !important;
+}
+
+/* Do not let CSS hover zoom crop the top edge. */
+.shop-product-card:hover .shop-product-image {
+  transform: none !important;
 }
