@@ -1321,7 +1321,7 @@ function Checkout() {
                     name="email"
                     value={form.email}
                     onChange={handleChange}
-                    placeholder="you@example.com"
+                    placeholder="Enter email address"
                     autoComplete="email"
                   />
 
@@ -1422,7 +1422,7 @@ function Checkout() {
                       name="city"
                       value={form.city}
                       onChange={handleChange}
-                      placeholder="Mumbai"
+                      placeholder="City"
                       autoComplete="address-level2"
                     />
 
@@ -1475,7 +1475,7 @@ function Checkout() {
                       name="pincode"
                       value={form.pincode}
                       onChange={handleChange}
-                      placeholder="400001"
+                      placeholder="PIN code"
                       autoComplete="postal-code"
                     />
 

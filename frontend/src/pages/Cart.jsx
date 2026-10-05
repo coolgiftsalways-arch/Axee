@@ -281,28 +281,102 @@ const getProductId = (item) => {
    cart placeholder instead of leaving a blank white box.
 ========================================================= */
 
-function CartProductImage({ src, alt }) {
+function CartProductImage({ item, alt }) {
+  const productId = getProductId(item);
+
+  const initialSrc = getCartItemImage(item);
+
+  const [src, setSrc] = useState(initialSrc);
+
   const [failed, setFailed] = useState(false);
 
+  const [repairTried, setRepairTried] = useState(false);
+
   useEffect(() => {
+    setSrc(getCartItemImage(item));
     setFailed(false);
-  }, [src]);
+    setRepairTried(false);
+  }, [item]);
+
+  const tryLatestProductImage = async () => {
+    if (repairTried || !productId) {
+      return false;
+    }
+
+    setRepairTried(true);
+
+    try {
+      const response = await fetch(`${API_URL}/api/products/${productId}`, {
+        method: "GET",
+        cache: "no-store",
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      const data = await parseApiResponse(response);
+
+      if (!response.ok) {
+        return false;
+      }
+
+      const product =
+        data?.product || data?.data?.product || data?.data || data;
+
+      const latestImage = getCartItemImage({
+        product,
+      });
+
+      if (latestImage && latestImage !== src) {
+        setFailed(false);
+        setSrc(latestImage);
+
+        return true;
+      }
+    } catch (error) {
+      console.warn("⚠️ Could not repair cart image from product:", {
+        productId,
+        message: error?.message,
+      });
+    }
+
+    return false;
+  };
+
+  useEffect(() => {
+    if (!src && productId && !repairTried) {
+      tryLatestProductImage().then((repaired) => {
+        if (!repaired) {
+          setFailed(true);
+        }
+      });
+    }
+  }, [src, productId, repairTried]);
 
   if (!src || failed) {
-    return <div className="cart-image-empty">UNBOUND</div>;
+    /*
+      No UNBOUND placeholder.
+      Keep the image area clean on desktop, tablet and mobile.
+    */
+
+    return null;
   }
 
   return (
     <img
       src={src}
       alt={alt}
-      onError={() => {
+      onError={async () => {
         console.error("❌ CART IMAGE FAILED:", {
           alt,
           src,
         });
 
-        setFailed(true);
+        const repaired = await tryLatestProductImage();
+
+        if (!repaired) {
+          setFailed(true);
+        }
       }}
     />
   );
@@ -820,8 +894,6 @@ function Cart() {
           {items.map((item, index) => {
             const itemBusy = busyItemId === String(item._id);
 
-            const imageUrl = getCartItemImage(item);
-
             const productId = getProductId(item);
 
             return (
@@ -834,7 +906,7 @@ function Cart() {
                 </div>
 
                 <Link to={`/product/${productId}`} className="cart-item-image">
-                  <CartProductImage src={imageUrl} alt={item.name} />
+                  <CartProductImage item={item} alt={item.name} />
 
                   <span className="cart-image-tag">
                     VIEW PIECE

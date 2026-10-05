@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   Truck,
+  X,
 } from "lucide-react";
 
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -1299,6 +1300,12 @@ function ProductDetails() {
 
   const [activeImage, setActiveImage] = useState(0);
 
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+
+  const [viewerImage, setViewerImage] = useState(0);
+
+  const viewerTouchStartX = useRef(null);
+
   const [selectedSize, setSelectedSize] = useState("");
 
   const [quantity, setQuantity] = useState(0);
@@ -1331,6 +1338,10 @@ function ProductDetails() {
         setRelatedProducts([]);
 
         setActiveImage(0);
+
+        setViewerImage(0);
+
+        setImageViewerOpen(false);
 
         setSelectedSize("");
 
@@ -1674,6 +1685,130 @@ function ProductDetails() {
 
     return product.images.filter(Boolean).slice(0, 4);
   }, [product]);
+
+  /* =========================================================
+     FULL SCREEN IMAGE VIEWER
+  ========================================================= */
+
+  const openImageViewer = (index = activeImage) => {
+    if (images.length === 0) {
+      return;
+    }
+
+    const safeIndex = Math.min(
+      Math.max(Number(index) || 0, 0),
+      images.length - 1,
+    );
+
+    setActiveImage(safeIndex);
+    setViewerImage(safeIndex);
+    setImageViewerOpen(true);
+  };
+
+  const closeImageViewer = () => {
+    setImageViewerOpen(false);
+  };
+
+  const goToViewerImage = (index) => {
+    if (images.length === 0) {
+      return;
+    }
+
+    const nextIndex = (index + images.length) % images.length;
+
+    setViewerImage(nextIndex);
+    setActiveImage(nextIndex);
+  };
+
+  const previousViewerImage = () => {
+    if (images.length <= 1) {
+      return;
+    }
+
+    goToViewerImage(viewerImage - 1);
+  };
+
+  const nextViewerImage = () => {
+    if (images.length <= 1) {
+      return;
+    }
+
+    goToViewerImage(viewerImage + 1);
+  };
+
+  const handleViewerTouchStart = (event) => {
+    viewerTouchStartX.current = event.changedTouches?.[0]?.clientX ?? null;
+  };
+
+  const handleViewerTouchEnd = (event) => {
+    const startX = viewerTouchStartX.current;
+    const endX = event.changedTouches?.[0]?.clientX;
+
+    viewerTouchStartX.current = null;
+
+    if (startX === null || endX === undefined) {
+      return;
+    }
+
+    const distance = endX - startX;
+
+    if (Math.abs(distance) < 45) {
+      return;
+    }
+
+    if (distance > 0) {
+      previousViewerImage();
+    } else {
+      nextViewerImage();
+    }
+  };
+
+  useEffect(() => {
+    if (!imageViewerOpen) {
+      return undefined;
+    }
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setImageViewerOpen(false);
+        return;
+      }
+
+      if (images.length <= 1) {
+        return;
+      }
+
+      if (event.key === "ArrowLeft") {
+        setViewerImage((current) => {
+          const nextIndex = (current - 1 + images.length) % images.length;
+          setActiveImage(nextIndex);
+          return nextIndex;
+        });
+      }
+
+      if (event.key === "ArrowRight") {
+        setViewerImage((current) => {
+          const nextIndex = (current + 1) % images.length;
+          setActiveImage(nextIndex);
+          return nextIndex;
+        });
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [imageViewerOpen, images.length]);
 
   /* =========================================================
      CURRENT SIZE
@@ -2041,7 +2176,8 @@ function ProductDetails() {
                       ? "pd-thumbnail active"
                       : "pd-thumbnail"
                   }
-                  onClick={() => setActiveImage(index)}
+                  onClick={() => openImageViewer(index)}
+                  aria-label={`Open ${product.name} image ${index + 1} full screen`}
                 >
                   <img src={image} alt={`${product.name} ${index + 1}`} />
 
@@ -2053,13 +2189,22 @@ function ProductDetails() {
 
           <div className="pd-main-image-box">
             {images.length > 0 ? (
-              <img
-                ref={mainImageRef}
-                src={images[activeImage]}
-                alt={product.name}
-                className="pd-main-image"
-                draggable="false"
-              />
+              <button
+                type="button"
+                className="pd-main-image-open"
+                onClick={() => openImageViewer(activeImage)}
+                aria-label={`Open ${product.name} image ${activeImage + 1} full screen`}
+              >
+                <img
+                  ref={mainImageRef}
+                  src={images[activeImage]}
+                  alt={product.name}
+                  className="pd-main-image"
+                  draggable="false"
+                />
+
+                <span className="pd-image-open-hint">TAP TO EXPAND</span>
+              </button>
             ) : (
               <div className="pd-no-image">NO IMAGE</div>
             )}
@@ -2676,6 +2821,95 @@ function ProductDetails() {
             ))}
           </div>
         </section>
+      )}
+
+      {/* ===================================================
+          FULL SCREEN PRODUCT IMAGE VIEWER
+      =================================================== */}
+
+      {imageViewerOpen && images.length > 0 && (
+        <div
+          className="pd-image-viewer"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${product.name} image viewer`}
+          onClick={closeImageViewer}
+          onTouchStart={handleViewerTouchStart}
+          onTouchEnd={handleViewerTouchEnd}
+        >
+          <div
+            className="pd-image-viewer-inner"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="pd-image-viewer-close"
+              onClick={closeImageViewer}
+              aria-label="Close image viewer"
+            >
+              <X size={28} strokeWidth={1.3} />
+            </button>
+
+            <div className="pd-image-viewer-stage">
+              <img
+                src={images[viewerImage]}
+                alt={`${product.name} ${viewerImage + 1}`}
+                className="pd-image-viewer-image"
+                draggable="false"
+              />
+            </div>
+
+            {images.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className="pd-image-viewer-arrow pd-image-viewer-prev"
+                  onClick={previousViewerImage}
+                  aria-label="Previous product image"
+                >
+                  <ChevronLeft size={28} strokeWidth={1.4} />
+                </button>
+
+                <button
+                  type="button"
+                  className="pd-image-viewer-arrow pd-image-viewer-next"
+                  onClick={nextViewerImage}
+                  aria-label="Next product image"
+                >
+                  <ChevronRight size={28} strokeWidth={1.4} />
+                </button>
+              </>
+            )}
+
+            <div className="pd-image-viewer-footer">
+              <div className="pd-image-viewer-count">
+                <strong>{String(viewerImage + 1).padStart(2, "0")}</strong>
+                <span>/</span>
+                <span>{String(images.length).padStart(2, "0")}</span>
+              </div>
+
+              {images.length > 1 && (
+                <div
+                  className="pd-image-viewer-dots"
+                  aria-label="Product images"
+                >
+                  {images.map((image, index) => (
+                    <button
+                      type="button"
+                      key={`viewer-dot-${image}-${index}`}
+                      className={viewerImage === index ? "active" : ""}
+                      onClick={() => goToViewerImage(index)}
+                      aria-label={`Show product image ${index + 1}`}
+                      aria-current={viewerImage === index ? "true" : undefined}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <span className="pd-image-viewer-swipe">SWIPE TO EXPLORE</span>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );

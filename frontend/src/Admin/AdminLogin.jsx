@@ -1,18 +1,17 @@
 import React, { useEffect, useState } from "react";
-
 import { Eye, EyeOff, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
-
 import { useLocation, useNavigate } from "react-router-dom";
 
 /* =========================================================
    API
+   Production:
+   /api/... on same domain
+
+   Local:
+   Vite proxy sends /api to http://localhost:5000
 ========================================================= */
 
-const API_BASE = (
-  import.meta.env.PROD
-    ? ""
-    : import.meta.env.VITE_API_URL || "http://localhost:5000"
-).replace(/\/$/, "");
+const API_BASE = "";
 
 /* =========================================================
    TOKEN
@@ -26,11 +25,9 @@ const TOKEN_KEY = "axiee_admin_token";
 
 function AdminLogin() {
   const navigate = useNavigate();
-
   const location = useLocation();
 
   const [email, setEmail] = useState("");
-
   const [password, setPassword] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
@@ -66,7 +63,9 @@ function AdminLogin() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (!email.trim() || !password) {
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail || !password) {
       setError("Enter your admin email and password.");
 
       return;
@@ -77,7 +76,11 @@ function AdminLogin() {
 
       setError("");
 
-      const response = await fetch(`${API_BASE}/api/admin-auth/login`, {
+      const loginURL = `${API_BASE}/api/admin-auth/login`;
+
+      console.log("ADMIN LOGIN URL:", loginURL);
+
+      const response = await fetch(loginURL, {
         method: "POST",
 
         headers: {
@@ -87,8 +90,7 @@ function AdminLogin() {
         },
 
         body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-
+          email: cleanEmail,
           password,
         }),
       });
@@ -97,23 +99,31 @@ function AdminLogin() {
 
       try {
         data = await response.json();
-      } catch {
-        data = {};
+      } catch (jsonError) {
+        console.error("ADMIN LOGIN JSON ERROR:", jsonError);
+
+        throw new Error(
+          `Server returned invalid response. Status: ${response.status}`,
+        );
       }
 
       if (!response.ok) {
-        throw new Error(data?.message || "Unable to login.");
+        throw new Error(
+          data?.message ||
+            data?.error ||
+            `Login failed. Status: ${response.status}`,
+        );
       }
 
       if (!data?.token) {
-        throw new Error("Admin token was not returned.");
+        throw new Error("Admin token was not returned by server.");
       }
 
       /* SAVE TOKEN */
 
       localStorage.setItem(TOKEN_KEY, data.token);
 
-      /* WHERE TO GO */
+      /* REDIRECT */
 
       const requestedPath = location.state?.from?.pathname;
 
@@ -128,7 +138,14 @@ function AdminLogin() {
     } catch (loginError) {
       console.error("ADMIN LOGIN ERROR:", loginError);
 
-      setError(loginError?.message || "Incorrect email or password.");
+      if (
+        loginError instanceof TypeError &&
+        loginError.message.toLowerCase().includes("fetch")
+      ) {
+        setError("Cannot connect to the server.");
+      } else {
+        setError(loginError?.message || "Incorrect email or password.");
+      }
     } finally {
       setLoading(false);
     }
@@ -150,7 +167,7 @@ function AdminLogin() {
 
       <div className="admin-login-background-text">UNBOUND</div>
 
-      {/* LOGIN CARD */}
+      {/* CARD */}
 
       <section className="admin-login-card">
         {/* BRAND */}
@@ -171,7 +188,7 @@ function AdminLogin() {
           Enter your administrator credentials to open the dashboard.
         </p>
 
-        {/* SECURE LABEL */}
+        {/* SECURE */}
 
         <div className="admin-login-secure">
           <ShieldCheck size={15} />
@@ -200,6 +217,7 @@ function AdminLogin() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 autoComplete="username"
+                disabled={loading}
               />
             </div>
           </label>
@@ -218,6 +236,7 @@ function AdminLogin() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 autoComplete="current-password"
+                disabled={loading}
               />
 
               <button
@@ -225,13 +244,14 @@ function AdminLogin() {
                 className="admin-login-eye"
                 onClick={() => setShowPassword((current) => !current)}
                 aria-label={showPassword ? "Hide password" : "Show password"}
+                disabled={loading}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </label>
 
-          {/* LOGIN BUTTON */}
+          {/* BUTTON */}
 
           <button
             type="submit"
@@ -245,21 +265,21 @@ function AdminLogin() {
         {/* FOOTER */}
 
         <div className="admin-login-footer">
-          <span>AXIEE ADMIN</span>
+          <span>UNBOUND ADMIN</span>
 
           <span>CONTROL / 2026</span>
         </div>
       </section>
 
-      {/* =====================================================
-          STYLE
-      ===================================================== */}
-
       <style>{`
+
+        * {
+          box-sizing: border-box;
+        }
+
         .admin-login-page {
           position: fixed;
           inset: 0;
-          z-index: 999999;
 
           width: 100%;
           min-height: 100vh;
@@ -271,6 +291,8 @@ function AdminLogin() {
           padding: 24px;
 
           overflow: hidden;
+
+          z-index: 999999;
 
           background: #070808;
           color: #ffffff;
@@ -288,12 +310,22 @@ function AdminLogin() {
 
           background-image:
             linear-gradient(
-              rgba(255,255,255,0.035) 1px,
+              rgba(
+                255,
+                255,
+                255,
+                0.035
+              ) 1px,
               transparent 1px
             ),
             linear-gradient(
               90deg,
-              rgba(255,255,255,0.035) 1px,
+              rgba(
+                255,
+                255,
+                255,
+                0.035
+              ) 1px,
               transparent 1px
             );
 
@@ -310,10 +342,18 @@ function AdminLogin() {
           top: 50%;
 
           transform:
-            translate(-50%, -50%);
+            translate(
+              -50%,
+              -50%
+            );
 
           color:
-            rgba(255,255,255,0.018);
+            rgba(
+              255,
+              255,
+              255,
+              0.018
+            );
 
           font-size:
             clamp(
@@ -338,7 +378,8 @@ function AdminLogin() {
 
           border-radius: 50%;
 
-          filter: blur(120px);
+          filter:
+            blur(120px);
 
           pointer-events: none;
         }
@@ -377,6 +418,7 @@ function AdminLogin() {
 
         .admin-login-card {
           position: relative;
+
           z-index: 10;
 
           width:
@@ -385,8 +427,7 @@ function AdminLogin() {
               100%
             );
 
-          padding:
-            36px;
+          padding: 36px;
 
           border:
             1px solid
@@ -397,8 +438,7 @@ function AdminLogin() {
               0.11
             );
 
-          border-radius:
-            18px;
+          border-radius: 18px;
 
           background:
             rgba(
@@ -409,6 +449,9 @@ function AdminLogin() {
             );
 
           backdrop-filter:
+            blur(24px);
+
+          -webkit-backdrop-filter:
             blur(24px);
 
           box-shadow:
@@ -423,12 +466,12 @@ function AdminLogin() {
 
         .admin-login-brand {
           display: flex;
+
           align-items: center;
 
           gap: 16px;
 
-          margin-bottom:
-            24px;
+          margin-bottom: 24px;
         }
 
         .admin-login-logo {
@@ -436,13 +479,13 @@ function AdminLogin() {
           height: 54px;
 
           display: flex;
+
           align-items: center;
           justify-content: center;
 
           flex-shrink: 0;
 
-          border-radius:
-            50%;
+          border-radius: 50%;
 
           background:
             #c6ff00;
@@ -450,43 +493,34 @@ function AdminLogin() {
           color:
             #080909;
 
-          font-size:
-            23px;
+          font-size: 23px;
 
-          font-weight:
-            900;
+          font-weight: 900;
         }
 
         .admin-login-brand span {
           display: block;
 
-          margin-bottom:
-            5px;
+          margin-bottom: 5px;
 
           color:
             #c6ff00;
 
-          font-size:
-            8px;
+          font-size: 8px;
 
-          font-weight:
-            800;
+          font-weight: 800;
 
-          letter-spacing:
-            2px;
+          letter-spacing: 2px;
         }
 
         .admin-login-brand h1 {
           margin: 0;
 
-          font-size:
-            28px;
+          font-size: 28px;
 
-          line-height:
-            1;
+          line-height: 1;
 
-          font-weight:
-            900;
+          font-weight: 900;
 
           letter-spacing:
             -1.2px;
@@ -496,39 +530,32 @@ function AdminLogin() {
           margin:
             0 0 18px;
 
-          max-width:
-            370px;
+          max-width: 370px;
 
           color:
             #8d9398;
 
-          font-size:
-            12px;
+          font-size: 12px;
 
-          line-height:
-            1.7;
+          line-height: 1.7;
         }
 
         .admin-login-secure {
           display:
             inline-flex;
 
-          align-items:
-            center;
+          align-items: center;
 
           gap: 7px;
 
-          margin-bottom:
-            24px;
+          margin-bottom: 24px;
 
           color:
             #c6ff00;
 
-          font-size:
-            8px;
+          font-size: 8px;
 
-          font-weight:
-            800;
+          font-weight: 800;
 
           letter-spacing:
             1.3px;
@@ -591,11 +618,9 @@ function AdminLogin() {
           color:
             #8d9398;
 
-          font-size:
-            9px;
+          font-size: 9px;
 
-          font-weight:
-            800;
+          font-weight: 800;
 
           letter-spacing:
             1.3px;
@@ -603,9 +628,11 @@ function AdminLogin() {
 
         .admin-login-input-box {
           width: 100%;
+
           height: 53px;
 
           display: flex;
+
           align-items: center;
 
           gap: 11px;
@@ -651,6 +678,7 @@ function AdminLogin() {
           height: 100%;
 
           border: none;
+
           outline: none;
 
           background:
@@ -675,6 +703,7 @@ function AdminLogin() {
           height: 32px;
 
           display: flex;
+
           align-items: center;
           justify-content: center;
 
@@ -692,13 +721,21 @@ function AdminLogin() {
             pointer;
         }
 
-        .admin-login-eye:hover {
+        .admin-login-eye:hover:not(:disabled) {
           color:
             #ffffff;
         }
 
+        .admin-login-eye:disabled {
+          opacity: 0.5;
+
+          cursor:
+            not-allowed;
+        }
+
         .admin-login-submit {
           width: 100%;
+
           height: 54px;
 
           margin-top:
@@ -749,7 +786,9 @@ function AdminLogin() {
 
         .admin-login-footer {
           display: flex;
+
           align-items: center;
+
           justify-content:
             space-between;
 
@@ -800,7 +839,13 @@ function AdminLogin() {
             font-size:
               24px;
           }
+
+          .admin-login-background-text {
+            letter-spacing:
+              -6px;
+          }
         }
+
       `}</style>
     </main>
   );

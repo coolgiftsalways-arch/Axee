@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 import Cart from "../models/Cart.js";
 
 /* =========================================================
-   HELPERS
+   CART ID
 ========================================================= */
 
 const createCartId = () => {
@@ -12,17 +12,18 @@ const createCartId = () => {
 };
 
 /* =========================================================
-   MONGODB ERROR HANDLER
+   DATABASE ERROR HANDLER
 ========================================================= */
 
 const sendDatabaseError = (res, error, defaultMessage) => {
   console.error(`❌ ${defaultMessage}:`, error);
 
   const message = String(error?.message || "");
+
   const code = error?.code;
 
   /* =======================================================
-     MONGODB ATLAS STORAGE FULL
+     MONGODB STORAGE FULL
   ======================================================= */
 
   if (
@@ -33,10 +34,13 @@ const sendDatabaseError = (res, error, defaultMessage) => {
   ) {
     return res.status(507).json({
       success: false,
+
       message: "MongoDB Atlas storage is full",
+
       error:
         "Your MongoDB Atlas cluster has reached its storage limit. " +
         "Free some storage or upgrade the Atlas cluster before trying again.",
+
       code: "MONGODB_STORAGE_FULL",
     });
   }
@@ -48,21 +52,62 @@ const sendDatabaseError = (res, error, defaultMessage) => {
   if (code === 11000) {
     return res.status(409).json({
       success: false,
+
       message: "Duplicate database record",
+
       error: message,
+
       code: "DUPLICATE_KEY",
     });
   }
 
   /* =======================================================
-     NORMAL SERVER ERROR
+     NORMAL ERROR
   ======================================================= */
 
   return res.status(500).json({
     success: false,
+
     message: defaultMessage,
+
     error: message || "Unknown server error",
   });
+};
+
+/* =========================================================
+   CHECK LOCAL HOSTNAME
+========================================================= */
+
+const isLocalHostname = (hostname) => {
+  const host = String(hostname || "")
+    .trim()
+    .toLowerCase();
+
+  if (!host) {
+    return false;
+  }
+
+  if (host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0") {
+    return true;
+  }
+
+  if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(host)) {
+    return true;
+  }
+
+  if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) {
+    return true;
+  }
+
+  const match172 = host.match(/^172\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/);
+
+  if (match172) {
+    const secondPart = Number(match172[1]);
+
+    return secondPart >= 16 && secondPart <= 31;
+  }
+
+  return false;
 };
 
 /* =========================================================
@@ -70,7 +115,9 @@ const sendDatabaseError = (res, error, defaultMessage) => {
 ========================================================= */
 
 const normalizeImageUrl = (image) => {
-  if (!image) return "";
+  if (!image) {
+    return "";
+  }
 
   let value = image;
 
@@ -87,42 +134,113 @@ const normalizeImageUrl = (image) => {
   ======================================================= */
 
   if (value && typeof value === "object") {
-    value =
-      value.url ||
-      value.src ||
-      value.path ||
-      value.image ||
-      value.fileId ||
-      value._id ||
-      value.id ||
+    /*
+      Always prefer actual image URL/path first.
+
+      Do not automatically use _id because _id can
+      simply be a MongoDB subdocument ID.
+    */
+
+    const directUrl =
+      value?.url ||
+      value?.src ||
+      value?.path ||
+      value?.image ||
+      value?.imageUrl ||
+      value?.location ||
       "";
+
+    if (directUrl) {
+      return normalizeImageUrl(directUrl);
+    }
+
+    /*
+      Actual GridFS file ID.
+    */
+
+    if (value?.fileId) {
+      return `/api/catalog/images/${String(value.fileId)}`;
+    }
+
+    /*
+      Legacy explicit ID fallback.
+    */
+
+    if (value?.id) {
+      return `/api/catalog/images/${String(value.id)}`;
+    }
+
+    return "";
   }
 
-  if (!value) return "";
+  /* =======================================================
+     STRING
+  ======================================================= */
 
   value = String(value).trim().replace(/\\/g, "/");
 
-  if (!value) return "";
+  if (!value) {
+    return "";
+  }
 
   /* =======================================================
-     FULL URL / DATA URL
+     DATA / BLOB
   ======================================================= */
 
-  if (
-    value.startsWith("http://") ||
-    value.startsWith("https://") ||
-    value.startsWith("data:") ||
-    value.startsWith("blob:")
-  ) {
+  if (value.startsWith("data:") || value.startsWith("blob:")) {
     return value;
   }
 
   /* =======================================================
-     OLD GRIDFS URL
+     FULL URL
+  ======================================================= */
 
-     /api/images/ID
-     ->
-     /api/catalog/images/ID
+  if (value.startsWith("http://") || value.startsWith("https://")) {
+    try {
+      const url = new URL(value);
+
+      /*
+        Old localhost URLs should not be saved
+        into production carts.
+
+        Example:
+
+        http://localhost:5000/api/catalog/images/123
+
+        becomes:
+
+        /api/catalog/images/123
+      */
+
+      if (isLocalHostname(url.hostname)) {
+        return `${url.pathname}${url.search}`;
+      }
+
+      /*
+        Backend-owned resources can use the
+        current domain.
+      */
+
+      if (
+        url.pathname.startsWith("/api/") ||
+        url.pathname.startsWith("/product-images/") ||
+        url.pathname.startsWith("/uploads/")
+      ) {
+        return `${url.pathname}${url.search}`;
+      }
+
+      /*
+        External CDN URL.
+      */
+
+      return value;
+    } catch {
+      return value;
+    }
+  }
+
+  /* =======================================================
+     OLD GRIDFS
   ======================================================= */
 
   if (value.startsWith("/api/images/")) {
@@ -134,7 +252,7 @@ const normalizeImageUrl = (image) => {
   }
 
   /* =======================================================
-     CURRENT GRIDFS URL
+     CURRENT GRIDFS
   ======================================================= */
 
   if (value.startsWith("/api/catalog/images/")) {
@@ -142,6 +260,30 @@ const normalizeImageUrl = (image) => {
   }
 
   if (value.startsWith("api/catalog/images/")) {
+    return `/${value}`;
+  }
+
+  /* =======================================================
+     OTHER API
+  ======================================================= */
+
+  if (value.startsWith("/api/")) {
+    return value;
+  }
+
+  if (value.startsWith("api/")) {
+    return `/${value}`;
+  }
+
+  /* =======================================================
+     PRODUCT IMAGES
+  ======================================================= */
+
+  if (value.startsWith("/product-images/")) {
+    return value;
+  }
+
+  if (value.startsWith("product-images/")) {
     return `/${value}`;
   }
 
@@ -157,42 +299,161 @@ const normalizeImageUrl = (image) => {
     return `/${value}`;
   }
 
+  /* =======================================================
+     WINDOWS PATH FIX
+  ======================================================= */
+
+  const productImagesIndex = value.indexOf("/product-images/");
+
+  if (productImagesIndex !== -1) {
+    return value.slice(productImagesIndex);
+  }
+
+  const uploadsIndex = value.indexOf("/uploads/");
+
+  if (uploadsIndex !== -1) {
+    return value.slice(uploadsIndex);
+  }
+
   return value;
 };
 
 /* =========================================================
+   GET FIRST IMAGE FROM ARRAY
+========================================================= */
+
+const getFirstImageFromArray = (images) => {
+  if (!Array.isArray(images) || images.length === 0) {
+    return "";
+  }
+
+  for (const image of images) {
+    const normalized = normalizeImageUrl(image);
+
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  return "";
+};
+
+/* =========================================================
    GET PRODUCT IMAGE
+
+   IMPORTANT PRIORITY:
+
+   1. product.images
+   2. product.mainImage
+   3. product.image
+   4. product.imageFiles
+   5. product.imageIds
+   6. product.imageId
+   7. thumbnail
 ========================================================= */
 
 const getProductImage = (product) => {
-  if (!product) return "";
+  if (!product) {
+    return "";
+  }
 
   /* =======================================================
-     1. imageFiles
+     1. CURRENT PRODUCT IMAGES
+  ======================================================= */
+
+  const currentImage = getFirstImageFromArray(product.images);
+
+  if (currentImage) {
+    return currentImage;
+  }
+
+  /* =======================================================
+     2. MAIN IMAGE
+  ======================================================= */
+
+  if (product.mainImage) {
+    const mainImage = normalizeImageUrl(product.mainImage);
+
+    if (mainImage) {
+      return mainImage;
+    }
+  }
+
+  /* =======================================================
+     3. SINGLE IMAGE
+  ======================================================= */
+
+  if (product.image) {
+    const image = normalizeImageUrl(product.image);
+
+    if (image) {
+      return image;
+    }
+  }
+
+  /* =======================================================
+     4. LEGACY IMAGE FILES
+
+     Only fallback.
   ======================================================= */
 
   if (Array.isArray(product.imageFiles) && product.imageFiles.length > 0) {
-    const sortedImages = [...product.imageFiles].sort(
-      (a, b) => Number(a?.order || 0) - Number(b?.order || 0),
+    const sorted = [...product.imageFiles].sort(
+      (a, b) => Number(a?.order ?? 0) - Number(b?.order ?? 0),
     );
 
-    for (const item of sortedImages) {
-      if (!item) continue;
+    /*
+      Actual URL/path first.
+    */
 
-      const fileId = item.fileId || item._id || item.id;
-
-      if (fileId) {
-        return `/api/catalog/images/${String(fileId)}`;
+    for (const imageFile of sorted) {
+      if (!imageFile) {
+        continue;
       }
 
-      if (item.url) {
-        return normalizeImageUrl(item.url);
+      const directUrl =
+        imageFile?.url ||
+        imageFile?.src ||
+        imageFile?.path ||
+        imageFile?.image ||
+        imageFile?.imageUrl ||
+        imageFile?.location ||
+        "";
+
+      if (directUrl) {
+        const normalized = normalizeImageUrl(directUrl);
+
+        if (normalized) {
+          return normalized;
+        }
+      }
+    }
+
+    /*
+      GridFS fileId.
+    */
+
+    for (const imageFile of sorted) {
+      if (imageFile?.fileId) {
+        return `/api/catalog/images/${String(imageFile.fileId)}`;
+      }
+    }
+
+    /*
+      Legacy explicit id.
+
+      Do not use imageFile._id automatically.
+    */
+
+    for (const imageFile of sorted) {
+      if (imageFile?.id) {
+        return `/api/catalog/images/${String(imageFile.id)}`;
       }
     }
   }
 
   /* =======================================================
-     2. imageIds
+     5. IMAGE IDS
   ======================================================= */
 
   if (Array.isArray(product.imageIds) && product.imageIds.length > 0) {
@@ -204,35 +465,7 @@ const getProductImage = (product) => {
   }
 
   /* =======================================================
-     3. images
-  ======================================================= */
-
-  if (Array.isArray(product.images) && product.images.length > 0) {
-    const firstImage = product.images[0];
-
-    if (firstImage) {
-      if (typeof firstImage === "object") {
-        const fileId = firstImage.fileId || firstImage._id || firstImage.id;
-
-        if (fileId) {
-          return `/api/catalog/images/${String(fileId)}`;
-        }
-
-        return normalizeImageUrl(
-          firstImage.url ||
-            firstImage.src ||
-            firstImage.path ||
-            firstImage.image ||
-            "",
-        );
-      }
-
-      return normalizeImageUrl(firstImage);
-    }
-  }
-
-  /* =======================================================
-     4. imageId
+     6. IMAGE ID
   ======================================================= */
 
   if (product.imageId) {
@@ -240,31 +473,45 @@ const getProductImage = (product) => {
   }
 
   /* =======================================================
-     5. mainImage
+     7. THUMBNAIL
   ======================================================= */
 
-  if (product.mainImage) {
-    return normalizeImageUrl(product.mainImage);
-  }
+  if (product.thumbnail) {
+    const thumbnail = normalizeImageUrl(product.thumbnail);
 
-  /* =======================================================
-     6. image
-  ======================================================= */
-
-  if (product.image) {
-    return normalizeImageUrl(product.image);
+    if (thumbnail) {
+      return thumbnail;
+    }
   }
 
   return "";
 };
 
 /* =========================================================
-   FIND PRODUCT IN MONGODB
+   NORMALIZE PRODUCT ID
+========================================================= */
+
+const normalizeProductId = (productId) => {
+  if (!productId) {
+    return "";
+  }
+
+  if (typeof productId === "object") {
+    return String(productId?._id || productId?.id || "");
+  }
+
+  return String(productId);
+};
+
+/* =========================================================
+   FIND PRODUCT
 ========================================================= */
 
 const findProduct = async (productId) => {
   try {
-    if (!productId) {
+    const id = normalizeProductId(productId);
+
+    if (!id) {
       return null;
     }
 
@@ -274,11 +521,15 @@ const findProduct = async (productId) => {
       return null;
     }
 
-    if (!mongoose.Types.ObjectId.isValid(String(productId))) {
+    /*
+      Static/local product IDs may not be Mongo ObjectIds.
+    */
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return null;
     }
 
-    const objectId = new mongoose.Types.ObjectId(String(productId));
+    const objectId = new mongoose.Types.ObjectId(id);
 
     const product = await mongoose.connection.db
       .collection("products")
@@ -295,7 +546,51 @@ const findProduct = async (productId) => {
 };
 
 /* =========================================================
-   REPAIR OLD CART IMAGES
+   REPAIR ONE CART ITEM IMAGE
+========================================================= */
+
+const repairSingleCartItemImage = async (item) => {
+  if (!item) {
+    return false;
+  }
+
+  const originalImage = String(item.image || "");
+
+  /*
+      Normalize whatever is already stored.
+    */
+
+  const storedImage = normalizeImageUrl(item.image);
+
+  /*
+      Try to get the latest/current product.
+    */
+
+  const product = await findProduct(item.productId);
+
+  const productImage = normalizeImageUrl(getProductImage(product));
+
+  /*
+      Current product image should win.
+    */
+
+  const nextImage = productImage || storedImage || "";
+
+  if (!nextImage) {
+    return false;
+  }
+
+  if (originalImage !== nextImage) {
+    item.image = nextImage;
+
+    return true;
+  }
+
+  return false;
+};
+
+/* =========================================================
+   REPAIR ALL CART IMAGES
 ========================================================= */
 
 const repairCartImages = async (cart) => {
@@ -306,55 +601,32 @@ const repairCartImages = async (cart) => {
   let changed = false;
 
   for (const item of cart.items) {
-    /* =====================================================
-       NORMALIZE EXISTING IMAGE
-    ===================================================== */
+    try {
+      const itemChanged = await repairSingleCartItemImage(item);
 
-    if (item.image) {
-      const normalizedImage = normalizeImageUrl(item.image);
-
-      if (normalizedImage && normalizedImage !== item.image) {
-        item.image = normalizedImage;
+      if (itemChanged) {
         changed = true;
       }
+    } catch (error) {
+      console.warn("⚠️ Could not repair cart item image:", {
+        productId: item?.productId,
 
-      continue;
-    }
-
-    /* =====================================================
-       IMAGE IS MISSING
-    ===================================================== */
-
-    const product = await findProduct(item.productId);
-
-    if (!product) {
-      continue;
-    }
-
-    const productImage = getProductImage(product);
-
-    if (productImage) {
-      item.image = productImage;
-      changed = true;
+        error: error?.message,
+      });
     }
   }
 
   /*
-    IMPORTANT:
-
-    If Atlas storage is full, even repairing an
-    old image could trigger a save error.
-
-    Because getting a cart should still work,
-    we don't allow image repair to completely
-    break GET /api/cart/:cartId.
+    Do not break GET cart just because repair save fails.
   */
 
   if (changed) {
     try {
       await cart.save();
+
+      console.log("✅ Cart images repaired");
     } catch (error) {
-      console.warn("⚠️ Could not save repaired cart images:", error.message);
+      console.warn("⚠️ Cart image repair save failed:", error?.message);
     }
   }
 
@@ -374,6 +646,7 @@ export const getCart = async (req, res) => {
     if (!cartId) {
       return res.status(400).json({
         success: false,
+
         message: "Cart ID is required",
       });
     }
@@ -383,8 +656,8 @@ export const getCart = async (req, res) => {
     });
 
     /* =====================================================
-       CART DOES NOT EXIST
-    ===================================================== */
+         CART NOT FOUND
+      ===================================================== */
 
     if (!cart) {
       return res.status(200).json({
@@ -392,19 +665,21 @@ export const getCart = async (req, res) => {
 
         cart: {
           cartId,
+
           items: [],
         },
       });
     }
 
-    /* =====================================================
-       REPAIR OLD IMAGES
-    ===================================================== */
+    /*
+        Fix old cart images automatically.
+      */
 
     cart = await repairCartImages(cart);
 
     return res.status(200).json({
       success: true,
+
       cart,
     });
   } catch (error) {
@@ -439,46 +714,50 @@ export const addToCart = async (req, res) => {
     } = req.body || {};
 
     /* =====================================================
-       VALIDATE PRODUCT ID
-    ===================================================== */
+         PRODUCT ID
+      ===================================================== */
 
     if (!productId) {
       return res.status(400).json({
         success: false,
+
         message: "Product ID is required",
       });
     }
 
-    /* =====================================================
-       GET PRODUCT FROM DATABASE
-    ===================================================== */
+    const normalizedProductId = normalizeProductId(productId);
 
-    const product = await findProduct(productId);
+    if (!normalizedProductId) {
+      return res.status(400).json({
+        success: false,
 
-    /*
-      MongoDB products normally come from the database.
-
-      But incoming values are kept as a fallback so
-      local/static frontend products can also work.
-    */
+        message: "Invalid product ID",
+      });
+    }
 
     /* =====================================================
-       NAME
-    ===================================================== */
+         DATABASE PRODUCT
+      ===================================================== */
+
+    const product = await findProduct(normalizedProductId);
+
+    /* =====================================================
+         NAME
+      ===================================================== */
 
     const name = String(
       product?.name || product?.title || incomingName || "UNBOUND Product",
     ).trim();
 
     /* =====================================================
-       CATEGORY
-    ===================================================== */
+         CATEGORY
+      ===================================================== */
 
     const category = String(product?.category || incomingCategory || "").trim();
 
     /* =====================================================
-       PRICE
-    ===================================================== */
+         PRICE
+      ===================================================== */
 
     const price = Number(
       product?.price ?? product?.salePrice ?? incomingPrice ?? 0,
@@ -487,34 +766,53 @@ export const addToCart = async (req, res) => {
     if (!Number.isFinite(price) || price < 0) {
       return res.status(400).json({
         success: false,
+
         message: "Invalid product price",
       });
     }
 
     /* =====================================================
-       IMAGE
-    ===================================================== */
+         IMAGE
 
-    const productImage = getProductImage(product);
+         DATABASE PRODUCT IMAGE FIRST.
+         FRONTEND IMAGE FALLBACK SECOND.
+      ===================================================== */
 
-    const image = productImage || normalizeImageUrl(incomingImage) || "";
+    const databaseImage = normalizeImageUrl(getProductImage(product));
+
+    const frontendImage = normalizeImageUrl(incomingImage);
+
+    const image = databaseImage || frontendImage || "";
+
+    console.log("🖼 CART IMAGE:", {
+      productId: normalizedProductId,
+
+      name,
+
+      databaseImage,
+
+      incomingImage,
+
+      finalImage: image,
+    });
 
     /* =====================================================
-       SIZE
-    ===================================================== */
+         SIZE
+      ===================================================== */
 
     const size = String(incomingSize || product?.size || "ONE SIZE").trim();
 
     if (!size) {
       return res.status(400).json({
         success: false,
+
         message: "Product size is required",
       });
     }
 
     /* =====================================================
-       QUANTITY
-    ===================================================== */
+         QUANTITY
+      ===================================================== */
 
     let quantity = Number(incomingQuantity || 1);
 
@@ -527,55 +825,60 @@ export const addToCart = async (req, res) => {
     quantity = Math.min(10, Math.max(1, quantity));
 
     /* =====================================================
-       CART ID
-    ===================================================== */
+         CART ID
+      ===================================================== */
 
     const cartId = String(incomingCartId || "").trim() || createCartId();
 
     /* =====================================================
-       FIND EXISTING CART
-    ===================================================== */
+         FIND CART
+      ===================================================== */
 
     let cart = await Cart.findOne({
       cartId,
     });
 
     /* =====================================================
-       CREATE CART
-    ===================================================== */
+         CREATE CART
+      ===================================================== */
 
     if (!cart) {
       cart = new Cart({
         cartId,
+
         items: [],
       });
     }
 
     /* =====================================================
-       FIND SAME PRODUCT + SAME SIZE
-    ===================================================== */
+         FIND SAME PRODUCT + SAME SIZE
+      ===================================================== */
 
     const existingItem = cart.items.find((item) => {
-      const sameProduct = String(item.productId) === String(productId);
+      const existingProductId = normalizeProductId(item.productId);
 
-      const sameSize =
-        String(item.size || "")
-          .trim()
-          .toLowerCase() ===
-        String(size || "")
-          .trim()
-          .toLowerCase();
+      const sameProduct =
+        String(existingProductId) === String(normalizedProductId);
 
-      return sameProduct && sameSize;
+      const existingSize = String(item.size || "")
+        .trim()
+        .toLowerCase();
+
+      const newSize = String(size || "")
+        .trim()
+        .toLowerCase();
+
+      return sameProduct && existingSize === newSize;
     });
 
     /* =====================================================
-       ITEM ALREADY EXISTS
-    ===================================================== */
+         UPDATE EXISTING
+      ===================================================== */
 
     if (existingItem) {
       existingItem.quantity = Math.min(
         10,
+
         Number(existingItem.quantity || 1) + quantity,
       );
 
@@ -585,16 +888,22 @@ export const addToCart = async (req, res) => {
 
       existingItem.price = price;
 
+      /*
+          Refresh image every time.
+        */
+
       if (image) {
         existingItem.image = image;
+      } else if (existingItem.image) {
+        existingItem.image = normalizeImageUrl(existingItem.image);
       }
     } else {
       /* ===================================================
-         ADD NEW CART ITEM
-      =================================================== */
+           ADD NEW
+        =================================================== */
 
       cart.items.push({
-        productId: String(productId),
+        productId: normalizedProductId,
 
         name,
 
@@ -611,12 +920,16 @@ export const addToCart = async (req, res) => {
     }
 
     /* =====================================================
-       SAVE CART
-
-       THIS REQUIRES MONGODB WRITE ACCESS.
-    ===================================================== */
+         SAVE
+      ===================================================== */
 
     await cart.save();
+
+    /*
+        Final image repair.
+      */
+
+    cart = await repairCartImages(cart);
 
     return res.status(200).json({
       success: true,
@@ -645,23 +958,24 @@ export const updateCartItem = async (req, res) => {
     const { quantity, size } = req.body || {};
 
     /* =====================================================
-       FIND CART
-    ===================================================== */
+         FIND CART
+      ===================================================== */
 
-    const cart = await Cart.findOne({
-      cartId,
+    let cart = await Cart.findOne({
+      cartId: String(cartId || "").trim(),
     });
 
     if (!cart) {
       return res.status(404).json({
         success: false,
+
         message: "Cart not found",
       });
     }
 
     /* =====================================================
-       FIND ITEM
-    ===================================================== */
+         FIND ITEM
+      ===================================================== */
 
     const item = cart.items.find(
       (cartItem) => String(cartItem._id) === String(itemId),
@@ -670,13 +984,14 @@ export const updateCartItem = async (req, res) => {
     if (!item) {
       return res.status(404).json({
         success: false,
+
         message: "Cart item not found",
       });
     }
 
     /* =====================================================
-       QUANTITY
-    ===================================================== */
+         QUANTITY
+      ===================================================== */
 
     if (quantity !== undefined && quantity !== null) {
       const nextQuantity = Number(quantity);
@@ -684,13 +999,14 @@ export const updateCartItem = async (req, res) => {
       if (!Number.isFinite(nextQuantity)) {
         return res.status(400).json({
           success: false,
+
           message: "Quantity must be a valid number",
         });
       }
 
-      /* ===================================================
-         QUANTITY 0 = REMOVE ITEM
-      =================================================== */
+      /*
+          Quantity zero = remove.
+        */
 
       if (nextQuantity <= 0) {
         cart.items = cart.items.filter(
@@ -708,16 +1024,20 @@ export const updateCartItem = async (req, res) => {
         });
       }
 
-      /* ===================================================
-         QUANTITY 1 - 10
-      =================================================== */
+      item.quantity = Math.min(
+        10,
 
-      item.quantity = Math.min(10, Math.max(1, Math.floor(nextQuantity)));
+        Math.max(
+          1,
+
+          Math.floor(nextQuantity),
+        ),
+      );
     }
 
     /* =====================================================
-       SIZE
-    ===================================================== */
+         SIZE
+      ===================================================== */
 
     if (size !== undefined) {
       const nextSize = String(size).trim();
@@ -725,6 +1045,7 @@ export const updateCartItem = async (req, res) => {
       if (!nextSize) {
         return res.status(400).json({
           success: false,
+
           message: "Size cannot be empty",
         });
       }
@@ -733,24 +1054,18 @@ export const updateCartItem = async (req, res) => {
     }
 
     /* =====================================================
-       FIX MISSING IMAGE
-    ===================================================== */
+         IMAGE REPAIR
+      ===================================================== */
 
-    if (!item.image) {
-      const product = await findProduct(item.productId);
-
-      const image = getProductImage(product);
-
-      if (image) {
-        item.image = image;
-      }
-    }
+    await repairSingleCartItemImage(item);
 
     /* =====================================================
-       SAVE
-    ===================================================== */
+         SAVE
+      ===================================================== */
 
     await cart.save();
+
+    cart = await repairCartImages(cart);
 
     return res.status(200).json({
       success: true,
@@ -775,23 +1090,24 @@ export const removeCartItem = async (req, res) => {
     const { cartId, itemId } = req.params;
 
     /* =====================================================
-       FIND CART
-    ===================================================== */
+         FIND CART
+      ===================================================== */
 
     const cart = await Cart.findOne({
-      cartId,
+      cartId: String(cartId || "").trim(),
     });
 
     if (!cart) {
       return res.status(404).json({
         success: false,
+
         message: "Cart not found",
       });
     }
 
     /* =====================================================
-       REMOVE ITEM
-    ===================================================== */
+         REMOVE ITEM
+      ===================================================== */
 
     const previousLength = cart.items.length;
 
@@ -802,13 +1118,14 @@ export const removeCartItem = async (req, res) => {
     if (cart.items.length === previousLength) {
       return res.status(404).json({
         success: false,
+
         message: "Cart item not found",
       });
     }
 
     /* =====================================================
-       SAVE
-    ===================================================== */
+         SAVE
+      ===================================================== */
 
     await cart.save();
 
@@ -835,16 +1152,16 @@ export const clearCart = async (req, res) => {
     const { cartId } = req.params;
 
     /* =====================================================
-       FIND CART
-    ===================================================== */
+         FIND CART
+      ===================================================== */
 
     const cart = await Cart.findOne({
-      cartId,
+      cartId: String(cartId || "").trim(),
     });
 
     /* =====================================================
-       ALREADY EMPTY / DOES NOT EXIST
-    ===================================================== */
+         ALREADY EMPTY
+      ===================================================== */
 
     if (!cart) {
       return res.status(200).json({
@@ -854,20 +1171,21 @@ export const clearCart = async (req, res) => {
 
         cart: {
           cartId,
+
           items: [],
         },
       });
     }
 
     /* =====================================================
-       CLEAR ITEMS
-    ===================================================== */
+         CLEAR
+      ===================================================== */
 
     cart.items = [];
 
     /* =====================================================
-       SAVE
-    ===================================================== */
+         SAVE
+      ===================================================== */
 
     await cart.save();
 
@@ -882,4 +1200,3 @@ export const clearCart = async (req, res) => {
     return sendDatabaseError(res, error, "Failed to clear cart");
   }
 };
-
