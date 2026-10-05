@@ -1277,7 +1277,7 @@ function Checkout() {
                     name="firstName"
                     value={form.firstName}
                     onChange={handleChange}
-                    placeholder="Ahmed"
+                    placeholder="Name"
                     autoComplete="given-name"
                   />
 
@@ -1300,7 +1300,7 @@ function Checkout() {
                     name="lastName"
                     value={form.lastName}
                     onChange={handleChange}
-                    placeholder="Khan"
+                    placeholder="Last name"
                     autoComplete="family-name"
                   />
 
@@ -1346,7 +1346,7 @@ function Checkout() {
                       name="phone"
                       value={form.phone}
                       onChange={handleChange}
-                      placeholder="9876543210"
+                      placeholder="Mobile Number"
                       autoComplete="tel"
                     />
                   </div>
