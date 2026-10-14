@@ -99,33 +99,15 @@ function Navbar() {
   // Controls the scrolling announcement above the desktop/mobile navbar.
   const [announcementOpen, setAnnouncementOpen] = useState(true);
   const announcementVisible = announcementOpen && !menuOpen;
-  // Repeat the fast-delivery offer often, and highlight only that offer.
-  // Online delivery: 1–2 days. Cash on Delivery: 4–6 days.
+  // The delivery offer is highlighted without mentioning payment methods.
   const announcements = [
-    {
-      id: "delivery-1",
-      text: "ONLINE PAYMENT — GET DELIVERED IN 1–2 DAYS",
-      featured: true,
-    },
+    { id: "delivery-1", text: "GET DELIVERED IN 1–2 DAYS", featured: true },
     { id: "collection", text: "EXPLORE THE COLLECTION" },
-    {
-      id: "delivery-2",
-      text: "ONLINE PAYMENT — GET DELIVERED IN 1–2 DAYS",
-      featured: true,
-    },
+    { id: "delivery-2", text: "GET DELIVERED IN 1–2 DAYS", featured: true },
     { id: "unbound", text: "UNBOUND — MORE THAN CLOTHES" },
-    {
-      id: "delivery-3",
-      text: "ONLINE PAYMENT — GET DELIVERED IN 1–2 DAYS",
-      featured: true,
-    },
-    { id: "cod", text: "CASH ON DELIVERY — ESTIMATED 4–6 DAYS" },
-    {
-      id: "delivery-4",
-      text: "ONLINE PAYMENT — GET DELIVERED IN 1–2 DAYS",
-      featured: true,
-    },
+    { id: "delivery-3", text: "GET DELIVERED IN 1–2 DAYS", featured: true },
     { id: "streetwear", text: "STREETWEAR WITHOUT LIMITS" },
+    { id: "delivery-4", text: "GET DELIVERED IN 1–2 DAYS", featured: true },
   ];
 
   const [mobileShopOpen, setMobileShopOpen] = useState(false);
@@ -542,13 +524,12 @@ function Navbar() {
           {/* Always-visible delivery highlight, including on mobile. */}
           <span
             className="ax-announcement-label"
-            aria-label="Online payment: estimated delivery in 1 to 2 days"
+            aria-label="Estimated delivery in 1 to 2 days"
           >
             <span className="ax-announcement-label-icon" aria-hidden="true">
               ✦
             </span>
             <span className="ax-announcement-label-copy">
-              <small>ONLINE PAYMENT</small>
               <strong>DELIVERY IN 1–2 DAYS</strong>
             </span>
           </span>
