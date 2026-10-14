@@ -1236,3 +1236,250 @@
           grid-template-columns: 1fr;
      }
 }
+
+/* ============================================================
+   UNBOUND CHECKOUT — TOP GAP FIX + PAYMENT DELIVERY ESTIMATE
+   The old header min-height: 260px made a large empty block.
+   Keep the contact form just below the fixed UNBOUND navbar.
+   The visible announcement bar adds its own top offset.
+============================================================ */
+
+.ax-checkout-page {
+     /* Navbar without announcement: top 16px + height 74px */
+     padding-top: 108px;
+}
+
+/* Announcement open: navbar starts at 49px and ends at 123px. */
+:root:has(.ax-announcement-bar) .ax-checkout-page {
+     padding-top: 139px;
+}
+
+.ax-checkout-heading {
+     min-height: 36px;
+     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+     align-items: center;
+     gap: 12px;
+     padding-bottom: 14px;
+}
+
+.ax-checkout-title-wrap {
+     grid-column: auto;
+     grid-row: auto;
+     text-align: center;
+}
+
+.ax-checkout-index {
+     margin: 0;
+     line-height: 1.5;
+}
+
+.ax-checkout-secure {
+     white-space: nowrap;
+}
+
+.ax-checkout-grid {
+     padding-top: 18px;
+}
+
+.ax-checkout-summary-sticky {
+     top: 109px;
+}
+
+:root:has(.ax-announcement-bar) .ax-checkout-summary-sticky {
+     top: 139px;
+}
+
+/* Live estimated-delivery box, directly below payment options. */
+.ax-checkout-delivery-estimate {
+     display: flex;
+     align-items: flex-start;
+     gap: 13px;
+     margin: -6px 30px 19px;
+     padding: 15px 16px;
+     border: 1px solid rgba(207, 255, 36, 0.27);
+     border-radius: 12px;
+     background: linear-gradient(115deg, rgba(207, 255, 36, 0.075), rgba(207, 255, 36, 0.015) 70%);
+     box-shadow: inset 3px 0 0 #cfff24;
+     transition: border-color .25s ease, background .25s ease;
+}
+
+.ax-checkout-delivery-estimate.is-cod {
+     border-color: rgba(255, 255, 255, 0.18);
+     background: linear-gradient(115deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.009));
+     box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.5);
+}
+
+.ax-checkout-delivery-icon {
+     flex: 0 0 39px;
+     width: 39px;
+     height: 39px;
+     display: grid;
+     place-items: center;
+     color: #cfff24;
+     border: 1px solid rgba(207, 255, 36, 0.2);
+     border-radius: 10px;
+     background: rgba(207, 255, 36, 0.065);
+}
+
+.ax-checkout-delivery-estimate.is-cod .ax-checkout-delivery-icon {
+     color: rgba(255, 255, 255, 0.84);
+     border-color: rgba(255, 255, 255, 0.15);
+     background: rgba(255, 255, 255, 0.04);
+}
+
+.ax-checkout-delivery-content {
+     min-width: 0;
+     display: flex;
+     flex-direction: column;
+     gap: 5px;
+}
+
+.ax-checkout-delivery-kicker {
+     font-size: 8px;
+     font-weight: 700;
+     letter-spacing: .19em;
+     color: #cfff24;
+}
+
+.ax-checkout-delivery-estimate.is-cod .ax-checkout-delivery-kicker {
+     color: rgba(255, 255, 255, 0.7);
+}
+
+.ax-checkout-delivery-content strong {
+     color: #f7f6f1;
+     font-size: clamp(13px, 1.15vw, 16px);
+     font-weight: 600;
+     line-height: 1.3;
+}
+
+.ax-checkout-delivery-content small {
+     color: rgba(255, 255, 255, 0.5);
+     font-size: 10px;
+     line-height: 1.55;
+}
+
+/* Keep payment guidance aligned with the estimate box. */
+.ax-checkout-online-note,
+.ax-checkout-cod-rule {
+     margin-top: 0;
+}
+
+.ax-checkout-price-lines .ax-checkout-summary-delivery {
+     min-height: 39px;
+     padding: 4px 0;
+     border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ax-checkout-summary-delivery strong {
+     color: #cfff24;
+     font-size: 11px;
+     white-space: nowrap;
+}
+
+/* Tablet navigation is 66px high. */
+@media (max-width: 960px) {
+     .ax-checkout-page {
+          padding-top: 94px;
+     }
+
+     :root:has(.ax-announcement-bar) .ax-checkout-page {
+          padding-top: 126px;
+     }
+
+     .ax-checkout-summary-sticky {
+          top: auto;
+     }
+
+     :root:has(.ax-announcement-bar) .ax-checkout-summary-sticky {
+          top: auto;
+     }
+
+     .ax-checkout-heading {
+          grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+          gap: 10px;
+          padding-bottom: 12px;
+     }
+
+     .ax-checkout-title-wrap {
+          grid-column: auto;
+          grid-row: auto;
+          text-align: center;
+     }
+
+     .ax-checkout-grid {
+          padding-top: 16px;
+     }
+}
+
+/* Mobile navbar is 60px high, moved to top 40px when the bar is open. */
+@media (max-width: 620px) {
+     .ax-checkout-page {
+          padding-top: 84px;
+     }
+
+     :root:has(.ax-announcement-bar) .ax-checkout-page {
+          padding-top: 114px;
+     }
+
+     .ax-checkout-heading {
+          min-height: 30px;
+          grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+          gap: 6px;
+          padding-bottom: 11px;
+     }
+
+     .ax-checkout-index {
+          font-size: 7px;
+          letter-spacing: .12em;
+     }
+
+     .ax-checkout-back {
+          font-size: 8px;
+          letter-spacing: .08em;
+          gap: 5px;
+     }
+
+     .ax-checkout-secure {
+          font-size: 7px;
+          letter-spacing: .05em;
+          gap: 4px;
+     }
+
+     .ax-checkout-grid {
+          padding-top: 14px;
+     }
+
+     .ax-checkout-delivery-estimate {
+          margin: -6px 20px 16px;
+          padding: 12px;
+          gap: 11px;
+     }
+
+     .ax-checkout-delivery-icon {
+          flex-basis: 35px;
+          width: 35px;
+          height: 35px;
+     }
+
+     .ax-checkout-delivery-content strong {
+          font-size: 13px;
+     }
+
+     .ax-checkout-delivery-content small {
+          font-size: 9px;
+     }
+}
+
+@media (max-width: 390px) {
+     .ax-checkout-heading {
+          grid-template-columns: minmax(0, 1fr) auto;
+     }
+
+     .ax-checkout-secure {
+          display: none;
+     }
+
+     .ax-checkout-title-wrap {
+          justify-self: end;
+     }
+}

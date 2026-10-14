@@ -96,6 +96,38 @@ const shopCategories = [
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // Controls the scrolling announcement above the desktop/mobile navbar.
+  const [announcementOpen, setAnnouncementOpen] = useState(true);
+  const announcementVisible = announcementOpen && !menuOpen;
+  // Repeat the fast-delivery offer often, and highlight only that offer.
+  // Online delivery: 1–2 days. Cash on Delivery: 4–6 days.
+  const announcements = [
+    {
+      id: "delivery-1",
+      text: "ONLINE PAYMENT — GET DELIVERED IN 1–2 DAYS",
+      featured: true,
+    },
+    { id: "collection", text: "EXPLORE THE COLLECTION" },
+    {
+      id: "delivery-2",
+      text: "ONLINE PAYMENT — GET DELIVERED IN 1–2 DAYS",
+      featured: true,
+    },
+    { id: "unbound", text: "UNBOUND — MORE THAN CLOTHES" },
+    {
+      id: "delivery-3",
+      text: "ONLINE PAYMENT — GET DELIVERED IN 1–2 DAYS",
+      featured: true,
+    },
+    { id: "cod", text: "CASH ON DELIVERY — ESTIMATED 4–6 DAYS" },
+    {
+      id: "delivery-4",
+      text: "ONLINE PAYMENT — GET DELIVERED IN 1–2 DAYS",
+      featured: true,
+    },
+    { id: "streetwear", text: "STREETWEAR WITHOUT LIMITS" },
+  ];
+
   const [mobileShopOpen, setMobileShopOpen] = useState(false);
 
   const [shopOpen, setShopOpen] = useState(false);
@@ -105,8 +137,42 @@ function Navbar() {
   const [cartCount, setCartCount] = useState(0);
 
   const shopCloseTimer = useRef(null);
+  const navbarRef = useRef(null);
 
   const navigate = useNavigate();
+
+  /* =========================================================
+     KEEP PAGE CONTENT BELOW THE FIXED NAVBAR.
+     The measured bottom automatically handles the announcement
+     bar opening/closing and desktop/mobile navbar heights.
+  ========================================================= */
+  useEffect(() => {
+    let frame = null;
+
+    const updateContentOffset = () => {
+      if (!navbarRef.current) return;
+
+      const navbarBottom = navbarRef.current.getBoundingClientRect().bottom;
+      document.documentElement.style.setProperty(
+        "--ax-nav-content-offset",
+        `${Math.ceil(navbarBottom + 16)}px`,
+      );
+    };
+
+    const handleResize = () => {
+      if (frame !== null) window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(updateContentOffset);
+    };
+
+    updateContentOffset();
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      if (frame !== null) window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", handleResize);
+      document.documentElement.style.removeProperty("--ax-nav-content-offset");
+    };
+  }, [announcementVisible]);
 
   /* =========================================================
      OPEN SHOP MENU
@@ -469,10 +535,65 @@ function Navbar() {
   return (
     <>
       {/* =====================================================
+          SCROLLING ANNOUNCEMENT — DESKTOP + MOBILE
+      ===================================================== */}
+      {announcementVisible && (
+        <aside className="ax-announcement-bar" aria-label="UNBOUND updates">
+          {/* Always-visible delivery highlight, including on mobile. */}
+          <span
+            className="ax-announcement-label"
+            aria-label="Online payment: estimated delivery in 1 to 2 days"
+          >
+            <span className="ax-announcement-label-icon" aria-hidden="true">
+              ✦
+            </span>
+            <span className="ax-announcement-label-copy">
+              <small>ONLINE PAYMENT</small>
+              <strong>DELIVERY IN 1–2 DAYS</strong>
+            </span>
+          </span>
+
+          <div className="ax-announcement-marquee" aria-hidden="true">
+            <div className="ax-announcement-track">
+              {[0, 1].map((copy) => (
+                <div className="ax-announcement-group" key={copy}>
+                  {announcements.map((message) => (
+                    <React.Fragment key={`${copy}-${message.id}`}>
+                      <span
+                        className={`ax-announcement-text${message.featured ? " ax-announcement-text-featured" : ""}`}
+                      >
+                        {message.featured && (
+                          <span className="ax-announcement-fast-icon">✦</span>
+                        )}
+                        {message.text}
+                      </span>
+                      <span className="ax-announcement-star">✦</span>
+                    </React.Fragment>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="ax-announcement-close"
+            aria-label="Close announcement bar"
+            onClick={() => setAnnouncementOpen(false)}
+          >
+            <X size={15} strokeWidth={1.8} />
+          </button>
+        </aside>
+      )}
+
+      {/* =====================================================
           DESKTOP NAVBAR
       ===================================================== */}
 
-      <header className="ax-navbar">
+      <header
+        ref={navbarRef}
+        className={`ax-navbar${announcementVisible ? " ax-navbar-with-announcement" : ""}`}
+      >
         {/* ===============================================
             LOGO
         =============================================== */}

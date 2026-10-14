@@ -298,6 +298,11 @@ function Checkout() {
 
   const [paymentMethod, setPaymentMethod] = useState("upi");
 
+  // The estimate updates immediately when the customer changes payment method.
+  // It is a display estimate, not a promise of an exact delivery date.
+  const isOnlinePayment = paymentMethod === "upi";
+  const estimatedDelivery = isOnlinePayment ? "1–2 days" : "4–6 days";
+
   /* =======================================================
      CART
   ======================================================= */
@@ -1174,6 +1179,16 @@ function Checkout() {
                 </strong>
               </p>
 
+              <p>
+                ESTIMATED DELIVERY:
+                <strong>
+                  {" "}
+                  {orderResult?.paymentMethod === "cod"
+                    ? "4–6 days"
+                    : "1–2 days"}
+                </strong>
+              </p>
+
               {orderResult?.paymentStatus === "paid" && (
                 <p>
                   PAYMENT STATUS:
@@ -1552,14 +1567,35 @@ function Checkout() {
                 })}
               </div>
 
+              {/* LIVE DELIVERY ESTIMATE — ONLINE: 1–2 DAYS / COD: 4–6 DAYS */}
+              <div
+                className={`ax-checkout-delivery-estimate ${
+                  isOnlinePayment ? "is-online" : "is-cod"
+                }`}
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                <span className="ax-checkout-delivery-icon" aria-hidden="true">
+                  <Truck size={20} strokeWidth={1.7} />
+                </span>
+
+                <span className="ax-checkout-delivery-content">
+                  <span className="ax-checkout-delivery-kicker">
+                    {isOnlinePayment ? "FAST DELIVERY" : "STANDARD DELIVERY"}
+                  </span>
+                  <strong>Estimated delivery: {estimatedDelivery}</strong>
+                  <small>
+                    {isOnlinePayment
+                      ? "For prepaid orders. Timing may vary by location."
+                      : "For Cash on Delivery orders. Timing may vary by location."}
+                  </small>
+                </span>
+              </div>
+
               {/* ONLINE */}
 
-              {paymentMethod === "upi" && (
-                <div className="ax-checkout-online-note">
-                  <LockKeyhole size={14} />
-                  Secure online payment powered by Razorpay.
-                </div>
-              )}
+              
 
               {/* COD */}
 
@@ -2065,6 +2101,12 @@ function Checkout() {
                   <span>SHIPPING</span>
 
                   <strong className="ax-checkout-free">FREE</strong>
+                </div>
+
+                {/* DELIVERY ESTIMATE */}
+                <div className="ax-checkout-summary-delivery">
+                  <span>ESTIMATED DELIVERY</span>
+                  <strong>{estimatedDelivery}</strong>
                 </div>
 
                 {/* TOTAL */}

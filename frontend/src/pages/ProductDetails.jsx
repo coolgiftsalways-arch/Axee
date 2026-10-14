@@ -2281,6 +2281,24 @@ function ProductDetails() {
             )}
           </div>
 
+          {/* ESTIMATED DELIVERY — DIRECTLY BELOW PRICE */}
+          <div
+            className="pd-delivery-estimate"
+            role="note"
+            aria-label="Estimated delivery in one to two days"
+          >
+            <div className="pd-delivery-estimate-icon" aria-hidden="true">
+              <Truck size={19} strokeWidth={1.7} />
+            </div>
+
+            <div className="pd-delivery-estimate-text">
+              <strong>
+                GET DELIVERED IN <span>1–2 DAYS</span>
+              </strong>
+              <small>Estimated delivery • Timing may vary by location</small>
+            </div>
+          </div>
+
           {/* DESCRIPTION */}
 
           <p className="pd-short-description">
