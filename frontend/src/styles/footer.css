@@ -10,6 +10,136 @@
      box-sizing: border-box;
 }
 
+
+/* ==========================================
+   FOOTER LEGAL LINKS
+   BOTTOM RIGHT POSITION
+========================================== */
+
+.ax-footer {
+     position: relative;
+}
+
+/* LEGAL LINKS CONTAINER */
+
+.ax-footer-legal {
+     position: absolute;
+
+     right: 4%;
+     bottom: 28px;
+
+     display: flex;
+     align-items: center;
+     justify-content: flex-end;
+
+     gap: 24px;
+
+     z-index: 10;
+}
+
+/* LINKS */
+
+.ax-footer-legal-link {
+     position: relative;
+
+     color: #8f8f8f;
+
+     font-family: inherit;
+     font-size: 12px;
+     font-weight: 400;
+
+     text-decoration: none;
+
+     white-space: nowrap;
+
+     transition:
+          color 0.3s ease,
+          opacity 0.3s ease;
+}
+
+/* HOVER */
+
+.ax-footer-legal-link:hover {
+     color: #ffffff;
+}
+
+/* VERTICAL DIVIDER */
+
+.ax-footer-legal-divider {
+     width: 1px;
+     height: 13px;
+
+     background: rgba(255, 255, 255, 0.25);
+
+     flex-shrink: 0;
+}
+
+/* ==========================================
+   TABLET
+========================================== */
+
+@media (max-width: 1024px) {
+     .ax-footer-legal {
+          right: 30px;
+          bottom: 24px;
+
+          gap: 18px;
+     }
+
+     .ax-footer-legal-link {
+          font-size: 11px;
+     }
+}
+
+/* ==========================================
+   MOBILE
+========================================== */
+
+@media (max-width: 768px) {
+     .ax-footer-legal {
+          position: relative;
+
+          right: auto;
+          bottom: auto;
+
+          width: 100%;
+
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+
+          gap: 15px;
+
+          padding: 20px 24px 25px;
+          margin-top: 10px;
+     }
+
+     .ax-footer-legal-link {
+          font-size: 11px;
+     }
+
+     .ax-footer-legal-divider {
+          height: 12px;
+     }
+}
+
+/* ==========================================
+   SMALL MOBILE
+========================================== */
+
+@media (max-width: 400px) {
+     .ax-footer-legal {
+          justify-content: center;
+
+          gap: 12px;
+
+          padding: 18px 12px 24px;
+     }
+
+     .ax-footer-legal-link {
+          font-size: 10px;
+     }
+}
 /* =========================================================
    UNBOUND FOOTER
 ========================================================= */

@@ -44,6 +44,10 @@ import TrackOrder from "./pages/TrackOrder.jsx";
 import ProductDetails from "./pages/ProductDetails.jsx";
 import Checkout from "./pages/Checkout.jsx";
 
+// LEGAL PAGES — UNBOUND CLOTHING
+import TermsAndConditions from "./pages/TermsAndConditions.jsx";
+import PrivacyPolicy from "./pages/PrivacyPolicy.jsx";
+
 /* =========================================================
    ADMIN
 ========================================================= */
@@ -759,10 +763,7 @@ function Layout() {
 
           <Route path="settings" element={<Settings />} />
 
-          <Route
-  path="/admin/shipping"
-  element={<Shipping />}
-/>
+          <Route path="/admin/shipping" element={<Shipping />} />
 
           <Route
             path="*"
@@ -862,6 +863,18 @@ function Layout() {
           {/* CHECKOUT */}
 
           <Route path="/checkout" element={<Checkout />} />
+
+          {/* =============================================
+              LEGAL PAGES
+              These routes must be ABOVE the catch-all.
+          ============================================= */}
+
+          <Route
+            path="/terms-and-conditions"
+            element={<TermsAndConditions />}
+          />
+
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
           {/* WRONG URL */}
 

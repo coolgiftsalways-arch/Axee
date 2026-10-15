@@ -1,0 +1,410 @@
+/* =====================================================
+   UNBOUND CLOTHING
+   PRIVACY POLICY & TERMS AND CONDITIONS
+===================================================== */
+
+.ub-legal-page {
+     width: 100%;
+     min-height: 100vh;
+
+     background: #080808;
+     color: #ffffff;
+
+     padding: 135px 24px 110px;
+
+     font-family: inherit;
+     box-sizing: border-box;
+}
+
+.ub-legal-page *,
+.ub-legal-page *::before,
+.ub-legal-page *::after {
+     box-sizing: border-box;
+}
+
+/* =====================================================
+   CONTAINER
+===================================================== */
+
+.ub-legal-container {
+     width: 100%;
+     max-width: 1050px;
+     margin: 0 auto;
+}
+
+/* =====================================================
+   BREADCRUMB
+===================================================== */
+
+.ub-legal-breadcrumb {
+     display: flex;
+     align-items: center;
+     flex-wrap: wrap;
+
+     gap: 12px;
+
+     margin-bottom: 75px;
+
+     color: #777;
+
+     font-size: 11px;
+     font-weight: 500;
+
+     letter-spacing: 1.8px;
+}
+
+.ub-legal-breadcrumb a {
+     color: #aaa;
+     text-decoration: none;
+
+     transition: color 0.3s ease;
+}
+
+.ub-legal-breadcrumb a:hover {
+     color: #ffffff;
+}
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+.ub-legal-header {
+     padding-bottom: 65px;
+     border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.ub-legal-eyebrow {
+     display: inline-block;
+
+     margin-bottom: 30px;
+
+     color: #aaa;
+
+     font-size: 11px;
+     font-weight: 500;
+
+     letter-spacing: 3px;
+     text-transform: uppercase;
+}
+
+.ub-legal-header h1 {
+     margin: 0 0 45px;
+
+     color: #ffffff;
+
+     font-size: clamp(48px, 8vw, 110px);
+     font-weight: 800;
+
+     line-height: 0.98;
+     letter-spacing: -0.065em;
+
+     text-transform: uppercase;
+     overflow-wrap: anywhere;
+}
+
+.ub-legal-header h1 span {
+     color: #777;
+}
+
+.ub-legal-meta {
+     display: flex;
+     align-items: center;
+     flex-wrap: wrap;
+
+     gap: 15px 35px;
+
+     color: #888;
+
+     font-size: 11px;
+     letter-spacing: 1.5px;
+}
+
+/* =====================================================
+   INTRODUCTION
+===================================================== */
+
+.ub-legal-introduction {
+     padding: 60px 0 35px;
+     max-width: 900px;
+}
+
+.ub-legal-introduction p {
+     color: #b7b7b7;
+
+     font-size: 16px;
+     font-weight: 400;
+
+     line-height: 1.95;
+
+     margin: 0 0 22px;
+}
+
+/* =====================================================
+   POLICY SECTIONS
+===================================================== */
+
+.ub-legal-sections {
+     width: 100%;
+}
+
+.ub-legal-section {
+     padding: 42px 0 48px;
+
+     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.ub-legal-section h2 {
+     color: #ffffff;
+
+     font-size: clamp(21px, 2.5vw, 30px);
+     font-weight: 600;
+
+     line-height: 1.35;
+     letter-spacing: -0.03em;
+
+     margin: 0 0 26px;
+}
+
+.ub-legal-section p {
+     color: #a8a8a8;
+
+     font-size: 15px;
+     font-weight: 400;
+
+     line-height: 1.95;
+
+     margin: 0 0 19px;
+
+     max-width: 940px;
+}
+
+.ub-legal-section p:last-child {
+     margin-bottom: 0;
+}
+
+/* =====================================================
+   BULLET LISTS
+===================================================== */
+
+.ub-legal-section ul {
+     margin: 0;
+     padding-left: 24px;
+
+     list-style: disc;
+}
+
+.ub-legal-section li {
+     color: #a8a8a8;
+
+     font-size: 15px;
+     line-height: 1.9;
+
+     margin-bottom: 17px;
+
+     padding-left: 8px;
+}
+
+.ub-legal-section li::marker {
+     color: #eeeeee;
+}
+
+.ub-legal-section li:last-child {
+     margin-bottom: 0;
+}
+
+/* =====================================================
+   BOTTOM NAVIGATION
+===================================================== */
+
+.ub-legal-bottom {
+     display: flex;
+     align-items: center;
+     justify-content: space-between;
+
+     flex-wrap: wrap;
+     gap: 25px;
+
+     padding-top: 75px;
+}
+
+.ub-legal-bottom a {
+     display: inline-block;
+
+     color: #ffffff;
+
+     font-size: 12px;
+     font-weight: 500;
+
+     letter-spacing: 1.4px;
+
+     text-decoration: none;
+
+     padding-bottom: 10px;
+
+     border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+
+     transition:
+          color 0.3s ease,
+          border-color 0.3s ease;
+}
+
+.ub-legal-bottom a:hover {
+     color: #aaaaaa;
+     border-color: #aaaaaa;
+}
+
+/* =====================================================
+   RESPONSIVE TABLET
+===================================================== */
+
+@media (max-width: 900px) {
+     .ub-legal-page {
+          padding: 115px 28px 85px;
+     }
+
+     .ub-legal-breadcrumb {
+          margin-bottom: 55px;
+     }
+
+     .ub-legal-header {
+          padding-bottom: 45px;
+     }
+
+     .ub-legal-header h1 {
+          font-size: clamp(48px, 9vw, 80px);
+     }
+
+     .ub-legal-introduction {
+          padding-top: 45px;
+     }
+
+     .ub-legal-section {
+          padding: 35px 0 40px;
+     }
+}
+
+/* =====================================================
+   RESPONSIVE MOBILE
+===================================================== */
+
+@media (max-width: 600px) {
+     .ub-legal-page {
+          padding: 95px 18px 70px;
+     }
+
+     .ub-legal-breadcrumb {
+          font-size: 10px;
+          letter-spacing: 1px;
+
+          margin-bottom: 43px;
+     }
+
+     .ub-legal-eyebrow {
+          font-size: 10px;
+          letter-spacing: 2px;
+
+          margin-bottom: 25px;
+     }
+
+     .ub-legal-header {
+          padding-bottom: 35px;
+     }
+
+     .ub-legal-header h1 {
+          font-size: clamp(42px, 11vw, 64px);
+
+          letter-spacing: -0.055em;
+
+          margin-bottom: 35px;
+     }
+
+     .ub-legal-meta {
+          flex-direction: column;
+          align-items: flex-start;
+
+          gap: 12px;
+
+          font-size: 10px;
+          letter-spacing: 1px;
+     }
+
+     .ub-legal-introduction {
+          padding: 35px 0 15px;
+     }
+
+     .ub-legal-introduction p {
+          font-size: 14px;
+          line-height: 1.9;
+
+          margin-bottom: 17px;
+     }
+
+     .ub-legal-section {
+          padding: 30px 0 35px;
+     }
+
+     .ub-legal-section h2 {
+          font-size: 21px;
+          line-height: 1.35;
+
+          margin-bottom: 20px;
+     }
+
+     .ub-legal-section p,
+     .ub-legal-section li {
+          font-size: 14px;
+          line-height: 1.9;
+     }
+
+     .ub-legal-section ul {
+          padding-left: 19px;
+     }
+
+     .ub-legal-section li {
+          padding-left: 4px;
+          margin-bottom: 14px;
+     }
+
+     .ub-legal-bottom {
+          padding-top: 50px;
+
+          flex-direction: column;
+          align-items: flex-start;
+
+          gap: 30px;
+     }
+
+     .ub-legal-bottom a {
+          font-size: 11px;
+     }
+}
+
+/* =====================================================
+   SMALL MOBILE
+===================================================== */
+
+@media (max-width: 360px) {
+     .ub-legal-page {
+          padding-left: 14px;
+          padding-right: 14px;
+     }
+
+     .ub-legal-header h1 {
+          font-size: 39px;
+     }
+}
+
+/* =====================================================
+   ACCESSIBILITY
+===================================================== */
+
+.ub-legal-page a:focus-visible {
+     outline: 2px solid #ffffff;
+     outline-offset: 5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+     .ub-legal-page * {
+          transition: none !important;
+     }
+}

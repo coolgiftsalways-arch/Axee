@@ -8,20 +8,24 @@ import { Link } from "react-router-dom";
 
 import "../styles/footer.css";
 
+// =====================================================
+// FOOTER COMPONENT
+// =====================================================
+
 function Footer() {
   const [openSection, setOpenSection] = useState("");
 
-  /* =========================================================
-     TOGGLE MOBILE SECTION
-  ========================================================= */
+  // ===================================================
+  // TOGGLE MOBILE ACCORDION
+  // ===================================================
 
   const toggleSection = (section) => {
     setOpenSection((current) => (current === section ? "" : section));
   };
 
-  /* =========================================================
-     CLOSE MOBILE SECTION
-  ========================================================= */
+  // ===================================================
+  // CLOSE MOBILE ACCORDION
+  // ===================================================
 
   const closeAccordion = () => {
     setOpenSection("");
@@ -29,9 +33,9 @@ function Footer() {
 
   return (
     <footer className="ax-footer">
-      {/* =====================================================
-          BACKGROUND
-      ===================================================== */}
+      {/* =================================================
+          BACKGROUND DECORATIONS
+      ================================================= */}
 
       <div className="ax-footer-planet ax-footer-planet-left" />
 
@@ -43,15 +47,15 @@ function Footer() {
 
       <div className="ax-footer-fog" />
 
-      {/* =====================================================
-          INNER
-      ===================================================== */}
+      {/* =================================================
+          FOOTER INNER
+      ================================================= */}
 
       <div className="ax-footer-inner">
         <div className="ax-footer-main">
-          {/* =================================================
-              BRAND
-          ================================================= */}
+          {/* =============================================
+              BRAND SECTION
+          ============================================= */}
 
           <div className="ax-footer-brand">
             <Link to="/" className="ax-footer-logo">
@@ -74,9 +78,7 @@ function Footer() {
               who see beyond.
             </p>
 
-            {/* ===============================================
-                SOCIAL LINKS
-            =============================================== */}
+            {/* SOCIAL MEDIA */}
 
             <div className="ax-footer-socials">
               <a
@@ -109,14 +111,12 @@ function Footer() {
             </div>
           </div>
 
-          {/* =================================================
-              DESKTOP LINKS
-          ================================================= */}
+          {/* =============================================
+              DESKTOP FOOTER LINKS
+          ============================================= */}
 
           <div className="ax-footer-links-desktop">
-            {/* ===============================================
-                SHOP
-            =============================================== */}
+            {/* SHOP */}
 
             <div className="ax-footer-column">
               <h3>SHOP</h3>
@@ -140,9 +140,9 @@ function Footer() {
               <Link to="/jackets">Jackets</Link>
             </div>
 
-            {/* ===============================================
+            {/* =========================================
                 PAGES
-            =============================================== */}
+            ========================================= */}
 
             <div className="ax-footer-column">
               <h3>PAGES</h3>
@@ -156,9 +156,9 @@ function Footer() {
               <Link to="/track-order">Track Order</Link>
             </div>
 
-            {/* ===============================================
+            {/* =========================================
                 ADDRESS
-            =============================================== */}
+            ========================================= */}
 
             <div className="ax-footer-column ax-footer-address">
               <h3>ADDRESS</h3>
@@ -177,9 +177,9 @@ function Footer() {
             </div>
           </div>
 
-          {/* =================================================
+          {/* =============================================
               NEWSLETTER
-          ================================================= */}
+          ============================================= */}
 
           <div className="ax-footer-newsletter">
             <span className="ax-footer-small-title">STAY IN THE LOOP</span>
@@ -198,14 +198,14 @@ function Footer() {
           </div>
         </div>
 
-        {/* =====================================================
+        {/* =================================================
             MOBILE ACCORDIONS
-        ===================================================== */}
+        ================================================= */}
 
         <div className="ax-footer-mobile-links">
-          {/* =================================================
-              SHOP
-          ================================================= */}
+          {/* =============================================
+              MOBILE SHOP
+          ============================================= */}
 
           <div className="ax-footer-accordion">
             <button type="button" onClick={() => toggleSection("shop")}>
@@ -261,9 +261,9 @@ function Footer() {
             </div>
           </div>
 
-          {/* =================================================
-              PAGES
-          ================================================= */}
+          {/* =============================================
+              MOBILE PAGES
+          ============================================= */}
 
           <div className="ax-footer-accordion">
             <button type="button" onClick={() => toggleSection("pages")}>
@@ -299,9 +299,9 @@ function Footer() {
             </div>
           </div>
 
-          {/* =================================================
-              ADDRESS
-          ================================================= */}
+          {/* =============================================
+              MOBILE ADDRESS
+          ============================================= */}
 
           <div className="ax-footer-accordion">
             <button type="button" onClick={() => toggleSection("address")}>
@@ -333,6 +333,23 @@ function Footer() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* =================================================
+          NEW: TERMS AND PRIVACY
+          POSITION: BOTTOM RIGHT
+      ================================================= */}
+
+      <div className="ax-footer-legal">
+        <Link to="/terms-and-conditions" className="ax-footer-legal-link">
+          Terms & Conditions
+        </Link>
+
+        <span className="ax-footer-legal-divider" />
+
+        <Link to="/privacy-policy" className="ax-footer-legal-link">
+          Privacy Policy
+        </Link>
       </div>
     </footer>
   );
