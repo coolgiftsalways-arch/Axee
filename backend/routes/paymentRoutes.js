@@ -1,6 +1,7 @@
 import express from "express";
 import crypto from "node:crypto";
 import Razorpay from "razorpay";
+import Order from "../models/Order.js";
 
 const router = express.Router();
 
@@ -61,8 +62,18 @@ router.post(
         notes = {},
       } = req.body;
 
-      const numericAmount =
-        Number(amount);
+      const internalOrderId = String(notes?.internalOrderId || "");
+      if (!internalOrderId) {
+        return res.status(400).json({ success: false, message: "Internal order ID required." });
+      }
+      const internalOrder = await Order.findById(internalOrderId);
+      if (!internalOrder || internalOrder.paymentMethod === "cod" || internalOrder.orderStatus !== "pending_payment") {
+        return res.status(400).json({ success: false, message: "Invalid or completed online order." });
+      }
+      const numericAmount = Number(internalOrder.total);
+      if (Math.abs(Number(amount) - numericAmount) > 0.001) {
+        return res.status(400).json({ success: false, message: "Payment amount does not match order total." });
+      }
 
       /* ===============================================
          VALIDATE AMOUNT
@@ -128,15 +139,11 @@ router.post(
 
         receipt:
           String(
-            receipt ||
+            internalOrder.orderNumber ||
               `axiee_${Date.now()}`,
           ).slice(0, 40),
 
-        notes:
-          notes &&
-          typeof notes === "object"
-            ? notes
-            : {},
+        notes: { internalOrderId: String(internalOrder._id), orderNumber: internalOrder.orderNumber },
       };
 
       console.log(
@@ -148,6 +155,9 @@ router.post(
         await razorpay.orders.create(
           orderOptions,
         );
+
+      internalOrder.razorpayOrderId = razorpayOrder.id;
+      await internalOrder.save();
 
       console.log(
         "✅ Razorpay order created:",
@@ -322,6 +332,17 @@ router.post(
           message:
             "Invalid Razorpay payment signature",
         });
+      }
+
+      // Confirm the gateway payment belongs to the saved order and is fully paid.
+      const internalOrder = await Order.findOne({ razorpayOrderId: razorpay_order_id });
+      if (!internalOrder || internalOrder.paymentMethod === "cod") {
+        return res.status(400).json({ success: false, message: "Payment is not linked to a valid order." });
+      }
+      const razorpay = getRazorpay();
+      const gatewayPayment = await razorpay.payments.fetch(razorpay_payment_id);
+      if (gatewayPayment.order_id !== razorpay_order_id || gatewayPayment.status !== "captured" || gatewayPayment.currency !== "INR" || Number(gatewayPayment.amount) !== Math.round(Number(internalOrder.total) * 100)) {
+        return res.status(400).json({ success: false, message: "Payment amount or capture status does not match the order." });
       }
 
       /* ===============================================

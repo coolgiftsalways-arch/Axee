@@ -1,4 +1,5 @@
 import Order from "../models/Order.js";
+import { validateCouponForOrder } from "./couponController.js";
 
 /* =========================================================
    HELPERS
@@ -49,6 +50,7 @@ export const createOrder = async (req, res) => {
       shippingAddress,
       items,
       paymentMethod,
+      couponCode = "",
       notes = "",
     } = req.body;
 
@@ -130,7 +132,26 @@ export const createOrder = async (req, res) => {
     */
     const shipping = 0;
 
-    const total = subtotal + shipping;
+    // Never trust a discount or order total supplied by the browser.
+    let applied = null;
+    if (String(couponCode || "").trim()) {
+      const result = await validateCouponForOrder({
+        code: couponCode,
+        subtotal,
+        paymentMethod: normalizedPaymentMethod,
+        email: customer.email,
+        phone: customer.phone,
+      });
+      if (!result.valid) {
+        return res.status(result.status || 400).json({ success: false, message: result.message });
+      }
+      applied = result;
+    }
+    const discountAmount = applied?.discountAmount || 0;
+    const total = Math.max(0, subtotal + shipping - discountAmount);
+    if (normalizedPaymentMethod !== "cod" && total < 1) {
+      return res.status(400).json({ success: false, message: "Online payment amount must be at least ₹1." });
+    }
 
     /* =====================================================
        STATUS
@@ -193,6 +214,11 @@ export const createOrder = async (req, res) => {
       items: normalizedItems,
 
       subtotal,
+
+      couponCode: applied?.coupon?.code || "",
+      discountType: applied?.coupon?.discountType || "",
+      discountValue: applied?.coupon?.discountValue || 0,
+      discountAmount,
 
       shipping,
 

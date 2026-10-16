@@ -17,6 +17,13 @@ const couponSchema = new mongoose.Schema(
       trim: true,
     },
 
+    paymentMethod: {
+      type: String,
+      enum: ["all", "cod", "online"],
+      default: "all",
+      required: true,
+    },
+
     discountType: {
       type: String,
       enum: ["percentage", "fixed"],
