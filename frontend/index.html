@@ -1,24 +1,73 @@
+
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- Google tag (gtag.js) -->
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=GT-TWDL2W8M"
+    ></script>
+
+    <script>
+      window.dataLayer = window.dataLayer || [];
+
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+
+      gtag("js", new Date());
+      gtag("config", "GT-TWDL2W8M");
+    </script>
+
     <meta charset="UTF-8" />
-  
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  
+
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+
     <!-- UNBOUND BRAND TITLE -->
     <title>UNBOUND | Premium Streetwear</title>
-  
+
     <!-- UNBOUND FAVICON -->
-    <link rel="icon" type="image/png" href="/frontend/src/assets/Logo/logo.png" />
-  
+    <link
+      rel="icon"
+      type="image/png"
+      href="/frontend/src/assets/Logo/logo.png"
+    />
+
     <!-- THEME COLOR -->
     <meta name="theme-color" content="#000000" />
+
+    <!-- Google Ads Purchase Conversion -->
+    <script>
+      window.trackPurchaseConversion = function (
+        transactionId,
+        orderValue
+      ) {
+        if (!transactionId || !Number.isFinite(Number(orderValue))) {
+          console.error("Invalid purchase conversion data");
+          return;
+        }
+
+        gtag("event", "conversion", {
+          send_to: "AW-18205318447/7AU5CJbTpaEdEK-6_OhD",
+          value: Number(orderValue),
+          currency: "INR",
+          transaction_id: String(transactionId)
+        });
+      };
+    </script>
   </head>
 
   <body>
     <div id="root"></div>
 
-    <script type="module" src="/src/main.jsx"></script>
+    <script
+      type="module"
+      src="/src/main.jsx"
+    ></script>
+
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   </body>
 </html>

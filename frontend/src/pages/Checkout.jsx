@@ -337,60 +337,84 @@ const getItemQuantity = (item) => Math.max(1, Number(item?.quantity || 1));
 ========================================================= */
 
 const resolveImageUrl = (value) => {
-  if (!value) return "";
+
+  if (!value) {
+
+    return "";
+
+  }
 
   if (typeof value === "object") {
-    if (value.url) return resolveImageUrl(value.url);
+
+    if (value.url) {
+
+      return resolveImageUrl(value.url);
+
+    }
 
     const fileId = value.fileId || value._id || value.id;
 
     if (fileId) {
+
       return `${API_URL}/api/catalog/images/${fileId}`;
+
     }
 
     return "";
+
   }
 
   const image = String(value).trim();
 
-  if (!image) return "";
+  if (!image) {
 
-  // Already a complete image URL
-  if (/^(https?:|data:|blob:)/i.test(image)) {
-    return image;
+    return "";
+
   }
 
-  // Images stored on Hostinger
   if (
-    image.startsWith("/product-images/") ||
-    image.startsWith("product-images/")
+
+    image.startsWith("http://") ||
+
+    image.startsWith("https://") ||
+
+    image.startsWith("data:") ||
+
+    image.startsWith("blob:")
+
   ) {
-    return `https://unboundclothing.in/${image.replace(/^\/+/, "")}`;
+
+    return image;
+
   }
 
-  // Legacy API image routes
   if (image.startsWith("/api/images/")) {
-    return `${API_URL}${image.replace(
-      "/api/images/",
-      "/api/catalog/images/"
-    )}`;
+
+    return `${API_URL}${image.replace("/api/images/", "/api/catalog/images/")}`;
+
   }
 
   if (image.startsWith("/api/")) {
+
     return `${API_URL}${image}`;
+
   }
 
   if (image.startsWith("/uploads/")) {
+
     return `${API_URL}${image}`;
+
   }
 
   if (image.startsWith("uploads/")) {
+
     return `${API_URL}/${image}`;
+
   }
 
   return image;
-};
 
+};
 
 /* =========================================================
 
@@ -431,9 +455,59 @@ const getItemImage = (item) => {
 // Match checkout payment IDs to admin coupon payment restrictions.
 const couponMatchesPayment = (coupon, paymentMethod) => {
   if (!coupon) return false;
-  const required = coupon.paymentMethod || "all";
+
+  const code = String(coupon.code || "").trim().toUpperCase();
   const selected = paymentMethod === "cod" ? "cod" : "online";
+
+  // Explicit protection for UNBOUND's payment-specific offers,
+  // including responses from a server still running older coupon code.
+  if (code === "COD15") return selected === "cod";
+  if (code === "PREPAID20") return selected === "online";
+
+  const required = String(coupon.paymentMethod || "all").toLowerCase();
   return required === "all" || required === selected;
+};
+
+/* =========================================================
+   GOOGLE ADS PURCHASE CONVERSION
+========================================================= */
+
+const trackGoogleAdsPurchase = (order) => {
+  const transactionId = String(
+    order?._id || order?.orderNumber || ""
+  ).trim();
+
+  const amount = Number(order?.total);
+
+  if (
+    !transactionId ||
+    !Number.isFinite(amount) ||
+    amount < 0
+  ) {
+    console.warn("Google Ads: Invalid order data.");
+    return;
+  }
+
+  const storageKey = `unbound-ads-purchase-${transactionId}`;
+
+  if (sessionStorage.getItem(storageKey)) {
+    return;
+  }
+
+  if (typeof window.trackPurchaseConversion !== "function") {
+    console.warn("Google Ads purchase tracking is unavailable.");
+    return;
+  }
+
+  window.trackPurchaseConversion(transactionId, amount);
+
+  sessionStorage.setItem(storageKey, "1");
+
+  console.log("Google Ads purchase conversion sent:", {
+    transactionId,
+    amount,
+    currency: "INR",
+  });
 };
 
 function Checkout() {
@@ -1350,17 +1424,18 @@ function Checkout() {
             );
 
             if (!verifyResponse.ok || !verifyData?.success) {
+  throw new Error(
+    verifyData?.message || "Payment verification failed."
+  );
+}
 
-              throw new Error(
+// Track only after successful backend payment verification
+trackGoogleAdsPurchase({
+  ...internalOrder,
+  total: Number(internalOrder?.total ?? amount),
+});
 
-                verifyData?.message || "Payment verification failed.",
-
-              );
-
-            }
-
-            await resetCartAfterSuccessfulOrder();
-
+await resetCartAfterSuccessfulOrder();
             setOrderResult((current) => ({
 
               ...current,
@@ -1523,7 +1598,7 @@ function Checkout() {
 
       paymentMethod,
 
-      couponCode: appliedCoupon?.code || "",
+      couponCode: activeCoupon?.code || "",
 
       items,
 
@@ -1585,11 +1660,13 @@ function Checkout() {
 
       if (paymentMethod === "cod") {
 
-        await resetCartAfterSuccessfulOrder();
+  // Track successfully created COD orders
+  trackGoogleAdsPurchase(createdOrder);
 
-        setOrderComplete(true);
+  await resetCartAfterSuccessfulOrder();
 
-        setPlacingOrder(false);
+  setOrderComplete(true);
+  setPlacingOrder(false);
 
         window.scrollTo({
 
