@@ -2018,7 +2018,7 @@ function ProductDetails() {
 
       const data = await readJsonResponse(response, "Cart API");
 
-      if (!response.ok) {
+      if (!response.ok || data?.success === false) {
         throw new Error(data?.message || "Could not add to cart");
       }
 
@@ -2027,6 +2027,14 @@ function ProductDetails() {
           detail: data?.cart,
         }),
       );
+
+      // Fire the Google Ads conversion only after the cart API succeeds.
+      // Keep tracking failures separate from cart failures.
+      try {
+        window.trackAddToCartConversion?.();
+      } catch (trackingError) {
+        console.warn("Google Ads Add to Cart tracking failed:", trackingError);
+      }
 
       setCartMessage("ADDED TO CART");
 
