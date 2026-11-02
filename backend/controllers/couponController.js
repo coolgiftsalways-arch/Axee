@@ -63,6 +63,7 @@ export const calculateCouponDiscount = (coupon, subtotal) => {
 export const validateCouponForOrder = async ({
   code,
   subtotal,
+  paymentMethod = "",
   email = "",
   phone = "",
 }) => {
@@ -88,6 +89,15 @@ export const validateCouponForOrder = async ({
       status: 404,
       message: "Coupon code not found.",
     };
+  }
+
+  const method = String(paymentMethod || "").trim().toLowerCase();
+  const group = method === "cod" ? "cod" : ["upi", "card", "online"].includes(method) ? "online" : "";
+  if (!group) {
+    return { valid: false, status: 400, message: "Select a valid payment method before applying a coupon." };
+  }
+  if ((coupon.paymentMethod || "all") !== "all" && coupon.paymentMethod !== group) {
+    return { valid: false, status: 400, message: `Coupon ${coupon.code} is only valid for ${coupon.paymentMethod === "cod" ? "Cash on Delivery" : "online payment"}.` };
   }
 
   /* INACTIVE */
@@ -233,6 +243,8 @@ const serializeCoupon = (coupon, subtotal = null) => {
 
     description: document.description || "",
 
+    paymentMethod: document.paymentMethod || "all",
+
     discountType: document.discountType,
 
     discountValue: document.discountValue,
@@ -294,6 +306,8 @@ export const getCoupons = async (_req, res) => {
 export const getAvailableCoupons = async (req, res) => {
   try {
     const subtotal = roundMoney(req.query.subtotal || 0);
+    const paymentMethod = String(req.query.paymentMethod || "").toLowerCase();
+    const methodGroup = paymentMethod === "cod" ? "cod" : ["upi", "card", "online"].includes(paymentMethod) ? "online" : "";
 
     const now = new Date();
 
@@ -312,6 +326,7 @@ export const getAvailableCoupons = async (req, res) => {
       expiryDate: {
         $gte: now,
       },
+      ...(methodGroup ? { paymentMethod: { $in: ["all", methodGroup, null] } } : {}),
     }).sort({
       createdAt: -1,
     });
@@ -340,11 +355,12 @@ export const getAvailableCoupons = async (req, res) => {
 
 export const applyCoupon = async (req, res) => {
   try {
-    const { code = "", subtotal = 0, email = "", phone = "" } = req.body || {};
+    const { code = "", subtotal = 0, paymentMethod = "", email = "", phone = "" } = req.body || {};
 
     const result = await validateCouponForOrder({
       code,
       subtotal,
+      paymentMethod,
       email,
       phone,
     });
@@ -394,6 +410,8 @@ export const createCoupon = async (req, res) => {
 
       description = "",
 
+      paymentMethod = "all",
+
       discountType = "percentage",
 
       discountValue,
@@ -429,6 +447,8 @@ export const createCoupon = async (req, res) => {
       code: normalizeCode(code),
 
       description,
+
+      paymentMethod,
 
       discountType,
 
@@ -489,6 +509,7 @@ export const updateCoupon = async (req, res) => {
 
     const allowedFields = [
       "description",
+      "paymentMethod",
       "discountType",
       "discountValue",
       "minOrderAmount",

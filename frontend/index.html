@@ -1,24 +1,121 @@
+
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-  
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  
+
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+
     <!-- UNBOUND BRAND TITLE -->
     <title>UNBOUND | Premium Streetwear</title>
-  
+
     <!-- UNBOUND FAVICON -->
-    <link rel="icon" type="image/png" href="/frontend/src/assets/Logo/logo.png" />
-  
+    <link
+      rel="icon"
+      type="image/png"
+      href="/frontend/src/assets/Logo/logo.png"
+    />
+
     <!-- THEME COLOR -->
     <meta name="theme-color" content="#000000" />
+
+    <!-- GOOGLE TAG (gtag.js) -->
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=AW-18205318447"
+    ></script>
+
+    <script>
+      window.dataLayer = window.dataLayer || [];
+
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+
+      gtag("js", new Date());
+
+      // Existing Google tracking
+      gtag("config", "GT-TWDL2W8M");
+
+      // Google Ads tracking
+      gtag("config", "AW-18205318447");
+    </script>
+
+    <!-- GOOGLE ADS ADD TO CART CONVERSION -->
+    <script>
+      window.trackAddToCartConversion = function (
+        orderValue = 1.0
+      ) {
+        if (typeof gtag !== "function") {
+          console.error("Google tag is not available");
+          return;
+        }
+
+        const value = Number(orderValue);
+
+        gtag("event", "conversion", {
+          send_to:
+            "AW-18205318447/BCl0CL7e4p8dEK-6_OhD",
+          value: Number.isFinite(value) ? value : 1.0,
+          currency: "INR"
+        });
+      };
+    </script>
+
+    <!-- GOOGLE ADS PURCHASE CONVERSION -->
+    <script>
+      window.trackPurchaseConversion = function (
+        transactionId,
+        orderValue
+      ) {
+        if (
+          !transactionId ||
+          !Number.isFinite(Number(orderValue))
+        ) {
+          console.error(
+            "Invalid purchase conversion data"
+          );
+          return;
+        }
+
+        if (typeof gtag !== "function") {
+          console.error("Google tag is not available");
+          return;
+        }
+
+        gtag("event", "conversion", {
+          send_to:
+            "AW-18205318447/7AU5CJbTpaEdEK-6_OhD",
+          value: Number(orderValue),
+          currency: "INR",
+          transaction_id: String(transactionId)
+        });
+      };
+    </script>
   </head>
 
   <body>
     <div id="root"></div>
 
-    <script type="module" src="/src/main.jsx"></script>
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <!-- REACT APP -->
+    <script
+      type="module"
+      src="/src/main.jsx"
+    ></script>
+
+    <!-- GOOGLE ADSENSE -->
+    <script
+      async
+      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8201611301648759"
+      crossorigin="anonymous"
+    ></script>
+
+    <!-- RAZORPAY -->
+    <script
+      src="https://checkout.razorpay.com/v1/checkout.js"
+    ></script>
   </body>
 </html>

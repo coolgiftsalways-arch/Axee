@@ -55,6 +55,8 @@ const EMPTY_FORM = {
 
   description: "",
 
+  paymentMethod: "all",
+
   discountType: "percentage",
 
   discountValue: "10",
@@ -207,6 +209,8 @@ function Coupons() {
 
       description: coupon.description || "",
 
+      paymentMethod: coupon.paymentMethod || "all",
+
       discountType: coupon.discountType || "percentage",
 
       discountValue: String(coupon.discountValue ?? 10),
@@ -275,6 +279,8 @@ function Coupons() {
           .toUpperCase(),
 
         description: String(form.description || "").trim(),
+
+        paymentMethod: form.paymentMethod,
 
         discountType: form.discountType,
 
@@ -640,6 +646,14 @@ function Coupons() {
                   <option value="percentage">Percentage (%)</option>
 
                   <option value="fixed">Fixed Amount (₹)</option>
+                </select>
+              </Field>
+
+              <Field label="Applicable Payment Method">
+                <select name="paymentMethod" value={form.paymentMethod} onChange={handleChange} style={inputStyle}>
+                  <option value="all">All Payment Methods</option>
+                  <option value="cod">Cash on Delivery Only</option>
+                  <option value="online">Online Payment Only</option>
                 </select>
               </Field>
 
