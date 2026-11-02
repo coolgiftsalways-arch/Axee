@@ -1,3 +1,6 @@
+import os from "node:os";
+import fs from "node:fs";
+
 import dns from "node:dns";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -69,23 +72,37 @@ const app = express();
    PERMANENT PRODUCT IMAGES
 ========================================================= */
 
+/* =========================================================
+   PERMANENT PRODUCT IMAGES
+========================================================= */
+
+// Existing product images
 const productImagesPath =
   process.env.PRODUCT_IMAGES_PATH || path.join(__dirname, "product-images");
-
-console.log("📸 Product images path:", productImagesPath);
 
 app.use(
   "/product-images",
   express.static(productImagesPath, {
     maxAge: "7d",
-
     immutable: false,
   }),
 );
+
+// Hostinger photos folder (outside public_html)
+const photosDirectory = path.join(os.homedir(), "photos");
+
+console.log("📸 Product images path:", productImagesPath);
+console.log("📸 Hostinger photos path:", photosDirectory);
+console.log("📸 Photos folder exists:", fs.existsSync(photosDirectory));
+
 app.use(
-  "/api/shiprocket",
-  shiprocketRoutes,
+  "/photos",
+  express.static(photosDirectory, {
+    maxAge: "7d",
+    immutable: false,
+  }),
 );
+app.use("/api/shiprocket", shiprocketRoutes);
 
 /* =========================================================
    CORS

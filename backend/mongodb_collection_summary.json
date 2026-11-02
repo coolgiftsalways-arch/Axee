@@ -1,0 +1,26 @@
+[
+  {
+    "collection": "products",
+    "totalDocuments": 670
+  },
+  {
+    "collection": "coupons",
+    "totalDocuments": 4
+  },
+  {
+    "collection": "shiprocketshipments",
+    "totalDocuments": 1
+  },
+  {
+    "collection": "productImages.files",
+    "totalDocuments": 1285
+  },
+  {
+    "collection": "orders",
+    "totalDocuments": 0
+  },
+  {
+    "collection": "carts",
+    "totalDocuments": 57
+  }
+]

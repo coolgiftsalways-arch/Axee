@@ -12,11 +12,11 @@
   "dependencies": {
     "axiee": "file:..",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.6.1",
     "express": "^5.1.0",
     "mime-types": "^3.0.2",
     "mongodb": "^6.21.0",
-    "mongoose": "^8.18.0",
+    "mongoose": "^8.24.7",
     "multer": "^2.0.2",
     "nodemailer": "^10.0.10",
     "razorpay": "^2.9.8",
