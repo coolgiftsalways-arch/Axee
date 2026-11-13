@@ -92,7 +92,7 @@ const createAdminToken = (email) => {
    VERIFY TOKEN
 ========================================================= */
 
-const verifyAdminToken = (token) => {
+export const verifyAdminToken = (token) => {
   if (!token || typeof token !== "string") {
     return null;
   }

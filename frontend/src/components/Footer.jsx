@@ -154,6 +154,8 @@ function Footer() {
               <Link to="/best-sellers">Best Sellers</Link>
 
               <Link to="/track-order">Track Order</Link>
+
+              <Link to="/exchange">Exchanges</Link>
             </div>
 
             {/* =========================================
@@ -295,6 +297,10 @@ function Footer() {
 
               <Link to="/track-order" onClick={closeAccordion}>
                 Track Order
+              </Link>
+
+              <Link to="/exchange" onClick={closeAccordion}>
+                Exchanges
               </Link>
             </div>
           </div>

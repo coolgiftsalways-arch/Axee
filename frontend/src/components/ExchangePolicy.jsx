@@ -66,12 +66,12 @@ export const EXCHANGE_STEPS = [
   {
     icon: MessageCircle,
     title: "Not the one?",
-    text: `Reach out within ${EXCHANGE_DAYS} days to request an exchange.`,
+    text: `Request it online within ${EXCHANGE_DAYS} days — takes a minute.`,
   },
   {
     icon: RefreshCw,
-    title: "Swap it",
-    text: "Pick another size or a different piece instead.",
+    title: "Free pickup & swap",
+    text: "We collect it, check it, and send your new size or piece.",
   },
 ];
 
@@ -146,6 +146,11 @@ export function ExchangeSheet({ visible = true }) {
           <span>Must be unwashed &amp; stain-free</span>
         </div>
       </div>
+
+      <Link to="/exchange" className="ax-exchange-sheet-link" tabIndex={isOpen ? 0 : -1}>
+        Already ordered? Start an exchange
+        <ArrowRight size={12} strokeWidth={2} aria-hidden="true" />
+      </Link>
     </div>
   );
 }
@@ -275,10 +280,17 @@ export function ExchangeHighlight() {
           questions about the tag.
         </p>
 
-        <Link to="/shop" className="ax-xc-cta">
-          SHOP RISK-FREE
-          <ArrowRight size={14} strokeWidth={1.8} aria-hidden="true" />
-        </Link>
+        <div className="ax-xc-foot-actions">
+          <Link to="/exchange" className="ax-xc-cta is-ghost">
+            START AN EXCHANGE
+            <RefreshCw size={14} strokeWidth={1.8} aria-hidden="true" />
+          </Link>
+
+          <Link to="/shop" className="ax-xc-cta">
+            SHOP RISK-FREE
+            <ArrowRight size={14} strokeWidth={1.8} aria-hidden="true" />
+          </Link>
+        </div>
       </footer>
     </section>
   );
@@ -374,15 +386,26 @@ export function ExchangeToast({ ready = true, delay = 900 }) {
         </span>
       </div>
 
-      <button
-        type="button"
-        className="ax-exchange-toast-cta"
-        onClick={showDetails}
-        tabIndex={isOpen ? 0 : -1}
-      >
-        SEE HOW
-        <ArrowDown size={13} strokeWidth={1.8} aria-hidden="true" />
-      </button>
+      <div className="ax-exchange-toast-actions">
+        <button
+          type="button"
+          className="ax-exchange-toast-cta"
+          onClick={showDetails}
+          tabIndex={isOpen ? 0 : -1}
+        >
+          SEE HOW
+          <ArrowDown size={13} strokeWidth={1.8} aria-hidden="true" />
+        </button>
+
+        <Link
+          to="/exchange"
+          className="ax-exchange-toast-link"
+          tabIndex={isOpen ? 0 : -1}
+          onClick={dismiss}
+        >
+          EXCHANGE AN ORDER
+        </Link>
+      </div>
 
       <button
         type="button"

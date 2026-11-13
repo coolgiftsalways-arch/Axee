@@ -207,6 +207,15 @@ const orderSchema = new mongoose.Schema(
       default: "pending",
     },
 
+    /*
+      Set when the order is marked delivered.
+      The 30-day exchange window is counted from this date.
+    */
+    deliveredAt: {
+      type: Date,
+      default: null,
+    },
+
     orderStatus: {
       type: String,
 

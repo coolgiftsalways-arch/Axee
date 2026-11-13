@@ -1,4 +1,5 @@
 import express from "express";
+import { requireAdmin } from "../middleware/adminMiddleware.js";
 import multer from "multer";
 import os from "node:os";
 import path from "node:path";
@@ -101,6 +102,8 @@ router.get("/:id", getProductById);
 router.post(
   "/",
 
+  requireAdmin,
+
   upload.array("images", 12),
 
   createProduct,
@@ -113,6 +116,8 @@ router.post(
 router.put(
   "/:id",
 
+  requireAdmin,
+
   upload.array("images", 12),
 
   updateProduct,
@@ -122,6 +127,6 @@ router.put(
    DELETE PRODUCT
 ========================================================= */
 
-router.delete("/:id", deleteProduct);
+router.delete("/:id", requireAdmin, deleteProduct);
 
 export default router;

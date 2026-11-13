@@ -1,4 +1,5 @@
 import express from "express";
+import { requireAdmin } from "../middleware/adminMiddleware.js";
 
 import {
   applyCoupon,
@@ -24,14 +25,14 @@ router.post("/apply", applyCoupon);
    ADMIN
 ========================================================= */
 
-router.get("/", getCoupons);
+router.get("/", requireAdmin, getCoupons);
 
-router.post("/", createCoupon);
+router.post("/", requireAdmin, createCoupon);
 
-router.put("/:id", updateCoupon);
+router.put("/:id", requireAdmin, updateCoupon);
 
-router.patch("/:id/status", toggleCouponStatus);
+router.patch("/:id/status", requireAdmin, toggleCouponStatus);
 
-router.delete("/:id", deleteCoupon);
+router.delete("/:id", requireAdmin, deleteCoupon);
 
 export default router;

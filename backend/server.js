@@ -22,6 +22,8 @@ import adminAuthRoutes from "./routes/adminAuthRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import couponRoutes from "./routes/couponRoutes.js";
 import shiprocketRoutes from "./routes/shiprocketRoutes.js";
+import exchangeRoutes from "./routes/exchangeRoutes.js";
+import { requireAdmin } from "./middleware/adminMiddleware.js";
 
 /* =========================================================
    MODELS
@@ -82,10 +84,7 @@ app.use(
     immutable: false,
   }),
 );
-app.use(
-  "/api/shiprocket",
-  shiprocketRoutes,
-);
+app.use("/api/shiprocket", requireAdmin, shiprocketRoutes);
 
 /* =========================================================
    CORS
@@ -259,6 +258,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/orders", orderRoutes);
 
 app.use("/api/coupons", couponRoutes);
+app.use("/api/exchanges", exchangeRoutes);
 
 /* =========================================================
    ADMIN

@@ -2817,3 +2817,69 @@
           animation: none;
      }
 }
+
+/* =========================================================
+   EXCHANGE LINK (30-day exchange)
+========================================================= */
+
+.ax-navbar-links > a.ax-nav-exchange {
+     display: inline-flex;
+     align-items: center;
+     gap: 7px;
+
+     color: #cfff24;
+}
+
+.ax-navbar-links > a.ax-nav-exchange:hover,
+.ax-navbar-links > a.ax-nav-exchange.active {
+     color: #e6ff8a;
+}
+
+.ax-nav-exchange-badge {
+     display: inline-flex;
+     align-items: center;
+
+     padding: 2px 5px;
+
+     border-radius: 999px;
+
+     background: #cfff24;
+     color: #050505;
+
+     font-size: 7px;
+     font-weight: 800;
+     letter-spacing: 0.08em;
+     line-height: 1.3;
+
+     box-shadow: 0 0 10px rgba(207, 255, 36, 0.55);
+
+     animation: ax-exchange-badge-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes ax-exchange-badge-pulse {
+     0%,
+     100% {
+          box-shadow: 0 0 8px rgba(207, 255, 36, 0.45);
+     }
+
+     50% {
+          box-shadow: 0 0 16px rgba(207, 255, 36, 0.85);
+     }
+}
+
+.ax-mobile-exchange {
+     color: #cfff24 !important;
+}
+
+.ax-mobile-exchange .ax-nav-exchange-badge {
+     margin-left: 10px;
+     font-size: 9px;
+     padding: 3px 8px;
+     vertical-align: middle;
+}
+
+@media (prefers-reduced-motion: reduce) {
+     .ax-nav-exchange-badge {
+          animation: none;
+     }
+}

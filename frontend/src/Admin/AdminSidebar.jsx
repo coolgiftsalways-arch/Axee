@@ -7,6 +7,7 @@ import {
   Package,
   Users,
   TicketPercent,
+  RefreshCw,
   Truck,
   Settings,
   LogOut,
@@ -49,6 +50,12 @@ const AdminSidebar = ({
       name: "Coupons",
       path: "/admin/coupons",
       icon: TicketPercent,
+    },
+
+    {
+      name: "Exchanges",
+      path: "/admin/exchanges",
+      icon: RefreshCw,
     },
 
     /* =====================================================

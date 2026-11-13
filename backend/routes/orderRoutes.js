@@ -1,4 +1,5 @@
 import express from "express";
+import { requireAdmin } from "../middleware/adminMiddleware.js";
 import mongoose from "mongoose";
 
 import Order from "../models/Order.js";
@@ -556,6 +557,8 @@ router.post(
 router.get(
   "/",
 
+  requireAdmin,
+
   async (_req, res) => {
     try {
       const orders = await Order.find().sort({
@@ -765,6 +768,8 @@ router.get(
 
 router.delete(
   "/customer",
+
+  requireAdmin,
 
   async (req, res) => {
     try {
@@ -1272,6 +1277,8 @@ router.get(
 router.patch(
   "/:id/status",
 
+  requireAdmin,
+
   async (req, res) => {
     try {
       const allowedStatuses = [
@@ -1302,12 +1309,24 @@ router.patch(
         });
       }
 
+      const statusUpdate = { orderStatus };
+
+      // Remember when the order was delivered — the 30-day exchange
+      // window is counted from this date.
+      if (orderStatus === "delivered") {
+        const existing = await Order.findById(req.params.id)
+          .select("deliveredAt")
+          .lean();
+
+        if (existing && !existing.deliveredAt) {
+          statusUpdate.deliveredAt = new Date();
+        }
+      }
+
       const order = await Order.findByIdAndUpdate(
         req.params.id,
 
-        {
-          orderStatus,
-        },
+        statusUpdate,
 
         {
           new: true,
@@ -1351,6 +1370,8 @@ router.patch(
 
 router.delete(
   "/:id",
+
+  requireAdmin,
 
   async (req, res) => {
     try {
@@ -1409,6 +1430,8 @@ router.delete(
 
 router.get(
   "/:id",
+
+  requireAdmin,
 
   async (req, res) => {
     try {

@@ -104,7 +104,7 @@ const buildAddress = (order) => {
 
 let transporter = null;
 
-const getTransporter = () => {
+export const getTransporter = () => {
   if (transporter) {
     return transporter;
   }

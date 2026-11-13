@@ -41,6 +41,7 @@ import CoOrdSets from "./pages/CoOrdSets.jsx";
 import Cart from "./pages/Cart.jsx";
 import BestSellers from "./pages/BestSellers.jsx";
 import TrackOrder from "./pages/TrackOrder.jsx";
+import Exchange from "./pages/Exchange.jsx";
 import ProductDetails from "./pages/ProductDetails.jsx";
 import Checkout from "./pages/Checkout.jsx";
 
@@ -60,6 +61,7 @@ import Products from "./Admin/Products.jsx";
 import Categories from "./Admin/Categories.jsx";
 import Customers from "./Admin/Customers.jsx";
 import Coupons from "./Admin/Coupons.jsx";
+import Exchanges from "./Admin/Exchanges.jsx";
 import Sliders from "./Admin/Sliders.jsx";
 import Banners from "./Admin/Banners.jsx";
 import Settings from "./Admin/Settings.jsx";
@@ -757,6 +759,8 @@ function Layout() {
 
           <Route path="coupons" element={<Coupons />} />
 
+          <Route path="exchanges" element={<Exchanges />} />
+
           <Route path="sliders" element={<Sliders />} />
 
           <Route path="banners" element={<Banners />} />
@@ -855,6 +859,8 @@ function Layout() {
           {/* TRACK ORDER */}
 
           <Route path="/track-order" element={<TrackOrder />} />
+
+          <Route path="/exchange" element={<Exchange />} />
 
           {/* CART */}
 

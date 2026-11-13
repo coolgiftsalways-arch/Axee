@@ -997,3 +997,79 @@
           animation: none !important;
      }
 }
+
+/* ---------------------------------------------------------
+   EXCHANGE LINKS / BUTTONS
+--------------------------------------------------------- */
+
+.ax-xc-foot-actions {
+     display: flex;
+     flex-wrap: wrap;
+     gap: 10px;
+}
+
+.ax-xc-cta.is-ghost {
+     border: 1px solid rgba(199, 255, 19, 0.5);
+     background: transparent;
+     color: #c7ff13;
+     box-shadow: none;
+}
+
+.ax-xc-cta.is-ghost:hover,
+.ax-xc-cta.is-ghost:focus-visible {
+     background: rgba(199, 255, 19, 0.08);
+     box-shadow: 0 0 24px rgba(199, 255, 19, 0.2);
+}
+
+.ax-exchange-sheet-link {
+     display: inline-flex;
+     align-items: center;
+     gap: 6px;
+
+     margin-top: 10px;
+
+     color: #c7ff13;
+     font-size: 11px;
+     font-weight: 700;
+     letter-spacing: 0.08em;
+     text-decoration: none;
+}
+
+.ax-exchange-sheet-link:hover {
+     text-decoration: underline;
+}
+
+.ax-exchange-toast-actions {
+     flex: 0 0 auto;
+
+     display: grid;
+     justify-items: center;
+     gap: 6px;
+}
+
+.ax-exchange-toast-link {
+     color: rgba(242, 239, 231, 0.7);
+     font-size: 9.5px;
+     font-weight: 700;
+     letter-spacing: 0.14em;
+     text-decoration: none;
+}
+
+.ax-exchange-toast-link:hover,
+.ax-exchange-toast-link:focus-visible {
+     color: #c7ff13;
+     text-decoration: underline;
+     outline: none;
+}
+
+@media (max-width: 760px) {
+     .ax-xc-foot-actions {
+          flex-direction: column;
+     }
+}
+
+@media (max-width: 640px) {
+     .ax-exchange-toast-actions {
+          width: 100%;
+     }
+}

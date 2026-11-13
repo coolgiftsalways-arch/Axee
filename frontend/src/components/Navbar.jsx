@@ -759,6 +759,22 @@ function Navbar() {
           >
             TRACK ORDER
           </NavLink>
+
+          {/* =================================================
+              EXCHANGE (30-day exchange)
+          ================================================= */}
+
+          <NavLink
+            to="/exchange"
+            className={({ isActive }) =>
+              `ax-nav-exchange ${isActive ? "active" : ""}`
+            }
+          >
+            EXCHANGE
+            <span className="ax-nav-exchange-badge" aria-hidden="true">
+              30D
+            </span>
+          </NavLink>
         </nav>
 
         {/* ===================================================
@@ -928,6 +944,24 @@ function Navbar() {
           >
             <i></i>
             TRACK ORDER
+          </NavLink>
+
+          {/* =================================================
+              EXCHANGE
+          ================================================= */}
+
+          <NavLink
+            to="/exchange"
+            onClick={closeAll}
+            className={({ isActive }) =>
+              `ax-mobile-exchange ${isActive ? "active" : ""}`
+            }
+          >
+            <i></i>
+            EXCHANGE
+            <span className="ax-nav-exchange-badge" aria-hidden="true">
+              30 DAYS
+            </span>
           </NavLink>
         </nav>
 
