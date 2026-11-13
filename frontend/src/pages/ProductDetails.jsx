@@ -11,6 +11,7 @@ import {
   Heart,
   Minus,
   Plus,
+  RefreshCw,
   ShieldCheck,
   ShoppingBag,
   Truck,
@@ -22,6 +23,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import gsap from "gsap";
 
 import products from "../data/products";
+
+import { ExchangeSheet, EXCHANGE_DAYS } from "../components/ExchangePolicy";
 
 import "../styles/productDetails.css";
 
@@ -2250,6 +2253,11 @@ function ProductDetails() {
             {product.featured && (
               <span className="pd-featured-tag">FEATURED</span>
             )}
+
+            {/* 30-day exchange — slides up over the first image */}
+            {images.length > 0 && (
+              <ExchangeSheet visible={activeImage === 0} />
+            )}
           </div>
         </div>
 
@@ -2645,6 +2653,16 @@ function ProductDetails() {
                 <strong>SECURE PAYMENT</strong>
 
                 <span>PROTECTED CHECKOUT</span>
+              </div>
+            </div>
+
+            <div>
+              <RefreshCw size={17} strokeWidth={1.25} />
+
+              <div>
+                <strong>{EXCHANGE_DAYS}-DAY EXCHANGE</strong>
+
+                <span>UNWASHED &amp; STAIN-FREE · TAG CAN BE REMOVED</span>
               </div>
             </div>
           </div>

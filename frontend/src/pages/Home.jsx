@@ -17,6 +17,8 @@ import heroModel from "../assets/hero-model.png";
 import heroNeon from "../assets/hero-neon.png";
 import heroFog from "../assets/hero-fog.png";
 
+import { ExchangeHighlight } from "../components/ExchangePolicy";
+
 import "../styles/home.css";
 import "../styles/audioControl.css";
 
@@ -2926,6 +2928,12 @@ function Home({
           BEYOND
         </p>
       </section>
+
+      {/* =================================================
+          30-DAY EXCHANGE HIGHLIGHT
+      ================================================= */}
+
+      <ExchangeHighlight />
 
       {/* =================================================
           LOADING
