@@ -299,6 +299,9 @@ router.post(
 
           subtotal,
 
+          // Required: the validator rejects coupons when no payment method is given.
+          paymentMethod,
+
           email: customer.email,
 
           phone: customer.phone,
